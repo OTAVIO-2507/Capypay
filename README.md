@@ -1,37 +1,63 @@
-# 💸 Controle Financeiro
-Aplicação web para controle financeiro pessoal, permitindo o gerenciamento de receitas, despesas e metas com visualização em gráficos interativos. O projeto foi desenvolvido com HTML, CSS, JavaScript e utiliza gráficos para monitoramento visual das receitas e despesas.
+# Controle Financeiro
 
-## 🌐 Visualize o Projeto:
+Aplicação web para gestão de finanças pessoais: cadastro de receitas e despesas, definição de metas e acompanhamento visual por meio de gráficos interativos, com persistência de dados no navegador.
 
-**[Ver Projeto Online](https://otavio-2507.github.io/Controle_Financeiro/)**
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![Chart.js](https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white)
 
-## 🛠️ Tecnologias Utilizadas
-O projeto foi construído com as seguintes ferramentas e tecnologias:
-- **HTML5**: Estrutura semântica para a página
-- **CSS3**: Estilização e media queries para responsividade
-- **JavaScript**: Funcionalidade interativa para controle de transações, metas financeiras e gráficos
-- **Tailwind CSS**: Framework de CSS para estilização rápida e flexível
-- **Chart.js**: Biblioteca para gráficos interativos de receitas e despesas
-- **Lucide Icons**: Ícones personalizados para a interface
-- **Antigravity**: Utilizado para otimizar o desempenho e a responsividade da aplicação
-- **LocalStorage*: Armazenamento local para persistência de dados
+[![Demonstração online](https://img.shields.io/badge/demonstra%C3%A7%C3%A3o-online-2EA44F?style=for-the-badge)](https://otavio-2507.github.io/Controle_Financeiro/)
 
-## 🚀 Como Começar
-- Clone ou baixe os arquivos do projeto para sua máquina local.
-- Abra o arquivo index.html no seu navegador.
-- Não é necessária configuração adicional — todas as dependências externas são carregadas via CDN.
+[![Prévia da aplicação](docs/preview.webp)](https://otavio-2507.github.io/Controle_Financeiro/)
 
-## 📦 Como Funciona
-- O usuário pode adicionar transações de receita e despesa, informando descrição, valor, data e categoria.
-- As transações são organizadas em gráficos interativos que mostram a comparação entre receitas e despesas, além de dividir os gastos por categoria.
-- A aplicação também permite o cadastro de metas financeiras, onde é possível acompanhar o progresso das economias para cada objetivo.
-- Os dados são salvos no LocalStorage, garantindo que as informações sejam persistentes entre sessões.
+## Visão geral
 
-## 🔄 Funcionalidades
-- Cadastro de Transações: Registre receitas e despesas, incluindo descrição, valor, data e categoria.
-- Metas Financeiras: Adicione metas de economia e acompanhe o progresso.
-- Gráficos Interativos: Exibição de gráficos de pizza e barras para analisar receitas, despesas e economia.
-- Validação de Entradas: Verifica se os valores inseridos são válidos (ex: valores numéricos e datas).
-- Modo Claro/Escuro: Alternância entre os modos claro e escuro para melhor experiência de uso.
-- Botão de Reiniciar: Permite ao usuário limpar os dados e reiniciar a aplicação.
-- Armazenamento Local: Dados salvos no navegador, garantindo persistência entre sessões.
+O Controle Financeiro centraliza a rotina de organização financeira pessoal em uma única tela: o usuário registra transações, categoriza cada movimentação e acompanha a evolução de receitas, despesas e metas em gráficos atualizados em tempo real. Todos os dados ficam armazenados localmente no navegador, sem necessidade de servidor ou cadastro.
+
+## Funcionalidades
+
+- Cadastro de transações de receita e despesa com descrição, valor, data e categoria
+- Definição e acompanhamento de metas financeiras
+- Gráficos interativos comparando receitas e despesas por período e categoria
+- Resumo consolidado de saldo, entradas e saídas
+- Persistência de dados via LocalStorage, mantendo o histórico entre sessões
+- Interface responsiva, adaptada a desktop e dispositivos móveis
+
+## Tecnologias
+
+| Tecnologia | Aplicação no projeto |
+| --- | --- |
+| HTML5 | Estrutura semântica da aplicação |
+| Tailwind CSS (CDN) | Estilização utilitária e layout responsivo |
+| JavaScript (ES6+) | Lógica de transações, metas, cálculos e renderização |
+| Chart.js | Gráficos interativos de receitas e despesas |
+| Lucide Icons | Iconografia da interface |
+| LocalStorage | Persistência local dos dados do usuário |
+
+## Como executar
+
+```bash
+git clone https://github.com/OTAVIO-2507/Controle_Financeiro.git
+cd Controle_Financeiro
+```
+
+Abra o arquivo `index.html` no navegador. Não há etapa de build: todas as dependências são carregadas via CDN.
+
+## Estrutura do projeto
+
+```
+Controle_Financeiro/
+├── index.html          Página única da aplicação
+├── src/
+│   ├── app.js          Lógica de transações, metas e gráficos
+│   └── style.css       Estilos complementares ao Tailwind
+└── docs/
+    └── preview.webp    Imagem de prévia do README
+```
+
+## Autor
+
+**Otávio Oliveira** — Desenvolvedor Full Stack
+
+[GitHub](https://github.com/OTAVIO-2507) · [Portfólio](https://otavio-2507.github.io/Portifolio-v2/) · [E-mail](mailto:56otavio@gmail.com)
