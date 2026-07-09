@@ -9,8 +9,6 @@ Aplicação web para gestão de finanças pessoais: cadastro de receitas e despe
 
 [![Demonstração online](https://img.shields.io/badge/demonstra%C3%A7%C3%A3o-online-2EA44F?style=for-the-badge)](https://otavio-2507.github.io/Controle_Financeiro/)
 
-[![Prévia da aplicação](docs/preview.webp)](https://otavio-2507.github.io/Controle_Financeiro/)
-
 ## Visão geral
 
 O Controle Financeiro centraliza a rotina de organização financeira pessoal em uma única tela: o usuário registra transações, categoriza cada movimentação e acompanha a evolução de receitas, despesas e metas em gráficos atualizados em tempo real. Todos os dados ficam armazenados localmente no navegador, sem necessidade de servidor ou cadastro.
@@ -49,11 +47,9 @@ Abra o arquivo `index.html` no navegador. Não há etapa de build: todas as depe
 ```
 Controle_Financeiro/
 ├── index.html          Página única da aplicação
-├── src/
-│   ├── app.js          Lógica de transações, metas e gráficos
-│   └── style.css       Estilos complementares ao Tailwind
-└── docs/
-    └── preview.webp    Imagem de prévia do README
+└── src/
+    ├── app.js          Lógica de transações, metas e gráficos
+    └── style.css       Estilos complementares ao Tailwind
 ```
 
 ## Autor
