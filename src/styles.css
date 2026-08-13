@@ -1,0 +1,414 @@
+@import 'tailwindcss';
+
+/*
+ * O tema escuro é comandado por classe no <html>, não por media query sozinha:
+ * a preferência do usuário precisa vencer a do sistema operacional nos dois
+ * sentidos, e `ThemeProvider` resolve 'system' antes de aplicar a classe.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * "Papel sobre papel": uma mesa cinza, folhas brancas apoiadas nela, tinta
+ * preta e nada mais. Não existe matiz em nenhum token — a ausência de cor é o
+ * sistema, e o único acento é o inverso: um bloco de tinta cheia.
+ */
+:root {
+  color-scheme: light;
+
+  --desk: #e9ebee;
+  --sheet: #ffffff;
+  --sheet-raised: #fcfcfd;
+  --sunken: #f1f2f4;
+  --hairline: #e4e6ea;
+  --hairline-strong: #d3d6dc;
+
+  --ink: #101114;
+  --ink-secondary: #5f646c;
+  /*
+   * A terciária é cor de ícone em repouso, não de texto: a exigência dela é a
+   * de componente de interface (3:1), e não a de texto (4.5:1). Aferida em
+   * 3.36:1 contra a superfície rebaixada, que é a pior em que ela aparece.
+   */
+  --ink-tertiary: #7e848d;
+
+  /* O bloco de tinta: retângulo preenchido, o único acento do sistema. */
+  --block: #16171a;
+  --block-hover: #2a2c31;
+  --block-ink: #ffffff;
+  --block-ink-secondary: #9da2ab;
+
+  /* Curva de resultado mensal: um matiz só, em Tinta. */
+  --series-1: #101114;
+  --chart-grid: #e4e6ea;
+
+  /*
+   * Rampa ordinal de quatro degraus, para parte-do-todo sem cor: as faixas de
+   * atividade de conta no painel de administração, que são ordenadas (mais
+   * recente → nunca). Não é paleta categórica: os degraus não têm identidade,
+   * só posição, e por isso um matiz só basta.
+   *
+   * Aprovada no validador da skill de dataviz contra `--sheet` nos dois temas:
+   * luminosidade monótona, salto adjacente ≥ 0.06, ponta clara em 2.35:1
+   * (claro) e 2.84:1 (escuro) contra a superfície, e dispersão de matiz de 15°
+   * e 9° — dentro do limite de 40° que separa "uma rampa" de "cores
+   * diferentes".
+   */
+  --ramp-1: #101114;
+  --ramp-2: #3a3f47;
+  --ramp-3: #6b727c;
+  --ramp-4: #a2aab5;
+
+  /*
+   * A identidade de fluxo — a segunda exceção de cor do sistema, e a única
+   * que o próprio sistema escolhe (o avatar é a que a pessoa escolhe). Três
+   * matizes fixos para receita, despesa e aporte: nunca escolhidos por
+   * usuário, nunca aplicados a mais nada. Validados como paleta categórica
+   * contra `--sheet` e `--sunken` nos dois temas — separação por daltonismo
+   * (ΔE ≥ 8 em todos os pares) e piso de visão normal (ΔE ≥ 15) OK; contraste
+   * ≥ 3:1, suficiente para ícone e marca de gráfico, não para texto — por
+   * isso a cor nunca é a única leitura nem veste o algarismo pequeno.
+   */
+  --income: #008b6d;
+  --expense: #b8492e;
+  --contribution: #8072c2;
+
+  /*
+   * A mesma identidade, calibrada para o bloco de tinta — a superfície do
+   * balão de gráfico, que inverte de escura para clara entre os temas. As
+   * três cores acima já passam 3:1 contra os dois blocos (validado contra
+   * #16171A e #F4F5F6), então um só trio serve às duas direções: não precisa
+   * repetir em `.dark`.
+   */
+  --income-on-block: #008b6d;
+  --expense-on-block: #b8492e;
+  --contribution-on-block: #8072c2;
+  --chart-axis: #8a9099;
+
+  /*
+   * O véu das camadas modais — fundo de diálogo e do tour de boas-vindas.
+   * Não é um cinza da escala: é preto translúcido, para escurecer o que está
+   * atrás em vez de cobrir com uma superfície. Mesmo valor nos dois temas.
+   */
+  --scrim: rgba(0, 0, 0, 0.5);
+
+  --shadow-sheet: 0 2px 4px rgba(16, 17, 20, 0.03), 0 8px 24px -8px rgba(16, 17, 20, 0.07);
+  --shadow-frame: 0 24px 64px -24px rgba(16, 17, 20, 0.16);
+  --shadow-float: 0 16px 40px -12px rgba(16, 17, 20, 0.22);
+  --shadow-block: 0 12px 28px -12px rgba(16, 17, 20, 0.45);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --desk: #080809;
+  --sheet: #17181b;
+  --sheet-raised: #1c1d21;
+  --sunken: #212226;
+  --hairline: #26282c;
+  --hairline-strong: #35383d;
+
+  --ink: #f4f5f6;
+  --ink-secondary: #9aa0a8;
+  --ink-tertiary: #787e86;
+
+  /*
+   * O bloco inverte junto com o papel. No escuro, a mancha de contraste máximo
+   * é clara — manter um retângulo preto sobre fundo preto anularia o acento.
+   */
+  --block: #f4f5f6;
+  --block-hover: #ffffff;
+  --block-ink: #101114;
+  --block-ink-secondary: #5f646c;
+
+  --series-1: #f4f5f6;
+  --chart-grid: #26282c;
+
+  /* A mesma rampa, invertida e revalidada contra a superfície escura. */
+  --ramp-1: #f4f5f6;
+  --ramp-2: #c3c8cf;
+  --ramp-3: #8b929c;
+  --ramp-4: #5a616b;
+
+  /* Mesma identidade, passo escuro — validada de novo contra as superfícies escuras. */
+  --income: #00a88b;
+  --expense: #db684c;
+  --contribution: #8f81d3;
+  --chart-axis: #787e86;
+
+  /* No escuro a sombra não é lida; a profundidade vira luminosidade. */
+  --shadow-sheet: none;
+  --shadow-frame: none;
+  --shadow-float: 0 16px 40px -12px rgba(0, 0, 0, 0.7);
+  --shadow-block: none;
+}
+
+/*
+ * `LoginPage` é a única tela que nunca segue o tema — é a primeira
+ * impressão do produto, antes de qualquer sessão ou preferência salva, e o
+ * painel de ilustração (a terceira exceção de cor, ver DESIGN.md) só lê bem
+ * contra um fundo claro. Redeclara os mesmos tokens do claro; por estar mais
+ * perto na árvore que `.dark` (que fica só em `<html>`), vence a cascata
+ * para tudo dentro da tela de login, sem tocar no resto do app.
+ *
+ * Os valores são copiados de propósito, não herdados — não existe operador
+ * CSS para "volte ao valor de :root, ignorando .dark no meio do caminho".
+ * Se a paleta clara mudar, este bloco precisa mudar junto.
+ */
+.force-light {
+  color-scheme: light;
+
+  --desk: #e9ebee;
+  --sheet: #ffffff;
+  --sheet-raised: #fcfcfd;
+  --sunken: #f1f2f4;
+  --hairline: #e4e6ea;
+  --hairline-strong: #d3d6dc;
+
+  --ink: #101114;
+  --ink-secondary: #5f646c;
+  --ink-tertiary: #7e848d;
+
+  --block: #16171a;
+  --block-hover: #2a2c31;
+  --block-ink: #ffffff;
+  --block-ink-secondary: #9da2ab;
+}
+
+/*
+ * `inline` faz o utilitário apontar para a variável em vez de copiar o valor,
+ * que é o que permite ao tema escuro trocar tudo pela cascata.
+ */
+@theme inline {
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --color-desk: var(--desk);
+  --color-sheet: var(--sheet);
+  --color-raised: var(--sheet-raised);
+  --color-sunken: var(--sunken);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+
+  --color-ink: var(--ink);
+  --color-muted: var(--ink-secondary);
+  --color-faint: var(--ink-tertiary);
+
+  --color-block: var(--block);
+  --color-block-hover: var(--block-hover);
+  --color-block-ink: var(--block-ink);
+  --color-block-muted: var(--block-ink-secondary);
+
+  --color-ramp-1: var(--ramp-1);
+  --color-ramp-2: var(--ramp-2);
+  --color-ramp-3: var(--ramp-3);
+  --color-ramp-4: var(--ramp-4);
+
+  --color-income: var(--income);
+  --color-expense: var(--expense);
+  --color-contribution: var(--contribution);
+
+  --radius-xs: 6px;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+
+  --shadow-sheet: var(--shadow-sheet);
+  --shadow-frame: var(--shadow-frame);
+  --shadow-float: var(--shadow-float);
+  --shadow-block: var(--shadow-block);
+}
+
+@layer base {
+  * {
+    border-color: var(--hairline);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--desk);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /*
+   * A partir de 1024px, quem rola é o `<main>`, não a página. Sem isto, o
+   * documento continua rolável mesmo com a moldura corretamente contida em
+   * `overflow: hidden`: o cálculo de `scrollHeight` do elemento raiz, no
+   * Chromium, não se limita à caixa medida de `<body>` — ele soma a extensão
+   * de conteúdo que existiria sem nenhum recorte, mesmo quando esse recorte
+   * já existe várias camadas abaixo. O sintoma era rolar a página e cair
+   * numa Mesa vazia, sem moldura nenhuma, com a barra lateral e o cabeçalho
+   * já fora de vista havia muito. Travar o scroll aqui, na única superfície
+   * que o CSSOM trata como fonte de verdade para a rolagem do documento,
+   * fecha a última rota de vazamento.
+   */
+  @media (width >= 64rem) {
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+    }
+  }
+
+  /*
+   * Um único anel de foco para todo controle. Sem cor de acento no sistema, o
+   * anel é a própria tinta — o que na prática é o contraste mais alto possível
+   * contra qualquer superfície clara.
+   */
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  ::selection {
+    background-color: var(--ink);
+    color: var(--sheet);
+  }
+
+  /* Remove as setas do input numérico: valor monetário não se ajusta de 1 em 1. */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+
+  input[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  /* O ícone nativo do seletor de data some no tema escuro sem esta inversão. */
+  .dark input[type='date']::-webkit-calendar-picker-indicator,
+  .dark input[type='month']::-webkit-calendar-picker-indicator {
+    filter: invert(1) opacity(0.6);
+  }
+}
+
+@layer utilities {
+  /*
+   * Alinhamento por casa decimal. Obrigatório em coluna de valores; um número
+   * que muda de largura ao ser atualizado faz a tabela inteira tremer.
+   */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /*
+   * A figura principal. Algarismos proporcionais de propósito: nesse corpo, a
+   * largura fixa da face tabular abre buracos visíveis entre os dígitos.
+   */
+  .figure {
+    font-variant-numeric: proportional-nums;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+}
+
+/*
+ * Abertura do menu suspenso. É o único elemento que entra em cena por conta
+ * própria; um painel que simplesmente aparece parece falha de renderização.
+ */
+@keyframes popover {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/*
+ * Entrada do balão do tour. Distinta da do popover: o balão troca de lugar a
+ * cada passo, e o mesmo deslocamento vertical de -4px leria como "a mesma
+ * caixa tremeu" em vez de "outra caixa chegou".
+ */
+@keyframes tour-balloon {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* A cena central chega de baixo, com o peso de um cartão que assenta. */
+@keyframes tour-scene {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/*
+ * Cada linha da cena entra por conta própria, alguns quadros depois da
+ * anterior. É o que separa uma tela que "aparece" de uma tela que é
+ * *apresentada*: o olho recebe título, texto e campos na ordem em que
+ * precisa deles, em vez de tudo de uma vez.
+ */
+@keyframes tour-line {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* O escurecimento não corta: ele fecha. */
+@keyframes tour-veil {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/*
+ * O halo que pulsa em volta do alvo iluminado. É a única coisa em movimento
+ * contínuo no sistema inteiro, e existe por um motivo estreito: no holofote a
+ * pessoa precisa achar o alvo antes de ler o balão, e um contorno parado se
+ * confunde com a borda do próprio componente iluminado.
+ */
+@keyframes tour-halo {
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(1.015);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
