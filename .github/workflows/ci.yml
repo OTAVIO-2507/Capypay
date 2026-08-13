@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Permite disparar manualmente pela aba Actions.
+  workflow_dispatch:
+
+# Só leitura: esta esteira confere o código, não publica nada.
+permissions:
+  contents: read
+
+# Um push logo depois do outro cancela a verificação anterior: o resultado do
+# commit do meio não interessa a ninguém, e segurar o runner por ele só atrasa
+# a resposta do commit que importa.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+
+      # Sem variáveis de ambiente aqui, e de propósito: teste de lógica pura
+      # não deve precisar de backend configurado para rodar. Foi assim que a
+      # esteira pegou um teste que arrastava o cliente Supabase pelo import.
+      - run: npm test
+
+      # As chaves do Supabase entram só aqui, que é onde de fato fazem falta.
+      # Faltando, o build passa e o site sobe sem conseguir autenticar, então
+      # elas precisam estar cadastradas em Settings → Secrets and variables.
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}

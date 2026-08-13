@@ -1,0 +1,42 @@
+node_modules
+dist
+dist-ssr
+*.local
+.vite
+
+# Chaves do Supabase — nunca commitadas, nem a anon key (que é pública por
+# design, mas ainda assim específica de cada projeto/ambiente).
+.env
+.env.local
+.env.*.local
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Estado local da CLI do Supabase: qual projeto esta máquina está vinculada.
+# Não é segredo, mas é configuração de máquina, não do repositório.
+supabase/.temp
+
+# Arte de origem dos avatares e da marca.
+#
+# São PNGs de ~2 MB cada, tamanho de geração: 41 MB somados, contra 264 KB do
+# que o aplicativo de fato carrega (`src/assets/`, 256×256 em JPEG). O que o
+# produto usa está versionado; o material bruto fica no disco de quem o criou.
+# Git guarda binário para sempre, e um repositório de portfólio não deveria
+# carregar quarenta megabytes de insumo em todo clone.
+/assets/
+/Imagens de pefil - Capipay/
