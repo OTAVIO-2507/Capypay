@@ -1,0 +1,324 @@
+import { create } from 'zustand'
+import { createEmptyData } from '@/data/defaults'
+import { createSupabaseRepository } from '@/data/supabaseRepository'
+import { CONTRIBUTION_CATEGORY_ID } from '@/domain/categories'
+import type {
+  Account,
+  CategoryId,
+  FinanceData,
+  Goal,
+  RecurrenceDraft,
+  ThemePreference,
+  Transaction,
+  TransactionDraft,
+  TransactionId,
+} from '@/domain/types'
+import { currentMonth, shiftDate, shiftMonth, type MonthKey } from '@/lib/date'
+import { createId } from '@/lib/id'
+import type { Cents } from '@/lib/money'
+
+const repository = createSupabaseRepository()
+
+type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
+
+interface FinanceState {
+  data: FinanceData
+  /** Ciclo de vida do carregamento remoto — ver `mutate()` e `loadForUser()`. */
+  status: LoadStatus
+  loadError: string | null
+  /** Mês que governa a rota inteira. Não é persistido: a sessão começa no mês atual. */
+  selectedMonth: MonthKey
+  saveError: string | null
+
+  setSelectedMonth: (month: MonthKey) => void
+
+  /** Busca os dados da conta logada. Chamado por `RequireUser` a cada sessão nova. */
+  loadForUser: () => Promise<void>
+  /** Volta ao estado inicial, sem dados em memória — ao trocar ou perder a sessão. */
+  reset: () => void
+
+  setTheme: (theme: ThemePreference) => void
+  togglePrivacy: () => void
+  setProfileName: (name: string) => void
+  updateProfile: (patch: Partial<FinanceData['profile']>) => void
+
+  addTransaction: (draft: TransactionDraft, recurrence?: RecurrenceDraft | null) => void
+  updateTransaction: (id: TransactionId, patch: Partial<Transaction>) => void
+  deleteTransaction: (id: TransactionId) => void
+  deleteSeries: (seriesId: string) => void
+
+  addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'archived'>) => void
+  updateGoal: (id: string, patch: Partial<Goal>) => void
+  deleteGoal: (id: string) => void
+
+  setBudget: (month: MonthKey, categoryId: CategoryId, limitCents: Cents) => void
+  copyBudgetsFromPreviousMonth: (month: MonthKey) => void
+
+  addAccount: (account: Omit<Account, 'id' | 'createdAt' | 'archived'>) => void
+  updateAccount: (id: string, patch: Partial<Account>) => void
+  deleteAccount: (id: string) => void
+
+  replaceAll: (data: FinanceData) => void
+  /** Semeia a base de demonstração preservando quem a pessoa é. */
+  loadDemoData: (demo: FinanceData) => void
+  clearAll: () => void
+}
+
+export const useFinanceStore = create<FinanceState>()((set, get) => {
+  /**
+   * Todo caminho de escrita passa por aqui: aplica a mudança, publica o novo
+   * estado e persiste. Centralizar isso é o que garante que nenhuma ação possa
+   * esquecer de salvar — a falha mais comum da versão anterior, onde cada
+   * handler chamava `saveData()` por conta própria.
+   */
+  const mutate = (recipe: (data: FinanceData) => FinanceData) => {
+    // Sem esta guarda, uma ação disparada antes de `loadForUser()` terminar
+    // salvaria o documento quase vazio (`createEmptyData()`) por cima dos
+    // dados reais já gravados no Supabase — o único jeito de esta troca
+    // perder dados de verdade em vez de só atrasar a tela.
+    if (get().status !== 'ready') return
+
+    const next = recipe(get().data)
+    set({ data: next })
+    repository.save(next).catch((error: unknown) => {
+      set({
+        saveError:
+          error instanceof Error ? error.message : 'Não foi possível salvar os dados.',
+      })
+    })
+  }
+
+  return {
+    data: createEmptyData(),
+    status: 'idle',
+    loadError: null,
+    selectedMonth: currentMonth(),
+    saveError: null,
+
+    setSelectedMonth: (month) => set({ selectedMonth: month }),
+
+    loadForUser: async () => {
+      if (get().status === 'loading') return
+      set({ status: 'loading', loadError: null })
+
+      try {
+        const data = await repository.load()
+        set({ data, status: 'ready' })
+      } catch (error) {
+        set({
+          status: 'error',
+          loadError:
+            error instanceof Error ? error.message : 'Não foi possível carregar seus dados.',
+        })
+      }
+    },
+
+    reset: () => set({ data: createEmptyData(), status: 'idle', loadError: null, saveError: null }),
+
+    setTheme: (theme) =>
+      mutate((data) => ({ ...data, settings: { ...data.settings, theme } })),
+
+    togglePrivacy: () =>
+      mutate((data) => ({
+        ...data,
+        settings: { ...data.settings, privacyMode: !data.settings.privacyMode },
+      })),
+
+    setProfileName: (name) => mutate((data) => ({ ...data, profile: { ...data.profile, name } })),
+
+    updateProfile: (patch) =>
+      mutate((data) => ({ ...data, profile: { ...data.profile, ...patch } })),
+
+    addTransaction: (draft, recurrence) =>
+      mutate((data) => ({
+        ...data,
+        transactions: [...data.transactions, ...expandRecurrence(draft, recurrence)],
+      })),
+
+    updateTransaction: (id, patch) =>
+      mutate((data) => ({
+        ...data,
+        transactions: data.transactions.map((transaction) =>
+          transaction.id === id
+            ? normalizeTransaction({ ...transaction, ...patch, updatedAt: Date.now() })
+            : transaction,
+        ),
+      })),
+
+    deleteTransaction: (id) =>
+      mutate((data) => ({
+        ...data,
+        transactions: data.transactions.filter((transaction) => transaction.id !== id),
+      })),
+
+    deleteSeries: (seriesId) =>
+      mutate((data) => ({
+        ...data,
+        transactions: data.transactions.filter((transaction) => transaction.seriesId !== seriesId),
+      })),
+
+    addGoal: (goal) =>
+      mutate((data) => ({
+        ...data,
+        goals: [
+          ...data.goals,
+          { ...goal, id: createId('goal'), archived: false, createdAt: Date.now() },
+        ],
+      })),
+
+    updateGoal: (id, patch) =>
+      mutate((data) => ({
+        ...data,
+        goals: data.goals.map((goal) => (goal.id === id ? { ...goal, ...patch } : goal)),
+      })),
+
+    /**
+     * Excluir uma meta também remove os aportes feitos para ela. O aporte não
+     * tem significado sem o destino, e mantê-lo órfão deixaria o saldo do mês
+     * menor sem nenhuma linha que explicasse o porquê.
+     */
+    deleteGoal: (id) =>
+      mutate((data) => ({
+        ...data,
+        goals: data.goals.filter((goal) => goal.id !== id),
+        transactions: data.transactions.filter(
+          (transaction) => !(transaction.kind === 'contribution' && transaction.goalId === id),
+        ),
+      })),
+
+    setBudget: (month, categoryId, limitCents) =>
+      mutate((data) => {
+        const monthBudgets = { ...(data.budgets[month] ?? {}) }
+        if (limitCents > 0) monthBudgets[categoryId] = limitCents
+        else delete monthBudgets[categoryId]
+
+        const budgets = { ...data.budgets }
+        if (Object.keys(monthBudgets).length > 0) budgets[month] = monthBudgets
+        else delete budgets[month]
+
+        return { ...data, budgets }
+      }),
+
+    copyBudgetsFromPreviousMonth: (month) =>
+      mutate((data) => {
+        const previous = data.budgets[shiftMonth(month, -1)]
+        if (!previous || Object.keys(previous).length === 0) return data
+        return { ...data, budgets: { ...data.budgets, [month]: { ...previous } } }
+      }),
+
+    addAccount: (account) =>
+      mutate((data) => ({
+        ...data,
+        accounts: [
+          ...data.accounts,
+          { ...account, id: createId('acc'), archived: false, createdAt: Date.now() },
+        ],
+      })),
+
+    updateAccount: (id, patch) =>
+      mutate((data) => ({
+        ...data,
+        accounts: data.accounts.map((account) =>
+          account.id === id ? { ...account, ...patch } : account,
+        ),
+      })),
+
+    /** Remover uma conta desvincula os lançamentos, mas não os apaga. */
+    deleteAccount: (id) =>
+      mutate((data) => ({
+        ...data,
+        accounts: data.accounts.filter((account) => account.id !== id),
+        transactions: data.transactions.map((transaction) =>
+          transaction.accountId === id ? { ...transaction, accountId: null } : transaction,
+        ),
+      })),
+
+    replaceAll: (data) => mutate(() => data),
+
+    /**
+     * Os dados de exemplo trocam lançamentos, metas e contas — não a pessoa.
+     *
+     * `createDemoData()` devolve um perfil zerado junto, e usá-lo direto em
+     * `replaceAll` apagava o nome cadastrado. Desde que existe o tour de
+     * boas-vindas isso ficou pior que um incômodo: zerar o perfil zera também
+     * `onboardedAt`, e a apresentação recomeçaria do zero logo depois de a
+     * pessoa ter carregado a demonstração.
+     */
+    loadDemoData: (demo) =>
+      mutate((data) => ({ ...demo, profile: data.profile, settings: data.settings })),
+
+    clearAll: () =>
+      mutate((data) => ({
+        ...createEmptyData(),
+        // A preferência visual não é um dado financeiro; zerar a base não
+        // deveria devolver o usuário ao tema errado.
+        settings: { ...createEmptyData().settings, theme: data.settings.theme },
+      })),
+  }
+})
+
+/** Garante as invariantes que o tipo sozinho não expressa. */
+function normalizeTransaction(transaction: Transaction): Transaction {
+  if (transaction.kind === 'contribution') {
+    return { ...transaction, categoryId: CONTRIBUTION_CATEGORY_ID }
+  }
+  return { ...transaction, goalId: null }
+}
+
+/**
+ * Converte um lançamento recorrente nas N ocorrências que ele representa.
+ *
+ * As parcelas são materializadas no momento do cadastro, e não calculadas na
+ * leitura, porque uma parcela precisa poder ser editada ou excluída
+ * individualmente — o valor da conta de luz muda todo mês.
+ */
+function expandRecurrence(
+  draft: TransactionDraft,
+  recurrence: RecurrenceDraft | null | undefined,
+): Transaction[] {
+  const now = Date.now()
+  const base: Omit<Transaction, 'id' | 'date' | 'description' | 'installment' | 'seriesId'> = {
+    kind: draft.kind,
+    amountCents: draft.amountCents,
+    categoryId: draft.categoryId,
+    goalId: draft.goalId ?? null,
+    accountId: draft.accountId ?? null,
+    source: draft.source ?? 'manual',
+    externalId: draft.externalId ?? null,
+    notes: draft.notes ?? null,
+    createdAt: now,
+    updatedAt: now,
+  }
+
+  const occurrences = recurrence ? Math.max(1, Math.min(recurrence.occurrences, 120)) : 1
+
+  if (!recurrence || occurrences === 1) {
+    return [
+      normalizeTransaction({
+        ...base,
+        id: createId('tx'),
+        date: draft.date,
+        description: draft.description,
+        installment: null,
+        seriesId: null,
+      }),
+    ]
+  }
+
+  const seriesId = createId('series')
+  const unit = recurrence.frequency === 'weekly' ? 'week' : recurrence.frequency === 'yearly' ? 'year' : 'month'
+
+  return Array.from({ length: occurrences }, (_, index) =>
+    normalizeTransaction({
+      ...base,
+      id: createId('tx'),
+      date: shiftDate(draft.date, index, unit),
+      description: `${draft.description} (${index + 1}/${occurrences})`,
+      installment: { index: index + 1, total: occurrences },
+      seriesId,
+      source: 'recurring',
+      createdAt: now + index,
+      updatedAt: now + index,
+    }),
+  )
+}
