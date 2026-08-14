@@ -345,6 +345,315 @@
   }
 }
 
+/*
+ * A capivara-guia (`features/onboarding/CapivaraLogo.tsx`): o logotipo de
+ * verdade, com cada parte movendo por conta própria.
+ *
+ * Movimento contínuo, que em qualquer outra tela do produto seria violação da
+ * Regra do Movimento que Responde. A licença é a mesma da Regra da Cena Que
+ * Acontece Uma Vez: o tour roda uma vez por conta, na primeira entrada, e
+ * ninguém abre o próprio primeiro acesso duas vezes. Uma mascote respirando no
+ * painel de todo dia cansaria na terceira manhã; aqui ela não chega a ter uma
+ * segunda.
+ *
+ * As regras moram aqui, e não em utilitários no componente, porque precisam
+ * alcançar grupos que vivem dentro do arquivo de arte (`#moedas`, `#brilho`).
+ * `transform-box: fill-box` faz cada origem ser relativa à própria parte, em
+ * vez do canto da caixa inteira: sem isso a pilha de moedas saltaria em torno
+ * do queixo.
+ *
+ * A orelha não mexe, e não é esquecimento: o contorno dela faz parte do
+ * caminho único da silhueta, e só a curva interna ficou num grupo próprio.
+ * Girar essa curva sozinha moveria o detalhe dentro de uma orelha parada, que
+ * é pior que orelha nenhuma se mexendo. Separá-la daria o mesmo trabalho que
+ * deu o braço da pose inteira, descrito abaixo, sem nada perto do mesmo
+ * retorno: ninguém repara numa orelha, e todo mundo repara num aceno.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .capy > svg {
+    animation: capy-respira 4.5s ease-in-out infinite;
+    transform-origin: 50% 100%;
+  }
+
+  .capy--saudacao > svg {
+    animation:
+      capy-respira 4.5s ease-in-out infinite,
+      capy-balanca 2.8s ease-in-out infinite;
+  }
+
+  /*
+   * Na pose inteira quem acena é o braço, e só ele. O corpo fica parado.
+   *
+   * O desenho veio de traçado automático, então braço, pata e cabeça saíram
+   * num contorno único: não existe um grupo de braço para girar. O arquivo de
+   * arte contorna isso desenhando a figura nove vezes, cada cópia revelada por
+   * uma máscara numa faixa horizontal diferente: o corpo abaixo do ombro, e
+   * oito elos subindo dali até a pata.
+   *
+   * Todos giram em torno do mesmo ponto, o ombro em (286, 605), mas cada um
+   * gira um oitavo a mais que o de baixo. O braço não vira um bloco rígido:
+   * ele **encurva**, que é o que um braço de verdade faz ao acenar. E o degrau
+   * entre dois elos vizinhos passa a ser um oitavo do gesto, sub-pixel no
+   * tamanho em que a capivara é exibida.
+   *
+   * Com uma articulação só, o mesmo aceno dava dezoito unidades de degrau bem
+   * no pulso, e era isso que lia como defeito.
+   *
+   * As faixas se cruzam em quatro unidades em vez de encostarem: sem essa
+   * sobra, a suavização das duas bordas deixa um fio claro atravessando o
+   * traço. E a sobra é opaca, nunca um degradê. Duas camadas meio
+   * transparentes não somam tinta cheia (50% sobre 50% dá 75%), e a versão que
+   * usou degradê ficou com uma escada de bandas claras subindo o braço.
+   *
+   * As máscaras ficam num grupo pai e a rotação no filho, nunca no mesmo
+   * elemento: máscara aplicada onde há transform gira junto, e a sobreposição
+   * que deveria cobrir a emenda escorrega com ela.
+   *
+   * A respiração continua no `svg` inteiro em vez de camada por camada: as
+   * nove escalam juntas, e as emendas acompanham.
+   */
+  .capy--inteira.capy--saudacao > svg {
+    animation: capy-respira 4.5s ease-in-out infinite;
+    transform-origin: 50% 100%;
+  }
+
+  .capy--inteira.capy--saudacao [id^='capy-elo'] {
+    transform-box: view-box;
+    transform-origin: 286px 605px;
+    animation-duration: 1.5s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+  }
+
+  .capy--inteira.capy--saudacao #capy-elo1 {
+    animation-name: capy-elo1;
+  }
+  .capy--inteira.capy--saudacao #capy-elo2 {
+    animation-name: capy-elo2;
+  }
+  .capy--inteira.capy--saudacao #capy-elo3 {
+    animation-name: capy-elo3;
+  }
+  .capy--inteira.capy--saudacao #capy-elo4 {
+    animation-name: capy-elo4;
+  }
+  .capy--inteira.capy--saudacao #capy-elo5 {
+    animation-name: capy-elo5;
+  }
+  .capy--inteira.capy--saudacao #capy-elo6 {
+    animation-name: capy-elo6;
+  }
+  .capy--inteira.capy--saudacao #capy-elo7 {
+    animation-name: capy-elo7;
+  }
+  .capy--inteira.capy--saudacao #capy-elo8 {
+    animation-name: capy-elo8;
+  }
+
+  /*
+   * A respiração é repetida em cada variante em vez de herdada: `animation` é
+   * atalho, e declará-lo de novo apaga a lista inteira. Sem isso a capivara
+   * parava de respirar assim que o pulinho terminava.
+   */
+  .capy--pula > svg {
+    animation:
+      capy-respira 4.5s ease-in-out infinite,
+      capy-pula 620ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .capy #brilho,
+  .capy #moedas,
+  .capy #olhos {
+    transform-box: fill-box;
+  }
+
+  /* O brilho é o gesto do próprio logotipo: a ideia acendendo. */
+  .capy #brilho {
+    transform-origin: 50% 140%;
+    animation: capy-brilha 2.6s ease-in-out infinite;
+  }
+  .capy--festa #brilho {
+    animation-duration: 900ms;
+  }
+
+  /* A pilha salta quando há o que comemorar, e só então. */
+  .capy--festa #moedas {
+    transform-origin: 50% 100%;
+    animation: capy-moeda 760ms cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+
+  /*
+   * O aperto dos olhos: 5% do ciclo, e nada no resto. Distribuído pelo ciclo
+   * inteiro viraria um piscar permanente, que lê como defeito.
+   */
+  .capy #olhos {
+    transform-origin: 50% 50%;
+    animation: capy-olhar 4.4s ease-in-out infinite;
+  }
+}
+
+@keyframes capy-respira {
+  0%,
+  100% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(1.02) translateY(-1.5px);
+  }
+}
+
+@keyframes capy-brilha {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes capy-moeda {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-6px);
+  }
+}
+
+/*
+ * O aceno: vai e volta sem parar, 1,5s por ciclo.
+ *
+ * Oito blocos porque cada elo precisa de uma amplitude própria, uma fração
+ * crescente do mesmo gesto: o elo 1 encosta no ombro e quase não sai do lugar,
+ * o elo 8 é a pata e faz o percurso inteiro. Repartir o ângulo é o que dobra o
+ * braço em vez de balançá-lo inteiro.
+ *
+ * Os -12° da pata são o limite do desenho: além disso ela cruza o traço do
+ * maxilar. Os +1,5° do outro lado são curtos porque desse lado a pata anda na
+ * direção da cabeça, e o espaço entre as duas é de cinco unidades.
+ */
+@keyframes capy-elo1 {
+  0%,
+  100% {
+    transform: rotate(0.188deg);
+  }
+  50% {
+    transform: rotate(-1.5deg);
+  }
+}
+
+@keyframes capy-elo2 {
+  0%,
+  100% {
+    transform: rotate(0.375deg);
+  }
+  50% {
+    transform: rotate(-3deg);
+  }
+}
+
+@keyframes capy-elo3 {
+  0%,
+  100% {
+    transform: rotate(0.563deg);
+  }
+  50% {
+    transform: rotate(-4.5deg);
+  }
+}
+
+@keyframes capy-elo4 {
+  0%,
+  100% {
+    transform: rotate(0.75deg);
+  }
+  50% {
+    transform: rotate(-6deg);
+  }
+}
+
+@keyframes capy-elo5 {
+  0%,
+  100% {
+    transform: rotate(0.938deg);
+  }
+  50% {
+    transform: rotate(-7.5deg);
+  }
+}
+
+@keyframes capy-elo6 {
+  0%,
+  100% {
+    transform: rotate(1.125deg);
+  }
+  50% {
+    transform: rotate(-9deg);
+  }
+}
+
+@keyframes capy-elo7 {
+  0%,
+  100% {
+    transform: rotate(1.313deg);
+  }
+  50% {
+    transform: rotate(-10.5deg);
+  }
+}
+
+@keyframes capy-elo8 {
+  0%,
+  100% {
+    transform: rotate(1.5deg);
+  }
+  50% {
+    transform: rotate(-12deg);
+  }
+}
+
+/* A inclinação do retrato, que é cabeça e ombros e não tem braço para mover. */
+@keyframes capy-balanca {
+  0%,
+  100% {
+    transform: rotate(-2.5deg);
+  }
+  50% {
+    transform: rotate(2.5deg);
+  }
+}
+
+@keyframes capy-olhar {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.5);
+  }
+}
+
+/* A reação a uma troca de passo: acontece uma vez e para. */
+@keyframes capy-pula {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  35% {
+    transform: translateY(-8px) scale(1.03);
+  }
+  60% {
+    transform: translateY(0) scale(0.98);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
 /* A cena central chega de baixo, com o peso de um cartão que assenta. */
 @keyframes tour-scene {
   from {
