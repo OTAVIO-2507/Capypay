@@ -224,8 +224,6 @@ O sistema tem exatamente três cores fora da escala neutra. Nenhuma outra existe
 
 A diferença entre as três é a diferença entre personalização, informação e primeira impressão. As duas primeiras são internas ao produto autenticado; a terceira vive inteiramente fora dele, na única tela que existe antes de qualquer sessão. Fora dessas três, a resposta para "posso colorir isto" é sempre não.
 
-**A Regra da Marca que Se Move.** O mascote do logotipo ganha vida no tour de boas-vindas (`features/onboarding/Capivara.tsx`): o mesmo desenho, redesenhado em SVG, em traço de espessura única e `currentColor` — tinta sobre papel como todo o resto, sem abrir exceção de cor nenhuma. Ele não ganha membro que o logotipo não tem: acenar é inclinar a cabeça, comemorar é a pilha de moedas saltando e o brilho estourando. Uma mascote que ganha partes novas para cada gesto deixa de ser a marca e vira um desenho parecido com ela. E ele não sai do tour: no painel de todo dia, uma mascote respirando cansa na terceira manhã. A licença para o movimento contínuo é a mesma da Regra da Cena Que Acontece Uma Vez.
-
 ### Identidade de fluxo
 
 Três matizes fixos — receita, despesa, aporte — nunca escolhidos, nunca reordenados, nunca aplicados a uma quarta categoria. Verde e terracota, não verde e vermelho: um par pensado para não coincidir com a confusão vermelho-verde que afeta a maioria dos daltonismos, com um terceiro matiz (violeta) longe o bastante dos dois para não ser confundido com nenhum.
@@ -396,6 +394,14 @@ Coluna de **232px, expandida, com ícone e rótulo** — não um rail de ícones
 **A Regra da Aba Contínua.** O item ativo nunca é um retângulo flutuando dentro da barra. Ele assume a cor do conteúdo e toca a borda, e os dois cantos côncavos são obrigatórios — são eles que transformam colagem em continuidade.
 
 **A Regra do Movimento que Responde.** O produto anima o que o usuário provoca — toque, hover, foco, troca de mês — e nunca a chegada da página. Quem abre este painel dez vezes por dia não quer assistir ao carregamento na décima. Por isso o único movimento não provocado é a subida de 160ms do menu suspenso, que existe para o painel não parecer defeito de renderização.
+
+**A Regra da Marca que Se Move.** O logotipo ganha vida no tour de boas-vindas (`features/onboarding/CapivaraLogo.tsx`). Não é um desenho parecido com a marca: é o SVG traçado da própria arte, pintado com `currentColor` como a `Logo` da barra superior — nenhuma exceção de cor é aberta.
+
+Ele **só move o que já está desenhado**. São duas artes: o retrato, que é cabeça, ombros e a pilha de moedas, e a pose inteira, que tem a pata levantada. O retrato acena inclinando, porque não tem braço para mover; a pose inteira acena com o braço, porque tem. O que nenhuma das duas faz é ganhar uma parte nova para caber num gesto — uma mascote que cria membros a cada cena deixa de ser a marca e vira um desenho parecido com ela.
+
+O custo disso é real e foi pago: o traçado devolve a figura inteira num contorno único, sem braço separado, então mover só o braço exigiu repetir a mesma arte em nove camadas mascaradas. É esse o preço de animar a marca em vez de redesenhá-la, e é preferível a uma segunda capivara que não é a do logotipo.
+
+E ele não sai do tour: no painel de todo dia, uma mascote respirando cansa na terceira manhã. A licença para o movimento contínuo é a mesma da regra abaixo.
 
 **A Regra da Cena Que Acontece Uma Vez.** O tour de boas-vindas (`features/onboarding/`) é a única superfície do sistema que se permite ser cinematográfica: entrada escalonada linha a linha, holofote viajando de um alvo ao outro em 560ms, desfoque de profundidade de campo no que está fora do foco, e um halo pulsando — o único movimento **contínuo** de todo o produto. A licença vem de ele rodar **uma vez por conta, na primeira entrada**, e nunca mais: a Regra do Movimento que Responde protege quem abre o painel todo dia, e ninguém abre o próprio primeiro acesso duas vezes. Qualquer movimento desta natureza fora do tour é violação, não precedente.
 
