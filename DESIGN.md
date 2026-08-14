@@ -14,11 +14,11 @@ colors:
   block: "#16171A"
   block-ink: "#FFFFFF"
   block-ink-secondary: "#9DA2AB"
-  desk-night: "#080809"
-  sheet-night: "#17181B"
-  sheet-raised-night: "#1C1D21"
-  sunken-night: "#212226"
-  hairline-night: "#26282C"
+  desk-night: "#26272C"
+  sheet-night: "#0A0B0D"
+  sheet-raised-night: "#0E0F12"
+  sunken-night: "#1C1D21"
+  hairline-night: "#2C2E33"
   ink-night: "#F4F5F6"
   ink-secondary-night: "#9AA0A8"
   ink-tertiary-night: "#787E86"
@@ -271,7 +271,7 @@ Dois regimes, um por gráfico, nunca misturados.
 
 **Entrou, saiu e guardou — três categorias, com identidade.** Receita, despesa e aporte vestem a **identidade de fluxo** (ver Colors) em vez de uma rampa de luminosidade: a mesma cor da coluna aparece no ícone de direção da lista de lançamentos e no resumo do período, então o gráfico deixou de ser o único lugar sem essa pista. Como a identidade é o único canal de cor que sobra, **a legenda é obrigatória** e o gráfico nunca passa de três séries — a quarta não teria matiz fixo e validado para vestir, e improvisar um quebraria a regra de que cor de fluxo nunca é escolhida.
 
-**Rampa ordinal (`{colors.ramp-1}` a `{colors.ramp-4}`).** Quatro degraus de um matiz só — `#101114`, `#3A3F47`, `#6B727C`, `#A2AAB5` no claro; `#F4F5F6`, `#C3C8CF`, `#8B929C`, `#5A616B` no escuro. Existe para **parte-do-todo sem cor**, e hoje só o disco de atividade de contas do painel de administração a usa. Não é paleta categórica e não pode virar uma: os degraus não têm identidade, só posição, e por isso um matiz basta. Aprovada no validador contra `--sheet` nos dois temas — luminosidade monótona, salto adjacente ≥ 0.06, ponta clara em 2.35:1 (claro) e 2.84:1 (escuro), dispersão de matiz de 15° e 9°, dentro do limite de 40° que separa "uma rampa" de "cores diferentes". A rampa acompanha a **ordem** das faixas, nunca o tamanho delas: tingir a maior fatia de mais escuro codificaria pela segunda vez o que o ângulo já diz.
+**Rampa ordinal (`{colors.ramp-1}` a `{colors.ramp-4}`).** Quatro degraus de um matiz só — `#101114`, `#3A3F47`, `#6B727C`, `#A2AAB5` no claro; `#F4F5F6`, `#C3C8CF`, `#8B929C`, `#5A616B` no escuro. Existe para **parte-do-todo sem cor**, e hoje só o disco de atividade de contas do painel de administração a usa. Não é paleta categórica e não pode virar uma: os degraus não têm identidade, só posição, e por isso um matiz basta. Aprovada no validador contra `--sheet` nos dois temas — luminosidade monótona, salto adjacente ≥ 0.06, ponta clara em 2.35:1 (claro) e 3.15:1 (escuro), dispersão de matiz de 15° e 9°, dentro do limite de 40° que separa "uma rampa" de "cores diferentes". A rampa acompanha a **ordem** das faixas, nunca o tamanho delas: tingir a maior fatia de mais escuro codificaria pela segunda vez o que o ângulo já diz.
 
 **A Regra da Marca que Não Muda de Forma.** A marca de categoria é sempre a seta de direção — nunca uma forma inventada para um lugar específico. Legenda, tooltip e resumo mostram a mesma seta que a lista de lançamentos já usa; o que muda entre eles é só a cor, e só quando a superfície exige.
 
@@ -338,6 +338,14 @@ Profundidade **física e discreta**: a folha se separa da mesa por uma sombra di
 **A Regra da Sombra com Contato.** Toda sombra tem deslocamento vertical positivo e desfoque maior que o deslocamento. Halo colorido de deslocamento zero e sombra dupla clara-e-escura (o efeito estampado do neumorfismo) estão fora: reduzem a nitidez da borda e envelhecem rápido.
 
 **A Regra do Escuro sem Sombra.** No tema escuro a sombra não é lida. A profundidade passa integralmente para a diferença de luminosidade entre mesa, folha e folha erguida, e a hairline assume o limite.
+
+**A Regra do Escuro Espelhado.** O tema escuro é o espelho do claro, e não o claro com o brilho abaixado. No claro a folha é o extremo da escala (`#FFFFFF`) e a mesa recua dela; no escuro a folha é o extremo preto (`#0A0B0D`) e a mesa recua na direção oposta. A ordem dos degraus — folha, folha erguida, rebaixado, mesa, hairline — é a mesma nos dois, medida como distância a partir do extremo.
+
+A versão anterior fazia o contrário: punha a mesa no extremo e subia a folha para um cinza. Como a folha é quase toda a tela, o tema inteiro lia cinza, e o produto perdia justamente o que o claro entrega — tinta cravada sobre a superfície mais extrema que a tela tem. Espelhar devolveu isso: a tinta passou de 16,26:1 para 18,04:1 contra a folha, encostando no 18,3:1 do claro, e a distância entre mesa e folha subiu de 1,13:1 para 1,32:1. Pela regra acima, essa distância é a única profundidade que resta no escuro, então ela precisa crescer, nunca encolher.
+
+Os degraus saem dos do claro medidos a partir do extremo, multiplicados por 1,25. sRGB já é perceptualmente uniforme e um espelho puro bastaria; a folga cobre o brilho ambiente, que come separação no escuro e não no claro.
+
+Corolário: **escurecer o tema escuro não é puxar todos os tokens para o preto.** No fim escuro da escala as diferenças comprimem, e mover tudo junto achata o painel — some a profundidade sem que nada fique mais preto onde importa. O que fica preto é a folha; o resto recua dela.
 
 ## Shapes
 
