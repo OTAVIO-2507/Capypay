@@ -414,9 +414,14 @@
    * transparentes não somam tinta cheia (50% sobre 50% dá 75%), e a versão que
    * usou degradê ficou com uma escada de bandas claras subindo o braço.
    *
-   * As máscaras ficam num grupo pai e a rotação no filho, nunca no mesmo
-   * elemento: máscara aplicada onde há transform gira junto, e a sobreposição
-   * que deveria cobrir a emenda escorrega com ela.
+   * A máscara mora **no mesmo elemento que gira**, e isso não é descuido: é a
+   * única forma de ela escolher a tinta pela posição de origem. Posta num
+   * grupo pai parado, ela escolhe pela posição final, depois do giro — e aí a
+   * bochecha, que em repouso está fora da coluna do braço, entra nela ao girar
+   * e a camada da pata desenha uma segunda cópia dela, uma lasca solta ao lado
+   * do maxilar. A faixa inclinar junto com o elo é o preço, e é barato: a
+   * sobra entre faixas vizinhas é de 8 unidades justamente para a inclinação
+   * comer parte dela sem nunca abrir vão.
    *
    * E a região de cada máscara é apertada em volta da própria faixa. Declarada
    * larga, ela vira uma textura de dezenas de milhares de pixels em tela de
