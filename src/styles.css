@@ -90,6 +90,15 @@
    * atrás em vez de cobrir com uma superfície. Mesmo valor nos dois temas.
    */
   --scrim: rgba(0, 0, 0, 0.5);
+  /* A abertura do tour, onde a cena precisa apagar o painel de trás. */
+  --scrim-forte: rgba(0, 0, 0, 0.78);
+  /*
+   * Tinta do que é desenhado direto sobre o véu, sem cartão por baixo.
+   * O véu é o mesmo preto nos dois temas, então esta clara também é: usar
+   * `--ink` deixava a capivara escura sobre fundo escuro no tema claro, e ela
+   * simplesmente sumia. Não é exceção de cor, é o neutro do outro lado.
+   */
+  --scrim-ink: #f4f5f6;
 
   --shadow-sheet: 0 2px 4px rgba(16, 17, 20, 0.03), 0 8px 24px -8px rgba(16, 17, 20, 0.07);
   --shadow-frame: 0 24px 64px -24px rgba(16, 17, 20, 0.16);

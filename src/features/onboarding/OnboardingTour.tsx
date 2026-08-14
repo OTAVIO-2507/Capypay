@@ -1,10 +1,10 @@
 import { useEffect, useLayoutEffect, useState, type FormEvent } from 'react'
-import { Avatar } from '@/components/Avatar'
 import { Icon } from '@/components/Icon'
 import { Wordmark } from '@/components/Wordmark'
 import { Button } from '@/components/ui/Button'
 import { Field, TextInput } from '@/components/ui/Field'
 import { callNameOf } from '@/features/dashboard/Greeting'
+import { CapivaraLogo } from './CapivaraLogo'
 import { cn } from '@/lib/cn'
 import type { Profile } from '@/domain/types'
 import {
@@ -111,10 +111,16 @@ export function OnboardingTour({
       aria-label="Boas-vindas ao CapyPay"
       className="fixed inset-0 z-50"
     >
-      <Scrim rect={passo ? rect : null} />
+      <Scrim rect={passo ? rect : null} abertura={cena === 0} />
 
       {cena === 0 ? (
-        <CenaCentral>
+        <CenaCentral
+          figura={
+            <span className="block text-[var(--scrim-ink)] motion-safe:animate-[tour-line_720ms_cubic-bezier(0.16,1,0.3,1)]">
+              <CapivaraLogo humor="saudacao" pose="inteira" size={300} />
+            </span>
+          }
+        >
           <ApresentacaoForm
             name={name}
             nickname={nickname}
@@ -217,14 +223,22 @@ function useTargetRect(targets: readonly string[] | null): Rect | null {
  * `top/left/width/height` — o holofote desliza de um elemento ao outro em vez
  * de piscar, que é o que faz a pessoa acompanhar para onde a atenção foi.
  */
-function Scrim({ rect }: { rect: Rect | null }) {
+function Scrim({ rect, abertura = false }: { rect: Rect | null; abertura?: boolean }) {
   if (!rect) {
     return (
       <div
         aria-hidden="true"
         className={cn(
-          'absolute inset-0 bg-[var(--scrim)] backdrop-blur-[3px]',
-          'motion-safe:animate-[tour-veil_420ms_ease-out]',
+          'absolute inset-0 motion-safe:animate-[tour-veil_420ms_ease-out]',
+          /*
+            A abertura escurece mais e desfoca mais que os passos, de
+            propósito: ali o painel atrás ainda não significa nada para quem
+            chegou, e apagá-lo é o que faz a cena começar. Nos passos o véu
+            afrouxa, porque aí o painel é justamente o assunto.
+          */
+          abertura
+            ? 'bg-[var(--scrim-forte)] backdrop-blur-[7px]'
+            : 'bg-[var(--scrim)] backdrop-blur-[3px]',
         )}
       />
     )
@@ -316,16 +330,36 @@ function surge(atrasoMs: number) {
  * empurra o excesso para fora dos dois lados e o topo fica inalcançável — e é
  * no topo que a capivara se debruça.
  */
-function CenaCentral({ children }: { children: React.ReactNode }) {
+function CenaCentral({ figura, children }: { figura?: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="absolute inset-0 flex justify-center overflow-y-auto p-4">
-      <div
-        className={cn(
-          'my-auto w-full max-w-md rounded-lg border border-hairline bg-sheet p-7 shadow-[var(--shadow-float)]',
-          'motion-safe:animate-[tour-scene_560ms_cubic-bezier(0.16,1,0.3,1)]',
-        )}
-      >
-        {children}
+      {/*
+        Quem centraliza é o cartão, sozinho. A figura pendura na borda direita
+        dele, fora do fluxo: dentro de uma linha flex, o par inteiro é que
+        ficava centrado, e o formulário acabava deslocado para a direita da
+        tela sem que nada explicasse o porquê.
+
+        `pointer-events-none` porque ela é cena, não controle: nada nela deve
+        interceptar um clique destinado ao formulário.
+
+        Some abaixo de 1280px: ali o cartão já ocupa quase toda a largura útil,
+        e pendurar a capivara ao lado a jogaria para fora da tela.
+      */}
+      <div className="relative my-auto w-full max-w-md">
+        {figura ? (
+          <div className="pointer-events-none absolute top-1/2 left-full ml-10 hidden -translate-y-1/2 xl:block">
+            {figura}
+          </div>
+        ) : null}
+
+        <div
+          className={cn(
+            'rounded-lg border border-hairline bg-sheet p-7 shadow-[var(--shadow-float)]',
+            'motion-safe:animate-[tour-scene_560ms_cubic-bezier(0.16,1,0.3,1)]',
+          )}
+        >
+          {children}
+        </div>
       </div>
     </div>
   )
@@ -483,8 +517,12 @@ function Encerramento({
 
   return (
     <div className="flex flex-col items-center text-center">
-      <span style={surge(0)}>
-        <Avatar profile={perfil} size={64} />
+      {/*
+        Ela, e não o avatar do perfil: o avatar a pessoa acabou de escolher e
+        vai ver todo dia no canto da tela. Quem se despede é a marca.
+      */}
+      <span style={surge(0)} className="text-ink">
+        <CapivaraLogo humor="festa" size={132} />
       </span>
 
       <h2
@@ -565,11 +603,16 @@ function Balao({
       className="fixed rounded-lg border border-hairline bg-sheet p-5 shadow-[var(--shadow-float)]"
     >
       <div className="flex items-start gap-3">
-        <span
-          style={surge(60)}
-          className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-sm bg-block text-block-ink"
-        >
-          <Icon name={passo.icon} size={17} />
+        {/*
+          A capivara ocupa o lugar que era do quadrado de ícone, e o ícone do
+          passo vira selo no canto dela: os dois cabem, e quem guia passa a ter
+          rosto em vez de ser um pictograma trocando de desenho.
+        */}
+        <span style={surge(60)} className="relative -mt-1 block shrink-0 text-ink">
+          <CapivaraLogo humor="calma" size={54} hop={indice} />
+          <span className="absolute -right-2 -bottom-1 inline-flex size-6 items-center justify-center rounded-full bg-block text-block-ink ring-2 ring-sheet">
+            <Icon name={passo.icon} size={12} />
+          </span>
         </span>
 
         <div className="min-w-0">
