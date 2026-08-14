@@ -418,12 +418,24 @@
    * elemento: máscara aplicada onde há transform gira junto, e a sobreposição
    * que deveria cobrir a emenda escorrega com ela.
    *
-   * A respiração continua no `svg` inteiro em vez de camada por camada: as
-   * nove escalam juntas, e as emendas acompanham.
+   * E a região de cada máscara é apertada em volta da própria faixa. Declarada
+   * larga, ela vira uma textura de dezenas de milhares de pixels em tela de
+   * alta densidade, acima do teto do navegador, que então rasteriza a máscara
+   * em resolução reduzida e serrilha a borda dentro do desenho.
+   */
+
+  /*
+   * E a pose inteira não respira.
+   *
+   * `capy-respira` escala 2% e sobe 1,5px. No retrato, de 128px, isso é um
+   * sopro. Aqui, com 300px, a figura incha 6px e o topo dela viaja 9px pela
+   * tela a cada ciclo. Ao lado de um cartão parado isso não lê como
+   * respiração, lê como a imagem escorregando — e ainda tira o apoio do
+   * aceno, que passa a acontecer sobre um corpo que também está se mexendo.
+   * Quem se move aqui é o braço, e só ele.
    */
   .capy--inteira.capy--saudacao > svg {
-    animation: capy-respira 4.5s ease-in-out infinite;
-    transform-origin: 50% 100%;
+    animation: none;
   }
 
   .capy--inteira.capy--saudacao [id^='capy-elo'] {
