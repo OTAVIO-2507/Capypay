@@ -49,7 +49,7 @@
    *
    * Aprovada no validador da skill de dataviz contra `--sheet` nos dois temas:
    * luminosidade monótona, salto adjacente ≥ 0.06, ponta clara em 2.35:1
-   * (claro) e 2.84:1 (escuro) contra a superfície, e dispersão de matiz de 15°
+   * (claro) e 3.15:1 (escuro) contra a superfície, e dispersão de matiz de 15°
    * e 9° — dentro do limite de 40° que separa "uma rampa" de "cores
    * diferentes".
    */
@@ -109,12 +109,32 @@
 .dark {
   color-scheme: dark;
 
-  --desk: #080809;
-  --sheet: #17181b;
-  --sheet-raised: #1c1d21;
-  --sunken: #212226;
-  --hairline: #26282c;
-  --hairline-strong: #35383d;
+  /*
+   * A escada do escuro é o espelho da do claro, e não a mesma escada mais
+   * apagada.
+   *
+   * No claro a folha é o extremo da escala (`#ffffff`) e a mesa recua dela.
+   * Aqui a folha é o extremo preto e a mesa recua na outra direção. A versão
+   * anterior fazia o contrário — mesa no extremo, folha subindo para um cinza
+   * — e como a folha ocupa quase toda a tela, o tema inteiro lia cinza.
+   *
+   * Espelhar também é o que devolve o destaque: a tinta sobe de 16,26:1 para
+   * 18,04:1 contra a folha — o patamar do claro, que é 18,3:1 — e a distância
+   * entre mesa e folha cresce de 1,13:1 para 1,32:1. Essa distância não é
+   * detalhe: com a Regra do Escuro sem Sombra, ela é a única profundidade que
+   * sobra. A hairline acompanha, de 1,20:1 para 1,45:1.
+   *
+   * Os degraus são os do claro medidos a partir do extremo (3, 14, 22, 27, 44
+   * em código sRGB), multiplicados por 1,25. sRGB já é perceptualmente
+   * uniforme, então um espelho puro bastaria; a folga a mais cobre o brilho
+   * ambiente, que come separação no escuro e não no claro.
+   */
+  --desk: #26272c;
+  --sheet: #0a0b0d;
+  --sheet-raised: #0e0f12;
+  --sunken: #1c1d21;
+  --hairline: #2c2e33;
+  --hairline-strong: #41444b;
 
   --ink: #f4f5f6;
   --ink-secondary: #9aa0a8;
@@ -130,7 +150,8 @@
   --block-ink-secondary: #5f646c;
 
   --series-1: #f4f5f6;
-  --chart-grid: #26282c;
+  /* Acompanha a hairline, como no claro. */
+  --chart-grid: #2c2e33;
 
   /* A mesma rampa, invertida e revalidada contra a superfície escura. */
   --ramp-1: #f4f5f6;
