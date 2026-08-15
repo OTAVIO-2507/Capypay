@@ -20,6 +20,35 @@ const PluggyConnect = lazy(async () => {
 })
 
 /**
+ * Falhas que não são falhas de conexão, e que "tente de novo" não resolve.
+ *
+ * O widget devolve um código quando a recusa é de regra, e não de rede ou de
+ * senha errada. Sem esta tabela, todas viram a mesma mensagem genérica — e
+ * mandar tentar de novo quem esbarrou num limite de plano é mandar repetir um
+ * gesto que vai falhar igual, todas as vezes.
+ */
+const RECUSAS_CONHECIDAS: Record<string, string> = {
+  TRIAL_CLIENT_ITEM_CREATE_NOT_ALLOWED:
+    'A conta da Pluggy está em período de teste, e nesse plano não é possível conectar bancos. É preciso ativar o plano no painel deles.',
+  ITEM_LOGIN_ERROR: 'O banco recusou os dados de acesso. Confira e tente de novo.',
+  CONNECTOR_NOT_AVAILABLE: 'Esse banco está indisponível no momento. Tente mais tarde ou escolha outro.',
+}
+
+/** O código da recusa, quando o widget mandou um. */
+function codigoDaFalha(falha: unknown): string | null {
+  const texto = falha instanceof Error ? falha.message : typeof falha === 'string' ? falha : ''
+  const doObjeto =
+    falha && typeof falha === 'object'
+      ? String((falha as { code?: unknown }).code ?? (falha as { message?: unknown }).message ?? '')
+      : ''
+
+  for (const codigo of Object.keys(RECUSAS_CONHECIDAS)) {
+    if (texto.includes(codigo) || doObjeto.includes(codigo)) return codigo
+  }
+  return null
+}
+
+/**
  * Extrai algo legível do que o widget chama de erro.
  *
  * Não é `Error` garantido: pode ser objeto do SDK, resposta da API embrulhada,
@@ -150,10 +179,14 @@ export function ConnectBankButton({ onConnected }: ConnectBankButtonProps) {
                * primeira conexão de teste.
                */
               console.error('pluggy connect:', falha)
+
+              const codigo = codigoDaFalha(falha)
               setErro(
-                import.meta.env.DEV
-                  ? `A conexão não foi concluída: ${detalharFalha(falha)}`
-                  : 'A conexão com o banco não foi concluída. Você pode tentar de novo.',
+                codigo
+                  ? RECUSAS_CONHECIDAS[codigo]
+                  : import.meta.env.DEV
+                    ? `A conexão não foi concluída: ${detalharFalha(falha)}`
+                    : 'A conexão com o banco não foi concluída. Você pode tentar de novo.',
               )
               fechar()
             }}
