@@ -8,9 +8,15 @@ import { Wordmark } from '@/components/Wordmark'
  * aparece entre abrir a aba e saber se há alguém logado, e entre logar e os
  * dados da conta chegarem.
  */
+/*
+ * Veste Folha, e não Mesa: a mesa só existe para ter folhas apoiadas nela, e
+ * aqui não há nenhuma. Uma tela inteira de mesa é o cinza sem função — no
+ * tema escuro isso aparecia como um cinza chapado onde o resto do produto é
+ * preto. Sem folha em cena, a tela inteira é a folha.
+ */
 export function FullPageLoader() {
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-desk">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-sheet">
       <Wordmark />
       <span
         aria-hidden="true"
