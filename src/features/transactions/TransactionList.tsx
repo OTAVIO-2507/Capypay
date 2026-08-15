@@ -1,4 +1,5 @@
 import { Icon } from '@/components/Icon'
+import { categoryColor } from '@/domain/categories'
 import { Badge } from '@/components/ui/Controls'
 import { FLOW_TEXT_CLASS, Money } from '@/components/ui/Money'
 import type { Category, Goal, Transaction } from '@/domain/types'
@@ -150,7 +151,27 @@ function Identity({
             </Badge>
           ) : null}
         </span>
-        <span className="block truncate text-xs text-muted">{view.subtitle}</span>
+        {/*
+          O ponto de categoria. O quadro do ícone à esquerda já codifica o
+          **tipo** pela forma — entrada contornada, saída preenchida, aporte
+          tracejada — e pintá-lo de categoria seria a mesma marca dizendo duas
+          coisas. A identidade ganha marca própria: um ponto ao lado do nome,
+          que é onde a categoria já estava escrita.
+
+          Só as oito nativas de despesa têm matiz; meta, receita e categoria
+          criada pelo usuário não recebem ponto nenhum, e continuam se lendo
+          pelo nome.
+        */}
+        <span className="flex items-center gap-1.5 text-xs text-muted">
+          {categoryColor(transaction.categoryId) ? (
+            <span
+              aria-hidden="true"
+              className="size-2 shrink-0 rounded-full"
+              style={{ backgroundColor: categoryColor(transaction.categoryId) ?? undefined }}
+            />
+          ) : null}
+          <span className="truncate">{view.subtitle}</span>
+        </span>
       </span>
     </div>
   )
