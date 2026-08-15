@@ -13,12 +13,10 @@ import type { Cents } from '@/lib/money'
  * cadastrar significa que nada precisa ser mantido em dois lugares, e que
  * editar ou apagar uma cobrança solta continua funcionando como sempre.
  *
- * **O modelo não separa assinatura de compra parcelada.** As duas saem do
- * mesmo campo do formulário e as duas ganham `installment`, então um sofá em
- * 12x entra nesta lista. É uma imprecisão aceita de olhos abertos: as duas são
- * compromisso que se repete e ocupa o mês que vem, que é a pergunta que o
- * painel responde. Separá-las exigiria um campo novo no lançamento, e não uma
- * heurística — adivinhar pelo nome ou pela categoria erraria calado.
+ * Compra parcelada fica de fora: ela é série também, mas responde outra
+ * pergunta e tem página própria (`domain/installments.ts`). Quem separa as
+ * duas é `seriesKind`, gravado no lançamento — não uma heurística sobre o
+ * nome ou a categoria, que erraria calada.
  */
 
 /** Inferida pelo espaçamento das cobranças, porque a frequência não é gravada. */
@@ -52,7 +50,8 @@ export function activeSubscriptions(
   const series = new Map<string, Transaction[]>()
 
   for (const transaction of transactions) {
-    if (transaction.kind !== 'expense' || !transaction.seriesId) continue
+    if (transaction.kind !== 'expense') continue
+    if (!transaction.seriesId || transaction.seriesKind !== 'subscription') continue
     const atual = series.get(transaction.seriesId)
     if (atual) atual.push(transaction)
     else series.set(transaction.seriesId, [transaction])

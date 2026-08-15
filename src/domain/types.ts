@@ -44,6 +44,17 @@ export interface Installment {
   total: number
 }
 
+/**
+ * As duas coisas que "repetir lançamento" cria, e que o produto trata em
+ * páginas separadas.
+ *
+ * `installment` é uma compra fatiada: o total é fixo, já foi decidido na
+ * compra, e a pergunta é quanto falta pagar. `subscription` é um serviço que
+ * cobra de novo: não há total, e a pergunta é quanto ele ocupa por mês.
+ * Somar as duas num número só não responde nenhuma das duas perguntas.
+ */
+export type SeriesKind = 'installment' | 'subscription'
+
 export interface Transaction {
   id: TransactionId
   kind: TransactionKind
@@ -61,6 +72,13 @@ export interface Transaction {
   externalId?: string | null
   /** Agrupa as parcelas geradas por um mesmo lançamento recorrente. */
   seriesId?: SeriesId | null
+  /**
+   * O que a série é. Sem isto, parcelamento e assinatura ficam idênticos no
+   * histórico — as duas nascem do mesmo campo do formulário e as duas viram N
+   * lançamentos com o mesmo `seriesId` — e nenhuma tela consegue separá-los
+   * sem adivinhar pelo nome ou pela categoria, que erraria calado.
+   */
+  seriesKind?: SeriesKind | null
   installment?: Installment | null
   notes?: string | null
   createdAt: number
@@ -197,6 +215,7 @@ export type TransactionDraft = Omit<Transaction, 'id' | 'createdAt' | 'updatedAt
   Partial<Pick<Transaction, 'source'>>
 
 export interface RecurrenceDraft {
+  kind: SeriesKind
   frequency: RecurrenceFrequency
   /** Total de ocorrências, incluindo a primeira. */
   occurrences: number

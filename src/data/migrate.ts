@@ -4,6 +4,7 @@ import type {
   CategoryId,
   FinanceData,
   Goal,
+  SeriesKind,
   Transaction,
   TransactionKind,
 } from '@/domain/types'
@@ -347,9 +348,31 @@ function sanitizeTransactions(raw: unknown): Transaction[] {
             : 'expense',
         description: asString(transaction.description) || 'Lançamento sem descrição',
         categoryId: asString(transaction.categoryId) || FALLBACK_CATEGORY_ID,
+        seriesKind: reconcileSeriesKind(transaction),
       },
     ]
   })
+}
+
+/**
+ * Completa `seriesKind` no que foi salvo antes de o campo existir.
+ *
+ * Até aqui as duas coisas eram indistinguíveis, então a única evidência
+ * disponível é a categoria: quem lançou em "Assinaturas" já disse o que era.
+ * Todo o resto vira parcelamento, que é como o formulário se apresentava na
+ * época ("cria as parcelas de uma vez") e portanto o que o usuário achava
+ * estar criando.
+ *
+ * O palpite acontece uma vez, na leitura, e o resultado é gravado — não fica
+ * uma heurística rodando para sempre sobre dados novos, que já nascem com o
+ * campo preenchido.
+ */
+function reconcileSeriesKind(transaction: Transaction): SeriesKind | null {
+  if (transaction.seriesKind === 'installment' || transaction.seriesKind === 'subscription') {
+    return transaction.seriesKind
+  }
+  if (!transaction.seriesId) return null
+  return transaction.categoryId === 'assinaturas' ? 'subscription' : 'installment'
 }
 
 function mergeCategories(

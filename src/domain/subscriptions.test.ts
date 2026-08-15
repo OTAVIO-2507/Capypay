@@ -15,6 +15,7 @@ function tx(
     source: 'manual',
     externalId: null,
     seriesId: null,
+    seriesKind: null,
     installment: null,
     notes: null,
     createdAt: 0,
@@ -38,7 +39,7 @@ function serie(
       date: `${mes}-${dia}`,
       description: `${description} (${index + 1}/${meses.length})`,
       seriesId,
-      installment: { index: index + 1, total: meses.length },
+      seriesKind: 'subscription',
     }),
   )
 }
@@ -67,7 +68,7 @@ describe('activeSubscriptions', () => {
   it('descarta lançamento avulso e série de uma ocorrência só', () => {
     const transactions = [
       tx({ kind: 'expense', amountCents: 5000, date: '2026-09-01' }),
-      tx({ kind: 'expense', amountCents: 5000, date: '2026-09-02', seriesId: 'orfa' }),
+      tx({ kind: 'expense', amountCents: 5000, date: '2026-09-02', seriesId: 'orfa', seriesKind: 'subscription' }),
     ]
 
     expect(activeSubscriptions(transactions, DEFAULT_CATEGORIES, HOJE)).toEqual([])
@@ -95,11 +96,11 @@ describe('activeSubscriptions', () => {
   it('leva semanal e anual para o custo de um mês', () => {
     const semanal = serie('sem', 'Faxina', 12000, [], '01').concat(
       ['2026-08-15', '2026-08-22', '2026-08-29'].map((date) =>
-        tx({ kind: 'expense', amountCents: 12000, date, description: 'Faxina', seriesId: 'sem' }),
+        tx({ kind: 'expense', amountCents: 12000, date, description: 'Faxina', seriesId: 'sem', seriesKind: 'subscription' }),
       ),
     )
     const anual = ['2025-09-01', '2026-09-01', '2027-09-01'].map((date) =>
-      tx({ kind: 'expense', amountCents: 24000, date, description: 'Domínio', seriesId: 'ano' }),
+      tx({ kind: 'expense', amountCents: 24000, date, description: 'Domínio', seriesId: 'ano', seriesKind: 'subscription' }),
     )
 
     const [faxina] = activeSubscriptions(semanal, DEFAULT_CATEGORIES, HOJE)
@@ -113,7 +114,7 @@ describe('activeSubscriptions', () => {
 
   it('mede a cadência pela mediana, para mês curto não virar semanal', () => {
     const transactions = ['2026-07-31', '2026-08-31', '2026-09-30', '2026-10-31'].map((date) =>
-      tx({ kind: 'expense', amountCents: 3800, date, description: 'Vivo', seriesId: 's1' }),
+      tx({ kind: 'expense', amountCents: 3800, date, description: 'Vivo', seriesId: 's1', seriesKind: 'subscription' }),
     )
 
     expect(activeSubscriptions(transactions, DEFAULT_CATEGORIES, HOJE)[0].cadence).toBe('monthly')
@@ -122,7 +123,7 @@ describe('activeSubscriptions', () => {
   it('ordena pela mordida mensal, não pelo valor da cobrança', () => {
     const mensal = serie('mensal', 'Streaming', 5000, ['2026-08', '2026-09'], '20')
     const anual = ['2026-08-20', '2027-08-20'].map((date) =>
-      tx({ kind: 'expense', amountCents: 30000, date, description: 'Seguro', seriesId: 'anual' }),
+      tx({ kind: 'expense', amountCents: 30000, date, description: 'Seguro', seriesId: 'anual', seriesKind: 'subscription' }),
     )
 
     const ordem = activeSubscriptions([...anual, ...mensal], DEFAULT_CATEGORIES, HOJE).map(

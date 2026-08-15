@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Icon, type IconName } from '@/components/Icon'
 import { Button } from '@/components/ui/Button'
 import { Segmented, Toggle, type SegmentOption } from '@/components/ui/Controls'
 import { Field, MoneyInput, SelectInput, TextInput } from '@/components/ui/Field'
@@ -7,12 +8,13 @@ import type {
   Account,
   Category,
   Goal,
-  RecurrenceDraft,
-  RecurrenceFrequency,
+  RecurrenceDraft, RecurrenceFrequency,
+  SeriesKind,
   Transaction,
   TransactionDraft,
   TransactionKind,
 } from '@/domain/types'
+import { cn } from '@/lib/cn'
 import { isValidIsoDate, todayIso } from '@/lib/date'
 import { parseDecimalInput, toCents, toInputValue } from '@/lib/money'
 
@@ -20,6 +22,31 @@ const KIND_OPTIONS: readonly SegmentOption<TransactionKind>[] = [
   { value: 'expense', label: 'Despesa' },
   { value: 'income', label: 'Receita' },
   { value: 'contribution', label: 'Aporte' },
+]
+
+/**
+ * As duas coisas que repetir um lançamento pode criar. A dica embaixo existe
+ * porque os nomes sozinhos não separam: "parcela" é palavra que o brasileiro
+ * usa para as duas, e é o total fechado que distingue uma da outra.
+ */
+const SERIES_KIND_OPTIONS: {
+  value: SeriesKind
+  label: string
+  icon: IconName
+  hint: string
+}[] = [
+  {
+    value: 'installment',
+    label: 'Parcelamento',
+    icon: 'credit-card',
+    hint: 'Uma compra fatiada, com total fechado. Aparece em Parcelamentos.',
+  },
+  {
+    value: 'subscription',
+    label: 'Assinatura',
+    icon: 'repeat',
+    hint: 'Um serviço que cobra de novo, sem fim previsto. Aparece em Assinaturas.',
+  },
 ]
 
 const FREQUENCY_LABEL: Record<RecurrenceFrequency, string> = {
@@ -69,6 +96,7 @@ export function TransactionForm({
   const [recurring, setRecurring] = useState(false)
   const [occurrences, setOccurrences] = useState('12')
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly')
+  const [seriesKind, setSeriesKind] = useState<SeriesKind>('installment')
   const [errors, setErrors] = useState<FormErrors>({})
 
   const availableCategories = categoriesFor(categories, kind)
@@ -142,7 +170,7 @@ export function TransactionForm({
         notes: null,
       },
       recurring && !isContribution
-        ? { frequency, occurrences: Number.parseInt(occurrences, 10) }
+        ? { kind: seriesKind, frequency, occurrences: Number.parseInt(occurrences, 10) }
         : null,
     )
 
@@ -283,13 +311,56 @@ export function TransactionForm({
             checked={recurring}
             onChange={setRecurring}
             label="Repetir lançamento"
-            description="Cria as parcelas de uma vez, cada uma editável."
+            description="Cria todas as cobranças de uma vez, cada uma editável."
             icon="repeat"
           />
 
           {recurring ? (
-            <div className="mt-3 grid grid-cols-2 gap-3 border-t border-hairline pt-3">
-              <Field label="Repetições" error={errors.occurrences}>
+            <div className="mt-3 space-y-3 border-t border-hairline pt-3">
+              {/*
+                A escolha vem antes das outras duas de propósito: ela muda o
+                que as próximas significam. Em parcelamento, "repetições" é o
+                número de vezes que a compra foi fatiada e o total já está
+                decidido; em assinatura, é só até onde as cobranças foram
+                lançadas, e nada impede lançar mais depois.
+
+                Sem esta pergunta as duas ficam idênticas no histórico, e as
+                páginas de Parcelamentos e Assinaturas teriam que adivinhar
+                pela categoria ou pelo nome — o que erraria calado.
+              */}
+              <fieldset>
+                <legend className="mb-1.5 text-xs font-medium text-muted">Tipo</legend>
+                <div className="grid grid-cols-2 gap-2">
+                  {SERIES_KIND_OPTIONS.map((option) => (
+                    <label
+                      key={option.value}
+                      className={cn(
+                        'flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-[0.8125rem] font-medium transition-colors duration-150',
+                        seriesKind === option.value
+                          ? 'border-transparent bg-block text-block-ink'
+                          : 'border-hairline bg-sheet text-ink-secondary hover:text-ink',
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="series-kind"
+                        value={option.value}
+                        checked={seriesKind === option.value}
+                        onChange={() => setSeriesKind(option.value)}
+                        className="sr-only"
+                      />
+                      <Icon name={option.icon} size={14} />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-1.5 text-xs text-muted">
+                  {SERIES_KIND_OPTIONS.find((option) => option.value === seriesKind)?.hint}
+                </p>
+              </fieldset>
+
+              <div className="grid grid-cols-2 gap-3">
+              <Field label={seriesKind === 'installment' ? 'Parcelas' : 'Cobranças'} error={errors.occurrences}>
                 {({ id, describedBy, invalid }) => (
                   <TextInput
                     id={id}
@@ -320,6 +391,7 @@ export function TransactionForm({
                   </SelectInput>
                 )}
               </Field>
+              </div>
             </div>
           ) : null}
         </div>

@@ -307,15 +307,23 @@ function expandRecurrence(
 
   const seriesId = createId('series')
   const unit = recurrence.frequency === 'weekly' ? 'week' : recurrence.frequency === 'yearly' ? 'year' : 'month'
+  const parcelado = recurrence.kind === 'installment'
 
   return Array.from({ length: occurrences }, (_, index) =>
     normalizeTransaction({
       ...base,
       id: createId('tx'),
       date: shiftDate(draft.date, index, unit),
-      description: `${draft.description} (${index + 1}/${occurrences})`,
-      installment: { index: index + 1, total: occurrences },
+      /*
+       * O "(3/12)" é da compra parcelada, onde a posição é informação: falta
+       * saber quanto ainda vem. Numa assinatura ele seria ruído — ninguém
+       * chama o serviço de "Streaming (3/12)", e a contagem só existe porque
+       * a série precisa acabar em algum lugar.
+       */
+      description: parcelado ? `${draft.description} (${index + 1}/${occurrences})` : draft.description,
+      installment: parcelado ? { index: index + 1, total: occurrences } : null,
       seriesId,
+      seriesKind: recurrence.kind,
       source: 'recurring',
       createdAt: now + index,
       updatedAt: now + index,
