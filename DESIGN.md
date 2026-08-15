@@ -27,15 +27,26 @@ colors:
   block-ink-secondary-night: "#5F646C"
   series-1: "#101114"
   series-1-night: "#F4F5F6"
-  income: "#008B6D"
-  expense: "#B8492E"
-  contribution: "#8072C2"
-  income-night: "#00A88B"
-  expense-night: "#DB684C"
-  contribution-night: "#8F81D3"
-  income-on-block: "#008B6D"
-  expense-on-block: "#B8492E"
-  contribution-on-block: "#8072C2"
+  income: "#009970"
+  expense: "#E0521F"
+  contribution: "#7B4DEA"
+  income-night: "#00AD85"
+  expense-night: "#E85F37"
+  contribution-night: "#9070E0"
+  income-on-block: "#009970"
+  expense-on-block: "#E0521F"
+  contribution-on-block: "#7B4DEA"
+  cat-alimentacao: "#EC6618"
+  cat-moradia: "#1065C6"
+  cat-transporte: "#0F9CB8"
+  cat-saude: "#DC185A"
+  cat-educacao: "#7018EC"
+  cat-lazer: "#EC18EC"
+  cat-compras: "#0EAA42"
+  cat-assinaturas: "#8A6B0F"
+  cat-moradia-night: "#116CD4"
+  cat-educacao-night: "#A571EF"
+  cat-lazer-night: "#C610C6"
 typography:
   greeting:
     fontFamily: "Geist Variable, ui-sans-serif, system-ui, sans-serif"
@@ -194,7 +205,7 @@ components:
 
 A tela é uma mesa cinza-clara com folhas de papel encorpado apoiadas sobre ela. Cada painel é uma folha: cantos aparados generosos, superfície branca lisa, e uma sombra difusa e curta — a sombra que papel grosso realmente projeta, não o halo que um efeito produz. Sobre essas folhas há tinta preta e nada mais.
 
-A ausência de cor é a decisão, não a economia. Sem matiz para carregar significado, todo o trabalho de hierarquia recai sobre coisas mais duráveis: tamanho, peso, densidade e a distância entre os elementos. É mais difícil de acertar e muito mais difícil de errar — não existe combinação de cores para envelhecer mal, e nenhum leitor perde informação por não distinguir um matiz de outro. Isso continua valendo para o sistema inteiro; o que mudou é que ele agora tem **três exceções nomeadas, fechadas, e nenhuma outra** — ver "As Três Exceções de Cor" em Colors.
+A ausência de cor é a decisão, não a economia. Sem matiz para carregar significado, todo o trabalho de hierarquia recai sobre coisas mais duráveis: tamanho, peso, densidade e a distância entre os elementos. É mais difícil de acertar e muito mais difícil de errar — não existe combinação de cores para envelhecer mal, e nenhum leitor perde informação por não distinguir um matiz de outro. Isso continua valendo para o sistema inteiro; o que mudou é que ele agora tem **quatro exceções nomeadas, fechadas, e nenhuma outra** — ver "As Quatro Exceções de Cor" em Colors.
 
 O acento monocromático existe, e é o inverso: um **bloco de tinta cheia**, retângulo preto sólido com texto branco. É a mancha de tinta na folha. Ele carrega o cartão, o saldo poupado, o item de navegação ativo e o alerta de orçamento estourado — sempre no máximo dois ou três por tela, porque uma folha com metade da área impressa em preto deixa de ter hierarquia.
 
@@ -202,27 +213,34 @@ O sistema recusa duas coisas que a categoria costuma entregar: o gradiente color
 
 **Key Characteristics:**
 
-- Preto, branco e cinzas quase em todo lugar. Duas exceções fechadas — o retrato de avatar (livre, nunca padrão) e a identidade de receita/despesa/aporte (fixa, nunca escolhida) — e nenhuma outra
+- Preto, branco e cinzas quase em todo lugar. Quatro exceções fechadas — retrato de avatar, identidade de receita/despesa/aporte, cor de categoria e a ilustração de login — e nenhuma outra
 - Painéis como folhas: raio de 24px, sombra difusa e curta, borda de 1px quase invisível
 - O inverso — bloco de tinta cheia — é o único acento monocromático, gasto no máximo três vezes por tela
 - Números monoespaçados tabulares; a figura principal em sans, proporcional, muito grande
-- Hierarquia por escala e espaço quase sempre; cor só nas três exceções, e nunca sozinha
+- Hierarquia por escala e espaço quase sempre; cor só nas quatro exceções, e nunca sozinha
 
 ## Colors
 
 Uma escala neutra fria, do papel à tinta, sem nenhum desvio de matiz que possa ser lido como cor — mais duas rampas coloridas, cada uma presa a um só uso.
 
-### As Três Exceções de Cor
+### As Quatro Exceções de Cor
 
-O sistema tem exatamente três cores fora da escala neutra. Nenhuma outra existe, e nenhuma nova entra sem virar uma quarta regra nomeada aqui.
+O sistema tem exatamente quatro cores fora da escala neutra. Nenhuma outra existe, e nenhuma nova entra sem virar uma quinta regra nomeada aqui.
 
-| | Retrato de avatar | Identidade de fluxo | Ilustração de login |
-|---|---|---|---|
-| **Quem escolhe** | Quem usa o app, entre dez opções, em tempo real | O sistema — nunca uma escolha | Quem mantém o produto, uma vez, no código — quem usa o app não escolhe nem troca |
-| **Onde aparece** | Só no avatar | Ícone de direção, marca de gráfico, a Figura quando é um resultado, e o anel/barra de progresso de Orçamento e Metas quando marcam status dentro do limite ou estourado | Só no painel esquerdo de `LoginPage` — nunca dentro do `AppShell`/`AdminShell`, onde o sistema monocromático vale sem exceção |
-| **Por quê** | É a única coisa na tela que representa uma pessoa, não um dado | Receita e despesa são a distinção mais lida da tela; a forma sozinha (seta, sinal, peso) já bastava, a cor é reforço, não requisito | Quem ainda não entrou não está lendo um dado financeiro — a tela de login não tem número nenhum para a cor competir com ele |
+| | Retrato de avatar | Identidade de fluxo | Cor de categoria | Ilustração de login |
+|---|---|---|---|---|
+| **Quem escolhe** | Quem usa o app, entre vinte opções, em tempo real | O sistema — nunca uma escolha | O sistema, uma vez, por busca sobre o validador — o usuário não escolhe nem cria | Quem mantém o produto, uma vez, no código |
+| **Onde aparece** | Só no avatar | Ícone de direção, marca de gráfico, a Figura quando é um resultado, e o anel/barra de Orçamento e Metas quando marcam status | Pastilha de categoria em Orçamento e barra em "Principais categorias" — as duas únicas telas onde as oito aparecem juntas | Só no painel esquerdo de `LoginPage` |
+| **O que codifica** | Uma pessoa | Direção do dinheiro: entrou, saiu, foi guardado | **Identidade**: qual categoria é esta | Nada — é ilustração |
+| **Por quê** | É a única coisa na tela que representa uma pessoa, não um dado | Receita e despesa são a distinção mais lida da tela; a forma sozinha já bastava, a cor é reforço | Procurar uma categoria entre oito ícones do mesmo cinza exige ler oito rótulos; colorida, achar vira reconhecer | Quem ainda não entrou não está lendo um dado financeiro |
 
-A diferença entre as três é a diferença entre personalização, informação e primeira impressão. As duas primeiras são internas ao produto autenticado; a terceira vive inteiramente fora dele, na única tela que existe antes de qualquer sessão. Fora dessas três, a resposta para "posso colorir isto" é sempre não.
+A quarta é a primeira que codifica **identidade** e não valor, e por isso é a única com regra de esgotamento: a lista é fechada nas oito categorias nativas de despesa, e **categoria criada pelo usuário não ganha matiz gerado** — cai em Tinta. Uma cor inventada em tempo de execução não passa por validador nenhum e pode nascer a ΔE 2 da vizinha, ilegível para quem tem daltonismo e indistinguível para quem não tem.
+
+Fora dessas quatro, a resposta para "posso colorir isto" é sempre não.
+
+**A Regra da Cor que Identifica.** A cor de categoria vale só onde as categorias são **comparadas lado a lado**: a lista de limites em Orçamento e as barras de "Principais categorias". Não desce para a lista de lançamentos, onde a linha já se identifica pela descrição e a cor viraria confete; nem para os totais, que são valor e pertencem à identidade de fluxo. Duas paletas na mesma marca gráfica seria a tela dizendo duas coisas com o mesmo recurso.
+
+A separação por daltonismo desta paleta fica em ΔE 6.1 — dentro da faixa de piso, que só é legal **com codificação secundária**. Ela é obrigatória aqui e não opcional: toda categoria aparece sempre com ícone e rótulo, nunca só com a cor. Apague a cor e nada se perde, exatamente como manda a Regra do Sinal Sem Cor.
 
 ### Identidade de fluxo
 
@@ -425,7 +443,7 @@ Quatro campos, na ordem em que se usam: **avisos** (o que exige atenção), **te
 - **Alternador de tema:** binário, sol ou lua, e nada mais. O ícone mostra o tema **que está na tela**, não a preferência salva — que pode ser "automático" e não tem desenho próprio. Um terceiro ícone de monitor obrigava a decifrar o símbolo para descobrir em que modo se estava. "Automático" segue existindo como escolha nomeada em Ajustes, e é o padrão de quem abre pela primeira vez; o primeiro toque aqui o converte em preferência explícita.
 - **Avatar:** um de dez retratos ilustrados de capivara — artes prontas, embutidas no aplicativo, não um upload — em dois formatos (círculo, quadrado arredondado).
 
-**A Regra do Retrato Livre.** O avatar é uma das três exceções de cor do sistema (ver "As Três Exceções de Cor" em Colors), e a única das três que quem usa o app escolhe em tempo real — a identidade de fluxo é fixa, e a ilustração de login é fixada no código. Ela fica contida aqui porque um retrato é a única coisa na tela que representa uma pessoa, e não um dado: o produto continua sem pedir nem guardar foto de ninguém. As dez ilustrações vivem na mesma grade, uma só escolha por vez, e o formato (círculo ou quadrado) é a única outra propriedade do avatar.
+**A Regra do Retrato Livre.** O avatar é uma das quatro exceções de cor do sistema (ver "As Quatro Exceções de Cor" em Colors), e a única que quem usa o app escolhe em tempo real — identidade de fluxo, cor de categoria e ilustração de login são todas fixadas no código. Ela fica contida aqui porque um retrato é a única coisa na tela que representa uma pessoa, e não um dado: o produto continua sem pedir nem guardar foto de ninguém. As vinte ilustrações vivem na mesma grade, uma só escolha por vez, e o formato (círculo ou quadrado) é a única outra propriedade do avatar.
 - **Saudação:** ocupa o **título** do painel, em 1.75rem — é a primeira linha que a pessoa lê no dia, e um rótulo miúdo acima do cabeçalho não sustentava esse papel. Segue o relógio de quem lê (bom dia até meio-dia, boa tarde até as dezoito, boa noite depois) e é recalculada a cada minuto, porque um painel financeiro fica horas aberto numa aba esquecida. Desligada, o painel volta a se chamar "Painel" — o cabeçalho nunca fica sem nome.
 
 **A Regra da Abertura que Informa.** A saudação abre em bloco de três peças: a **folha de calendário** à esquerda em 52px (dia da semana abreviado sobre o número do dia, em Rebaixado — papel sobre papel, porque a cota de tinta da tela já está gasta na barra lateral e no cartão), o cumprimento, e embaixo o que hoje cobra — "1 lançamento vence hoje", ou "Nada vence hoje". A contagem sai do mesmo histórico que alimenta "Ainda vence este mês": lançamentos que já existem, sem previsão nem estimativa, e receita não entra porque receita não vence.
@@ -474,7 +492,7 @@ Representação do cartão cadastrado, em proporção real (1,586:1), Bloco de t
 
 ### Don't:
 
-- **Don't** introduzir matiz fora das três exceções fechadas (retrato de avatar; identidade de fluxo; ilustração de login) — nem em alerta, nem em estado ativo, nem numa quarta categoria de gráfico, nem dentro do `AppShell`/`AdminShell`. Uma cor nova pede uma regra nomeada nesta seção antes de qualquer linha de código.
+- **Don't** introduzir matiz fora das quatro exceções fechadas (retrato de avatar; identidade de fluxo; cor de categoria; ilustração de login) — nem em alerta, nem em estado ativo, nem numa quinta categoria de gráfico. E dentro da cor de categoria, nunca gerar matiz em tempo de execução para categoria criada pelo usuário: ela veste Tinta. Uma cor nova pede uma regra nomeada nesta seção antes de qualquer linha de código.
 - **Don't** deixar a cor da identidade de fluxo ser a única leitura de um valor. Ela mora no ícone, na marca de gráfico, na Figura e no anel/barra de progresso — nunca sozinha, nunca no algarismo pequeno de uma lista.
 - **Don't** dar ao estado `warning` de orçamento uma terceira cor. O anel e a barra de progresso são binários — Receita ou Despesa — para manter a paleta em duas rampas; ver "A Regra do Status Emprestado".
 - **Don't** usar sombra dupla clara-e-escura (o efeito estampado do neumorfismo): reduz a nitidez da borda e envelhece rápido.

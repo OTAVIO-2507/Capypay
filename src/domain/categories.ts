@@ -65,6 +65,35 @@ export function categoryIcon(
 }
 
 /**
+ * As oito categorias nativas de despesa que têm matiz próprio, na ordem em que
+ * a paleta foi validada. Só elas: a lista é fechada de propósito.
+ */
+const CATEGORIAS_COM_COR = new Set<CategoryId>([
+  'alimentacao',
+  'moradia',
+  'transporte',
+  'saude',
+  'educacao',
+  'lazer',
+  'compras',
+  'assinaturas',
+])
+
+/**
+ * O matiz de uma categoria, ou `null` para quem não tem.
+ *
+ * Devolver `null` é a parte importante. Categoria criada pelo usuário **não
+ * ganha cor gerada**: um matiz inventado em tempo de execução não passa por
+ * validador nenhum e pode nascer a ΔE 2 da categoria vizinha, ilegível para
+ * quem tem daltonismo e indistinguível para quem não tem. Quem não está na
+ * lista veste Tinta, o neutro do sistema, e continua se identificando pelo
+ * ícone e pelo rótulo — que é como todas se identificavam antes da cor.
+ */
+export function categoryColor(id: CategoryId | undefined | null): string | null {
+  return id && CATEGORIAS_COM_COR.has(id) ? `var(--cat-${id})` : null
+}
+
+/**
  * Mapeia os rótulos livres da versão anterior para os identificadores atuais.
  * Fora dessa tabela, o texto vira slug e, se ainda assim não bater, cai em
  * "Outros" — nenhum lançamento antigo pode se perder na migração.

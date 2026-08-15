@@ -1,6 +1,7 @@
 import { Icon } from '@/components/Icon'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Money } from '@/components/ui/Money'
+import { categoryColor } from '@/domain/categories'
 import type { CategorySpend } from '@/domain/selectors'
 import { cn } from '@/lib/cn'
 import { formatPercent } from '@/lib/format'
@@ -57,7 +58,12 @@ export function CategoryBreakdown({ data, limit, className }: CategoryBreakdownP
         <li key={item.categoryId}>
           <div className="mb-2 flex items-baseline justify-between gap-3">
             <span className="flex min-w-0 items-center gap-2.5">
-              <Icon name={item.icon} size={15} className="shrink-0 text-faint" />
+              <Icon
+                name={item.icon}
+                size={15}
+                className={cn('shrink-0', categoryColor(item.categoryId) ? '' : 'text-faint')}
+                style={{ color: categoryColor(item.categoryId) ?? undefined }}
+              />
               <span className="truncate text-[0.8125rem] font-medium text-ink">{item.label}</span>
             </span>
             <span className="flex shrink-0 items-baseline gap-2.5">
@@ -73,9 +79,21 @@ export function CategoryBreakdown({ data, limit, className }: CategoryBreakdownP
             traços indistinguíveis.
           */}
           <div className="h-2 w-full overflow-hidden rounded-full bg-sunken">
+            {/*
+              A barra veste o matiz da categoria. Aqui a cor não é enfeite: as
+              barras estão empilhadas e a mesma categoria precisa ser
+              reconhecível entre esta lista e a de Orçamento, que é a única
+              outra tela onde as oito aparecem juntas. Sem matiz, cai em Tinta.
+            */}
             <div
-              className="h-full rounded-full bg-ink transition-[width] duration-300"
-              style={{ width: `${Math.max((item.amount / largest) * 100, 2)}%` }}
+              className={cn(
+                'h-full rounded-full transition-[width] duration-300',
+                categoryColor(item.categoryId) ? '' : 'bg-ink',
+              )}
+              style={{
+                width: `${Math.max((item.amount / largest) * 100, 2)}%`,
+                backgroundColor: categoryColor(item.categoryId) ?? undefined,
+              }}
             />
           </div>
         </li>

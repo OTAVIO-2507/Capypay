@@ -68,9 +68,44 @@
    * ≥ 3:1, suficiente para ícone e marca de gráfico, não para texto — por
    * isso a cor nunca é a única leitura nem veste o algarismo pequeno.
    */
-  --income: #008b6d;
-  --expense: #b8492e;
-  --contribution: #8072c2;
+  --income: #009970;
+  --expense: #e0521f;
+  --contribution: #7b4dea;
+
+  /*
+   * A cor de categoria — a quarta exceção, e a primeira que existe para
+   * **identidade** e não para leitura de valor.
+   *
+   * Orçamento é a tela onde a pessoa procura uma categoria específica no meio
+   * de oito, e o ícone monocromático não ajuda nessa busca: todos têm o mesmo
+   * peso e a mesma cor, então achar "Transporte" exige ler oito rótulos. Com
+   * a pastilha colorida, achar vira reconhecer.
+   *
+   * Oito matizes fixos, um por categoria nativa, nunca reordenados e nunca
+   * reciclados. Categoria criada pelo usuário **não ganha matiz gerado**: cai
+   * em Tinta, que é o neutro do sistema. Uma cor inventada em tempo de
+   * execução não passa por validador nenhum e quebraria as duas garantias
+   * abaixo na primeira categoria nova.
+   *
+   * Escolhidos por busca sobre o validador da skill de dataviz, não a olho:
+   * banda de luminosidade, piso de croma e contraste ≥ 3:1 contra a folha nos
+   * dois temas, com a saturação máxima que ainda passa em tudo. A separação
+   * por daltonismo fica em ΔE 6.1 — dentro da faixa de piso, que só é legal
+   * com codificação secundária. Ela existe e é obrigatória aqui: **toda
+   * categoria aparece sempre com ícone e rótulo**, nunca só com a cor. Apague
+   * a cor e nada se perde, exatamente como manda a Regra do Sinal Sem Cor.
+   *
+   * A pastilha leva o glifo em branco, com contraste mínimo de 3.07:1 sobre a
+   * cor mais clara da paleta.
+   */
+  --cat-alimentacao: #ec6618;
+  --cat-moradia: #1065c6;
+  --cat-transporte: #0f9cb8;
+  --cat-saude: #dc185a;
+  --cat-educacao: #7018ec;
+  --cat-lazer: #ec18ec;
+  --cat-compras: #0eaa42;
+  --cat-assinaturas: #8a6b0f;
 
   /*
    * A mesma identidade, calibrada para o bloco de tinta — a superfície do
@@ -79,9 +114,9 @@
    * #16171A e #F4F5F6), então um só trio serve às duas direções: não precisa
    * repetir em `.dark`.
    */
-  --income-on-block: #008b6d;
-  --expense-on-block: #b8492e;
-  --contribution-on-block: #8072c2;
+  --income-on-block: #009970;
+  --expense-on-block: #e0521f;
+  --contribution-on-block: #7b4dea;
   --chart-axis: #8a9099;
 
   /*
@@ -160,9 +195,24 @@
   --ramp-4: #5a616b;
 
   /* Mesma identidade, passo escuro — validada de novo contra as superfícies escuras. */
-  --income: #00a88b;
-  --expense: #db684c;
-  --contribution: #8f81d3;
+  --income: #00ad85;
+  --expense: #e85f37;
+  --contribution: #9070e0;
+
+  /*
+   * A mesma paleta de categoria, repassada pelo validador contra a folha
+   * preta. Cinco matizes servem aos dois temas; três precisaram de um passo
+   * próprio para caber na banda de luminosidade do escuro, que é mais estreita
+   * que a do claro.
+   */
+  --cat-alimentacao: #ec6618;
+  --cat-moradia: #116cd4;
+  --cat-transporte: #0f9cb8;
+  --cat-saude: #dc185a;
+  --cat-educacao: #a571ef;
+  --cat-lazer: #c610c6;
+  --cat-compras: #0eaa42;
+  --cat-assinaturas: #8a6b0f;
   --chart-axis: #787e86;
 
   /* No escuro a sombra não é lida; a profundidade vira luminosidade. */

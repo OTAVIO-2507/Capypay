@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/Controls'
 import { Donut } from '@/components/ui/Donut'
 import { MoneyInput } from '@/components/ui/Field'
 import { Money } from '@/components/ui/Money'
-import { categoriesFor } from '@/domain/categories'
+import { categoryColor, categoriesFor } from '@/domain/categories'
 import { budgetStatuses, transactionsInMonth } from '@/domain/selectors'
 import { cn } from '@/lib/cn'
 import { formatMonthLong, shiftMonth } from '@/lib/date'
@@ -86,7 +86,25 @@ export function BudgetPage() {
                   className="-mx-3 flex items-center justify-between gap-4 rounded-md px-3 py-2.5 transition-colors duration-150 hover:bg-sunken/60"
                 >
                   <span className="flex min-w-0 items-center gap-2.5">
-                    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-sunken text-faint">
+                    {/*
+                      A pastilha veste o matiz da categoria — a quarta exceção
+                      de cor, documentada em DESIGN.md. É esta tela que a
+                      justifica: aqui a pessoa procura uma categoria entre oito,
+                      e com oito ícones do mesmo cinza achar exige ler todos os
+                      rótulos. Colorida, achar vira reconhecer.
+
+                      O glifo em branco, e não o ícone colorido sobre o cinza:
+                      a mancha de cor é maior e por isso mais rápida de achar
+                      de canto de olho. Categoria criada pelo usuário volta ao
+                      cinza — `categoryColor` devolve nulo de propósito.
+                    */}
+                    <span
+                      style={{ backgroundColor: categoryColor(category.id) ?? undefined }}
+                      className={cn(
+                        'inline-flex size-8 shrink-0 items-center justify-center rounded-lg',
+                        categoryColor(category.id) ? 'text-white' : 'bg-sunken text-faint',
+                      )}
+                    >
                       <Icon name={category.icon} size={15} />
                     </span>
                     <span className="min-w-0">
