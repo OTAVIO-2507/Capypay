@@ -25,6 +25,8 @@ colors:
   block-night: "#F4F5F6"
   block-ink-night: "#101114"
   block-ink-secondary-night: "#5F646C"
+  void: "#FFFFFF"
+  void-night: "#000000"
   series-1: "#101114"
   series-1-night: "#F4F5F6"
   income: "#009970"
@@ -240,9 +242,11 @@ Fora dessas quatro, a resposta para "posso colorir isto" é sempre não.
 
 **A Regra da Cor que Identifica.** A cor de categoria aparece onde a categoria é a pergunta: a lista de limites e o anel de composição em Orçamento, as barras de "Principais categorias", e o ponto ao lado do nome da categoria em cada lançamento. Não veste os totais, que são valor e pertencem à identidade de fluxo.
 
-**O tamanho da marca segue o trabalho que ela faz.** Onde a pessoa procura uma categoria específica — a lista de limites — a marca é a pastilha inteira, de 32px, porque procurar exige achar de canto de olho. Onde a categoria só precisa ser reconhecida de passagem — a lista de lançamentos — a marca é um ponto de 8px ao lado do nome. Uma pastilha grande por linha de extrato viraria confete e roubaria a leitura do valor, que é o que se procura ali.
+**A marca é a mesma em toda tela.** A pastilha de categoria tem o mesmo desenho em Orçamento e na lista de lançamentos: mesmo tamanho, mesmo raio, glifo branco sobre o matiz. Reconhecer "o laranja" numa tela e na outra só funciona se for a mesma marca, e não uma versão reduzida dela — uma marca que encolhe entre telas é uma marca que a pessoa precisa reaprender em cada uma.
 
-**Uma marca gráfica não diz duas coisas.** No lançamento, o quadro do ícone já codifica o **tipo** pela forma: entrada contornada, saída preenchida, aporte tracejada. Pintar esse mesmo quadro de categoria seria sobrepor duas paletas na mesma marca. Por isso a identidade de categoria ganha marca própria, separada, ao lado do nome — e por isso a cor não entra em texto nenhum, que continua vestindo tinta.
+**A pastilha colorida ocupa a leitura mais fraca, nunca uma forte.** No lançamento, o quadro do ícone codificava o **tipo** pela forma: entrada contornada, saída preenchida, aporte tracejada. Na despesa colorida essa leitura sai do quadro, e a conta foi feita antes: o tipo continua dito pela seta antes do valor, pelo sinal `+`/`−` e pelo peso da tinta. Eram quatro leituras independentes de matiz e ficam três — e a que saiu era a mais fraca das quatro. Receita e aporte, que não têm matiz de categoria, mantêm o quadro e as quatro.
+
+O limite continua de pé do outro lado: a cor de categoria não entra em texto nenhum, que segue vestindo tinta, nem nos totais, que são valor e pertencem à identidade de fluxo.
 
 A separação por daltonismo desta paleta fica em ΔE 6.1 — dentro da faixa de piso, que só é legal **com codificação secundária**. Ela é obrigatória aqui e não opcional: toda categoria aparece sempre com ícone e rótulo, nunca só com a cor. Apague a cor e nada se perde, exatamente como manda a Regra do Sinal Sem Cor.
 
@@ -360,6 +364,8 @@ Profundidade **física e discreta**: a folha se separa da mesa por uma sombra di
 ### Named Rules
 
 **A Regra da Sombra com Contato.** Toda sombra tem deslocamento vertical positivo e desfoque maior que o deslocamento. Halo colorido de deslocamento zero e sombra dupla clara-e-escura (o efeito estampado do neumorfismo) estão fora: reduzem a nitidez da borda e envelhecem rápido.
+
+**A Regra da Superfície Sem Vizinha.** Carregamento e erro ocupam a janela inteira sem nenhuma folha em cena, e são as duas únicas superfícies do sistema que não têm com que se comparar. Por isso vão ao extremo absoluto da escala — branco puro, preto puro — e não à Folha. A folha do escuro é #0A0B0D: três pontos acima do preto, invisíveis ao lado de outra superfície e visíveis quando ocupam a tela toda, onde viram um cinza escuro chapado. Toda superfície que tem vizinha continua na escada normal; a exceção é literalmente a ausência de vizinha.
 
 **A Regra do Escuro sem Sombra.** No tema escuro a sombra não é lida. A profundidade passa integralmente para a diferença de luminosidade entre mesa, folha e folha erguida, e a hairline assume o limite.
 
