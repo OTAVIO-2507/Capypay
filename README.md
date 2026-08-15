@@ -21,7 +21,8 @@ Login real fica na frente de tudo. Cada conta é criada por um administrador —
 
 ## Funcionalidades
 
-- **Lançamentos** de receita, despesa e aporte em meta, com categoria, data, conta de origem e parcelamento (semanal, mensal ou anual). Cada parcela é gerada como um lançamento próprio e pode ser editada isoladamente.
+- **Lançamentos** de receita, despesa e aporte em meta, com categoria, data, conta de origem e repetição (semanal, mensal ou anual). Cada cobrança é gerada como um lançamento próprio e pode ser editada isoladamente — a conta de luz muda de valor todo mês.
+- **Parcelamentos e Assinaturas** em páginas próprias, porque a unidade das duas é a série e não o lançamento: em Transações, um notebook em 10x são dez linhas soltas que não somam nada. Parcelamento tem total fechado e a pergunta é quanto falta pagar; assinatura não tem total e a pergunta é quanto ocupa por mês — inclusive a projeção anual, que é onde a conta assusta. Quem separa as duas é uma escolha do usuário no formulário, não um palpite sobre o nome ou a categoria.
 - **Orçamento por categoria e por mês**, com histórico preservado: alterar o teto de agosto não reescreve o de julho. Três estados visíveis — dentro do limite, perto do limite e estourado.
 - **Metas** cujo progresso vem sempre da soma dos aportes vinculados. Não há campo de "valor já guardado" para digitar, então o número na tela nunca discorda do extrato.
 - **Contas e cartões** como entidade própria, com ciclo de fechamento e vencimento. O cartão cadastrado é desenhado no painel em proporção real — e sem conta cadastrada, o espaço convida a cadastrar em vez de exibir um cartão fictício.
