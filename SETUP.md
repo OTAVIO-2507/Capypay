@@ -102,10 +102,13 @@ Crie a aplicação no painel da Pluggy e pegue o `clientId` e o `clientSecret`.
 Eles **não entram no repositório** — vão como secret da função:
 
 ```bash
-supabase secrets set PLUGGY_CLIENT_ID=<seu-client-id>
-supabase secrets set PLUGGY_CLIENT_SECRET=<seu-client-secret>
-supabase functions deploy pluggy-connect-token
+npx supabase secrets set PLUGGY_CLIENT_ID=<seu-client-id> --project-ref mkxjmrmkgsetnclfkxcj
+npx supabase secrets set PLUGGY_CLIENT_SECRET=<seu-client-secret> --project-ref mkxjmrmkgsetnclfkxcj
+npx supabase functions deploy pluggy-connect-token --project-ref mkxjmrmkgsetnclfkxcj
 ```
+
+Sem aspas e sem espaço em volta do `=`. O `--project-ref` evita depender de
+`supabase link` ter sido feito nesta máquina.
 
 A função está em
 [`supabase/functions/pluggy-connect-token/index.ts`](supabase/functions/pluggy-connect-token/index.ts).
@@ -161,10 +164,26 @@ revoke all on public.bank_connections from anon;
 
 Depois publique a função e registre a URL na Pluggy:
 
+O segredo é a única porta da função, então precisa vir de gerador
+criptográfico. No PowerShell:
+
+```powershell
+$bytes = New-Object byte[] 32
+(New-Object System.Security.Cryptography.RNGCryptoServiceProvider).GetBytes($bytes)
+$s = ($bytes | ForEach-Object { $_.ToString('x2') }) -join ''
+npx supabase secrets set PLUGGY_WEBHOOK_SECRET=$s --project-ref mkxjmrmkgsetnclfkxcj
+$s   # anote: são 64 caracteres, e você precisa deles na URL abaixo
+```
+
+No Git Bash, `openssl rand -hex 32` faz o mesmo. **Não use `Get-Random`**: ele
+não é criptográfico, e `Get-Random -Count N` sorteia itens *distintos* de uma
+lista — pedir 64 de uma lista de 16 dígitos hexadecimais devolve os 16
+embaralhados, um segredo curto e de formato previsível.
+
+Depois publique a função:
+
 ```bash
-# Um segredo longo e aleatório. Ele é a única porta da função.
-supabase secrets set PLUGGY_WEBHOOK_SECRET=$(openssl rand -hex 32)
-supabase functions deploy pluggy-webhook --no-verify-jwt
+npx supabase functions deploy pluggy-webhook --no-verify-jwt --project-ref mkxjmrmkgsetnclfkxcj
 ```
 
 O `--no-verify-jwt` é obrigatório e tem consequência: webhook chega de
@@ -173,7 +192,7 @@ qualquer um que descubra a URL**. É por isso que o segredo vai na própria
 URL, registrada uma vez na Pluggy:
 
 ```
-https://<ref-do-projeto>.functions.supabase.co/pluggy-webhook?token=<o-segredo>
+https://mkxjmrmkgsetnclfkxcj.functions.supabase.co/pluggy-webhook?token=<o-segredo>
 ```
 
 A comparação do segredo é feita em tempo constante. Comparar com `===` sai no
