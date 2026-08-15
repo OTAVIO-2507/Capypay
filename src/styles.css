@@ -120,6 +120,19 @@
   --chart-axis: #8a9099;
 
   /*
+   * O fundo das telas que ocupam a janela inteira sem nenhuma folha em cena:
+   * carregamento e erro. Não é a folha, é o extremo absoluto da escala —
+   * branco puro no claro, preto puro no escuro.
+   *
+   * A folha do escuro é #0A0B0D, quase preto mas não preto. Três pontos são
+   * invisíveis ao lado de outra superfície e visíveis quando ocupam a tela
+   * toda: viram um cinza muito escuro chapado, sem nada com que se comparar.
+   * É a única superfície do sistema que não tem vizinha, e por isso a única
+   * que pode ir ao extremo.
+   */
+  --void: #ffffff;
+
+  /*
    * O véu das camadas modais — fundo de diálogo e do tour de boas-vindas.
    * Não é um cinza da escala: é preto translúcido, para escurecer o que está
    * atrás em vez de cobrir com uma superfície. Mesmo valor nos dois temas.
@@ -183,6 +196,8 @@
   --block-hover: #ffffff;
   --block-ink: #101114;
   --block-ink-secondary: #5f646c;
+
+  --void: #000000;
 
   --series-1: #f4f5f6;
   /* Acompanha a hairline, como no claro. */
@@ -263,6 +278,7 @@
   --font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --color-desk: var(--desk);
+  --color-void: var(--void);
   --color-sheet: var(--sheet);
   --color-raised: var(--sheet-raised);
   --color-sunken: var(--sunken);

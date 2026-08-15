@@ -7,16 +7,17 @@ import { Wordmark } from '@/components/Wordmark'
  * esperar. Sessão e dados agora vêm de rede, então este é o estado que
  * aparece entre abrir a aba e saber se há alguém logado, e entre logar e os
  * dados da conta chegarem.
- */
-/*
- * Veste Folha, e não Mesa: a mesa só existe para ter folhas apoiadas nela, e
- * aqui não há nenhuma. Uma tela inteira de mesa é o cinza sem função — no
- * tema escuro isso aparecia como um cinza chapado onde o resto do produto é
- * preto. Sem folha em cena, a tela inteira é a folha.
+ *
+ * Veste o extremo da escala, e não a Folha: branco puro no claro, preto puro
+ * no escuro. A mesa só existe para ter folhas apoiadas nela, e aqui não há
+ * nenhuma — mas a folha do escuro é #0A0B0D, e três pontos acima do preto
+ * ocupando a tela inteira leem como cinza chapado, porque não há nenhuma
+ * outra superfície com que comparar. Sem vizinha, a superfície pode ir ao
+ * extremo.
  */
 export function FullPageLoader() {
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-sheet">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-6 bg-void">
       <Wordmark />
       <span
         aria-hidden="true"

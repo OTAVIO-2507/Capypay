@@ -22,10 +22,10 @@ export function ErrorPage() {
   const isNotFound = isRouteErrorResponse(error) && error.status === 404
   const path = typeof window === 'undefined' ? '' : window.location.pathname
 
-  // Folha e não Mesa, pelo mesmo motivo de `FullPageLoader`: sem folha em
-  // cena, a tela inteira é a folha.
+  // O extremo da escala, pelo mesmo motivo de `FullPageLoader`: tela cheia
+  // sem nenhuma folha em cena não tem vizinha com que se comparar.
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-sheet px-6 py-16">
+    <div className="flex min-h-dvh items-center justify-center bg-void px-6 py-16">
       <div className="w-full max-w-lg text-center">
         <span className="inline-flex size-14 items-center justify-center rounded-full bg-sunken text-faint">
           <Icon name={isNotFound ? 'circle-alert' : 'triangle-alert'} size={24} />
