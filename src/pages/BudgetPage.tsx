@@ -80,11 +80,46 @@ export function BudgetPage() {
       />
 
       <div className="grid gap-5 lg:grid-cols-12">
-        <Card className="lg:col-span-7">
-          <CardHeader
-            title={`Limites de ${formatMonthLong(month).toLowerCase()}`}
-            description="Deixe em branco ou zero para não acompanhar a categoria."
-          />
+        <div className="flex flex-col gap-5 lg:col-span-7">
+          {/*
+            A Regra do Alerta Invertido, posta em prática: um limite estourado
+            inverte o painel inteiro para tinta cheia — o evento mais alto
+            disponível num campo sem cor.
+
+            Fica no topo da coluna das categorias, e não no fim da outra, por
+            dois motivos. O primeiro é de leitura: o aviso nomeia categorias, e
+            a lista delas está logo abaixo — quem lê "Alimentação estourou"
+            desce dois dedos e já está no campo do limite. O segundo é a Regra
+            da Coluna que Fecha: acima, quem fecha o vão da coluna é a lista,
+            que distribui a sobra entre as próprias linhas. No fim da coluna
+            seria o bloco de aviso a esticar, e um aviso de duas linhas com
+            duzentos pixels de vazio embaixo lê como falha de carregamento.
+          */}
+          {exceeded.length > 0 ? (
+            <BlockPanel>
+              <CardHeader
+                title="Atenção"
+                onBlock
+                action={
+                  <span className="inline-flex items-center gap-1 rounded-full bg-block-ink/15 px-2.5 py-1 text-xs font-semibold text-block-ink">
+                    <Icon name="triangle-alert" size={12} />
+                    {exceeded.length}
+                  </span>
+                }
+              />
+              <p className="text-xs leading-relaxed text-block-muted">
+                {exceeded.length === 1
+                  ? `O limite de ${exceeded[0].label} foi ultrapassado neste mês. Vale conferir os lançamentos dessa categoria ou ajustar o teto para o mês seguinte.`
+                  : `Os limites de ${exceeded.map((row) => row.label).join(', ')} foram ultrapassados neste mês. Vale conferir os lançamentos dessas categorias ou ajustar os tetos para o mês seguinte.`}
+              </p>
+            </BlockPanel>
+          ) : null}
+
+          <Card className="flex flex-1 flex-col">
+            <CardHeader
+              title={`Limites de ${formatMonthLong(month).toLowerCase()}`}
+              description="Deixe em branco ou zero para não acompanhar a categoria."
+            />
 
           <ul className="flex flex-col divide-y divide-hairline">
             {expenseCategories.map((category) => {
@@ -149,11 +184,12 @@ export function BudgetPage() {
                 </li>
               )
             })}
-          </ul>
-        </Card>
+            </ul>
+          </Card>
+        </div>
 
         <div className="flex flex-col gap-5 lg:col-span-5">
-          <Card className={cn('flex flex-col', exceeded.length === 0 && 'flex-1')}>
+          <Card className="flex flex-1 flex-col">
             <CardHeader title="Como está indo" />
 
             {/*
@@ -239,33 +275,6 @@ export function BudgetPage() {
             )}
           </Card>
 
-          {/*
-            A Regra do Alerta Invertido, posta em prática: um limite estourado
-            inverte o painel inteiro para tinta cheia — o evento mais alto
-            disponível num campo sem cor. Até aqui a regra só existia descrita
-            em DESIGN.md; o badge "Estourou" carregava o aviso sozinho. Com
-            vários limites passados do teto ao mesmo tempo, o badge se perdia
-            no meio de uma tela cinza — o bloco inteiro não se perde.
-          */}
-          {exceeded.length > 0 ? (
-            <BlockPanel className="flex flex-1 flex-col">
-              <CardHeader
-                title="Atenção"
-                onBlock
-                action={
-                  <span className="inline-flex items-center gap-1 rounded-full bg-block-ink/15 px-2.5 py-1 text-xs font-semibold text-block-ink">
-                    <Icon name="triangle-alert" size={12} />
-                    {exceeded.length}
-                  </span>
-                }
-              />
-              <p className="text-xs leading-relaxed text-block-muted">
-                {exceeded.length === 1
-                  ? `O limite de ${exceeded[0].label} foi ultrapassado neste mês. Vale conferir os lançamentos dessa categoria ou ajustar o teto para o mês seguinte.`
-                  : `Os limites de ${exceeded.map((row) => row.label).join(', ')} foram ultrapassados neste mês. Vale conferir os lançamentos dessas categorias ou ajustar os tetos para o mês seguinte.`}
-              </p>
-            </BlockPanel>
-          ) : null}
         </div>
       </div>
     </>
