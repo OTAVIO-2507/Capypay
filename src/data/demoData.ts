@@ -70,6 +70,26 @@ const COBRANCAS = 12
 const COBRANCAS_PASSADAS = 5
 
 /**
+ * As compras parceladas, que são o outro lado da mesma mecânica.
+ *
+ * Uma delas já terminou de propósito: a página de Parcelamentos separa em
+ * andamento de finalizadas, e uma demonstração em que a segunda aba está
+ * sempre vazia não demonstra a separação.
+ */
+const INSTALLMENTS: {
+  day: number
+  description: string
+  parcela: number
+  parcelas: number
+  pagas: number
+  categoryId: string
+}[] = [
+  { day: 12, description: 'Notebook', parcela: 416.5, parcelas: 10, pagas: 6, categoryId: 'compras' },
+  { day: 6, description: 'Sofá da sala', parcela: 289.9, parcelas: 6, pagas: 2, categoryId: 'moradia' },
+  { day: 22, description: 'Curso de inglês', parcela: 197, parcelas: 4, pagas: 4, categoryId: 'educacao' },
+]
+
+/**
  * O que muda em cada mês, contando do mais antigo para o atual.
  *
  * São seis meses porque o gráfico de fluxo mostra seis: com três, metade do
@@ -229,7 +249,37 @@ export function createDemoData(): FinanceData {
         source: 'recurring',
         externalId: null,
         seriesId,
-        installment: { index: index + 1, total: COBRANCAS },
+        seriesKind: 'subscription',
+        installment: null,
+        notes: null,
+        createdAt: now + sequence,
+        updatedAt: now + sequence,
+      })
+      sequence += 1
+    }
+  }
+
+  // As compras parceladas. `pagas` posiciona a série no tempo: uma compra com
+  // 6 de 10 pagas começou seis meses atrás e termina daqui a quatro.
+  for (const compra of INSTALLMENTS) {
+    const seriesId = createId('series')
+
+    for (let index = 0; index < compra.parcelas; index += 1) {
+      const month = shiftMonth(thisMonth, index - (compra.pagas - 1))
+      transactions.push({
+        id: createId('tx'),
+        kind: 'expense',
+        description: `${compra.description} (${index + 1}/${compra.parcelas})`,
+        amountCents: Math.round(compra.parcela * 100),
+        date: `${month}-${String(compra.day).padStart(2, '0')}`,
+        categoryId: compra.categoryId,
+        goalId: null,
+        accountId: accountByKey.cartao,
+        source: 'recurring',
+        externalId: null,
+        seriesId,
+        seriesKind: 'installment',
+        installment: { index: index + 1, total: compra.parcelas },
         notes: null,
         createdAt: now + sequence,
         updatedAt: now + sequence,
