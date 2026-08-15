@@ -92,6 +92,35 @@ admin-users` de novo.** Ela não passa pelo CI nem pelo build do site. Se o
 painel se comportar de um jeito que o código não explica, o mais provável é
 que a versão publicada seja mais antiga que a do repositório.
 
+## Etapa opcional — Open Finance com a Pluggy
+
+Só é necessária se você for conectar contas bancárias de verdade. Sem ela o
+resto do produto funciona igual; o que falha é a tela de conexão bancária, e
+com uma mensagem que diz exatamente isso em vez de um erro genérico.
+
+Crie a aplicação no painel da Pluggy e pegue o `clientId` e o `clientSecret`.
+Eles **não entram no repositório** — vão como secret da função:
+
+```bash
+supabase secrets set PLUGGY_CLIENT_ID=<seu-client-id>
+supabase secrets set PLUGGY_CLIENT_SECRET=<seu-client-secret>
+supabase functions deploy pluggy-connect-token
+```
+
+A função está em
+[`supabase/functions/pluggy-connect-token/index.ts`](supabase/functions/pluggy-connect-token/index.ts).
+Ela troca as credenciais por uma API Key de vida curta e devolve ao navegador
+**só** o Connect Token — a chave e as credenciais nunca saem do servidor.
+
+O token é sempre carimbado com o id da sessão de quem chamou, e nunca com um
+id vindo do corpo da requisição. A documentação da Pluggy passa esse campo
+pelo corpo; aceitá-lo assim deixaria qualquer pessoa logada abrir uma conexão
+bancária carimbada como de outra, e as contas conectadas chegariam vinculadas
+à conta errada.
+
+Como as duas variáveis são lidas na chamada, **trocar um secret exige
+`supabase functions deploy pluggy-connect-token` de novo.**
+
 **Ponto de atenção:** a função usa `ban_duration: '876000h'`/`'none'` para
 desativar/reativar contas. Esse formato pode ter mudado entre versões do SDK
 — se `Desativar conta` no painel admin falhar, confira a assinatura atual de
