@@ -20,6 +20,7 @@ export function createEmptyData(): FinanceData {
     },
     settings: { theme: 'system', privacyMode: false },
     accounts: [],
+    connections: [],
     categories: DEFAULT_CATEGORIES.map((category) => ({ ...category })),
     transactions: [],
     goals: [],

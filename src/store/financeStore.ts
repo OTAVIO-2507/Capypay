@@ -55,6 +55,8 @@ interface FinanceState {
   copyBudgetsFromPreviousMonth: (month: MonthKey) => void
 
   addAccount: (account: Omit<Account, 'id' | 'createdAt' | 'archived'>) => void
+  registerBankConnection: (provider: string, itemId: string) => void
+  removeBankConnection: (itemId: string) => void
   updateAccount: (id: string, patch: Partial<Account>) => void
   deleteAccount: (id: string) => void
 
@@ -213,6 +215,42 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
           ...data.accounts,
           { ...account, id: createId('acc'), archived: false, createdAt: Date.now() },
         ],
+      })),
+
+    /**
+     * Guarda a autorização que o widget do agregador acabou de devolver.
+     *
+     * Idempotente pelo `itemId`: reconectar a mesma instituição devolve o
+     * mesmo identificador, e duas linhas iguais fariam a importação futura
+     * pedir os mesmos lançamentos duas vezes. Quando já existe, o registro é
+     * mantido com a data original — reconectar renova o consentimento no
+     * banco, não cria uma conexão nova.
+     */
+    registerBankConnection: (provider, itemId) =>
+      mutate((data) => {
+        if (data.connections.some((item) => item.itemId === itemId)) return data
+        return {
+          ...data,
+          connections: [
+            ...data.connections,
+            { provider, itemId, connectedAt: Date.now(), lastSyncedAt: null },
+          ],
+        }
+      }),
+
+    removeBankConnection: (itemId) =>
+      mutate((data) => ({
+        ...data,
+        connections: data.connections.filter((item) => item.itemId !== itemId),
+        /*
+         * As contas que vieram dessa autorização perdem o vínculo, mas não são
+         * apagadas: os lançamentos já importados continuam sendo movimentação
+         * real do usuário, e sumir com a conta deixaria cada um deles órfão. A
+         * conta volta a ser o que uma conta cadastrada à mão é.
+         */
+        accounts: data.accounts.map((account) =>
+          account.sync?.itemId === itemId ? { ...account, sync: null } : account,
+        ),
       })),
 
     updateAccount: (id, patch) =>

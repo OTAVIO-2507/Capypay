@@ -256,6 +256,10 @@ export function reconcileData(raw: unknown): FinanceData {
       privacyMode: data.settings?.privacyMode === true,
     },
     accounts: Array.isArray(data.accounts) ? data.accounts : [],
+    // Dado salvo antes do campo existir volta sem ele, e `undefined` aqui
+    // quebraria todo `.map` que o consome. Lista vazia é o estado honesto:
+    // ninguém tinha conectado banco nenhum.
+    connections: Array.isArray(data.connections) ? data.connections : [],
     // O catálogo nativo pode ganhar categorias entre versões; unir por id
     // preserva as personalizadas sem duplicar as que já existem.
     categories: mergeCategories(base.categories, data.categories),

@@ -95,10 +95,32 @@ export interface CreditCardTerms {
   limitCents: Cents | null
 }
 
-/** Vínculo com um agregador. Reservado; nada o preenche ainda. */
+/** Vínculo entre uma conta local e a conta correspondente no agregador. */
 export interface AccountSyncLink {
   provider: string
   itemId: string
+  lastSyncedAt: number | null
+}
+
+/**
+ * Uma autorização de Open Finance concedida pelo usuário.
+ *
+ * O widget do agregador devolve um `itemId` e some. Esse identificador é a
+ * única coisa que sobra da conexão inteira: é por ele que se pedem contas e
+ * lançamentos depois, e perdê-lo significa refazer todo o consentimento no
+ * banco. Por isso ele é gravado no instante em que chega, antes de qualquer
+ * importação existir.
+ *
+ * Fica separado de `Account.sync` de propósito: uma autorização cobre o
+ * vínculo com a instituição, que costuma render **várias** contas. O `sync`
+ * de cada conta aponta de volta para o mesmo `itemId` quando a importação
+ * criar as contas — a autorização vem primeiro e existe sozinha.
+ */
+export interface BankConnection {
+  /** Sempre `'pluggy'` hoje. Nomeado para o dia em que houver outro. */
+  provider: string
+  itemId: string
+  connectedAt: number
   lastSyncedAt: number | null
 }
 
@@ -204,6 +226,8 @@ export interface FinanceData {
   profile: Profile
   settings: Settings
   accounts: Account[]
+  /** Autorizações de Open Finance ativas. Vazio enquanto ninguém conectou. */
+  connections: BankConnection[]
   categories: Category[]
   transactions: Transaction[]
   goals: Goal[]

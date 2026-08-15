@@ -11,6 +11,7 @@ import { useFinanceStore } from './financeStore'
 export const useTransactions = () => useFinanceStore((state) => state.data.transactions)
 export const useGoals = () => useFinanceStore((state) => state.data.goals)
 export const useAccounts = () => useFinanceStore((state) => state.data.accounts)
+export const useConnections = () => useFinanceStore((state) => state.data.connections)
 export const useCategories = () => useFinanceStore((state) => state.data.categories)
 export const useBudgets = () => useFinanceStore((state) => state.data.budgets)
 export const useProfile = () => useFinanceStore((state) => state.data.profile)

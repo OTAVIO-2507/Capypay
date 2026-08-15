@@ -6,14 +6,15 @@ import { Card, CardHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Controls'
 import { ConfirmDialog } from '@/components/ui/Dialog'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { ConnectBankButton } from '@/features/openfinance/ConnectBankButton'
 import { Field, MoneyInput, SelectInput, TextInput } from '@/components/ui/Field'
 import { Money } from '@/components/ui/Money'
 import { transactionsInMonth } from '@/domain/selectors'
-import type { Account, AccountKind } from '@/domain/types'
+import type { Account, AccountKind, BankConnection } from '@/domain/types'
 import { formatMonthLong } from '@/lib/date'
 import { parseDecimalInput, toCents } from '@/lib/money'
 import { useFinanceStore } from '@/store/financeStore'
-import { useAccounts, useSelectedMonth, useTransactions } from '@/store/hooks'
+import { useAccounts, useConnections, useSelectedMonth, useTransactions } from '@/store/hooks'
 
 const KIND_META: Record<AccountKind, { label: string; icon: IconName }> = {
   checking: { label: 'Conta corrente', icon: 'landmark' },
@@ -24,6 +25,7 @@ const KIND_META: Record<AccountKind, { label: string; icon: IconName }> = {
 
 export function AccountsPage() {
   const accounts = useAccounts()
+  const connections = useConnections()
   const transactions = useTransactions()
   const month = useSelectedMonth()
   const addAccount = useFinanceStore((state) => state.addAccount)
@@ -57,7 +59,8 @@ export function AccountsPage() {
     <>
       <PageHeader
         title="Contas e cartões"
-        description="Separe de onde cada gasto saiu. Cadastro manual: a leitura automática do banco ainda não existe."
+        description="Separe de onde cada gasto saiu. Cadastre à mão ou conecte o banco por Open Finance."
+        actions={<ConnectBankButton />}
       />
 
       <div className="grid gap-5 lg:grid-cols-12">
@@ -130,7 +133,7 @@ export function AccountsPage() {
             )}
           </Card>
 
-          <SyncRoadmap />
+          <SyncRoadmap connections={connections} />
         </div>
 
         <div className="lg:col-span-4">
@@ -168,23 +171,29 @@ export function AccountsPage() {
  * existe, esta seção precisa dizer isso sem rodeio — um painel que insinua
  * integração que não tem é pior que um painel que admite não ter.
  */
-function SyncRoadmap() {
+function SyncRoadmap({ connections }: { connections: readonly BankConnection[] }) {
   return (
     <Card>
       <CardHeader
         title="Sincronização com o banco"
-        action={<Badge tone="quiet">Ainda não disponível</Badge>}
+        description={
+          connections.length > 0
+            ? `${connections.length} ${connections.length === 1 ? 'banco autorizado' : 'bancos autorizados'}`
+            : undefined
+        }
+        action={<Badge tone="quiet">Importação ainda não disponível</Badge>}
       />
       <p className="max-w-[68ch] text-xs leading-relaxed text-muted">
-        O plano é ler compras do cartão, faturas, extrato da conta e posição de investimentos por
-        um agregador do Open Finance. Nada disso funciona hoje: o aplicativo não fala com nenhuma
-        instituição financeira e todo lançamento é manual.
+        Conectar o banco já funciona: “Conectar banco” abre o consentimento do Open Finance, e a
+        autorização que volta dele fica guardada. O que ainda não existe é a etapa seguinte — ler
+        compras do cartão, faturas, extrato e posição de investimentos e trazer isso para cá. Até
+        lá, todo lançamento continua manual, inclusive nas contas já conectadas.
       </p>
       <p className="mt-2.5 max-w-[68ch] text-xs leading-relaxed text-muted">
-        O que já está pronto é a estrutura embaixo: cada lançamento guarda a origem e um espaço
-        para o identificador externo que evita duplicar a mesma compra a cada sincronia, e contas
-        e cartões existem como entidade própria. Falta a integração em si: o token do agregador
-        precisa viver no servidor, nunca no navegador.
+        A estrutura embaixo está pronta há mais tempo que a conexão: cada lançamento guarda a
+        origem e um espaço para o identificador externo, que é o que evita duplicar a mesma compra
+        a cada sincronia. As credenciais do agregador vivem no servidor, numa Edge Function, e
+        nunca chegam ao navegador.
       </p>
     </Card>
   )
