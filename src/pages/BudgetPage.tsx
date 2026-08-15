@@ -4,14 +4,14 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { BlockPanel, Card, CardHeader } from '@/components/ui/Card'
 import { Progress } from '@/components/ui/Controls'
-import { Donut } from '@/components/ui/Donut'
+import { CategoryDonut } from '@/features/charts/CategoryDonut'
 import { MoneyInput } from '@/components/ui/Field'
 import { Money } from '@/components/ui/Money'
 import { categoryColor, categoriesFor } from '@/domain/categories'
-import { budgetStatuses, transactionsInMonth } from '@/domain/selectors'
+import { budgetStatuses, spendingByCategory, transactionsInMonth } from '@/domain/selectors'
 import { cn } from '@/lib/cn'
 import { formatMonthLong, shiftMonth } from '@/lib/date'
-import { parseDecimalInput, percentOf, toCents, toInputValue } from '@/lib/money'
+import { parseDecimalInput, toCents, toInputValue } from '@/lib/money'
 import { useFinanceStore } from '@/store/financeStore'
 import { useBudgets, useCategories, useSelectedMonth, useTransactions } from '@/store/hooks'
 
@@ -47,11 +47,22 @@ export function BudgetPage() {
     return totals
   }, [transactions, month])
 
+  // A composição do anel: o gasto real do mês por categoria, inclusive nas
+  // que não têm limite definido — o anel mostra para onde o dinheiro foi, e
+  // isso não depende de alguém ter posto um teto.
+  const categorySpend = useMemo(
+    () => spendingByCategory(transactions, categories, month),
+    [transactions, categories, month],
+  )
+
   const totalLimit = statuses.reduce((sum, row) => sum + row.limitCents, 0)
   const totalSpent = statuses.reduce((sum, row) => sum + row.spentCents, 0)
   const exceeded = statuses.filter((row) => row.state === 'exceeded')
-  const overallPercent = percentOf(totalSpent, totalLimit)
   const overallRemaining = totalLimit - totalSpent
+  // O número acima do anel é o gasto do mês inteiro. `totalSpent` só soma as
+  // categorias que têm limite, e o anel mostra todas — um total menor que a
+  // soma das próprias fatias logo abaixo seria a tela se contradizendo.
+  const totalSpentAll = categorySpend.reduce((soma, item) => soma + item.amount, 0)
 
   return (
     <>
@@ -144,47 +155,55 @@ export function BudgetPage() {
         <div className="flex flex-col gap-5 lg:col-span-5">
           <Card className={cn('flex flex-col', exceeded.length === 0 && 'flex-1')}>
             <CardHeader title="Como está indo" />
+
+            {/*
+              O anel de composição vem antes da conferência de limites, e fora
+              do `if` dela de propósito: para onde o dinheiro foi não depende de
+              alguém ter definido teto nenhum. Quem ainda não usa orçamento
+              continua tendo a resposta mais útil da tela.
+
+              Anel e não barra porque a pergunta aqui é parte-do-todo. Em
+              "Principais categorias", no painel, a pergunta é qual pesou mais,
+              e lá as barras ficam: comparar comprimento é mais fácil que
+              comparar ângulo.
+            */}
+            {categorySpend.length > 0 ? (
+              <div className="mb-6 border-b border-hairline pb-6">
+                <div className="min-w-0">
+                  <p className="text-2xl font-semibold tracking-[-0.02em]">
+                    <Money cents={totalSpentAll} tabular={false} />
+                  </p>
+                  <p className="mt-1 text-xs text-muted">
+                    gasto em {formatMonthLong(month).toLowerCase()}
+                  </p>
+                </div>
+
+                <CategoryDonut data={categorySpend} className="mt-5" />
+
+                {statuses.length > 0 ? (
+                  <p className="mt-5 text-xs text-muted">
+                    {overallRemaining >= 0 ? (
+                      <>
+                        Restam <Money cents={overallRemaining} emphasis="strong" /> de{' '}
+                        <Money cents={totalLimit} /> em limites
+                      </>
+                    ) : (
+                      <>
+                        <Money cents={Math.abs(overallRemaining)} emphasis="strong" /> acima do
+                        total de limites
+                      </>
+                    )}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
             {statuses.length === 0 ? (
               <p className="text-xs text-muted">
                 Defina ao menos um limite ao lado para acompanhar o consumo durante o mês.
               </p>
             ) : (
               <>
-                {/*
-                  O anel que o Painel já usa para "quanto falta de uma meta",
-                  aqui a serviço da pergunta irmã: quanto do teto do mês já foi
-                  gasto. Mesma composição — anel à esquerda, valor e legenda à
-                  direita — porque é o mesmo tipo de número: uma parte contra
-                  um limite.
-                */}
-                <div className="mb-6 flex items-center gap-5 border-b border-hairline pb-6">
-                  <Donut
-                    value={Math.min(overallPercent, 100)}
-                    rawValue={overallPercent}
-                    label={`Comprometido: ${overallPercent}% dos limites do mês`}
-                    tone={overallPercent > 100 ? 'expense' : 'income'}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-xs text-muted">Comprometido no mês</p>
-                    <p className="mt-1.5 text-lg font-semibold">
-                      <Money cents={totalSpent} tabular={false} />
-                    </p>
-                    <p className="mt-3 text-xs text-muted">
-                      {overallRemaining >= 0 ? (
-                        <>
-                          Restam <Money cents={overallRemaining} emphasis="strong" /> de{' '}
-                          <Money cents={totalLimit} />
-                        </>
-                      ) : (
-                        <>
-                          <Money cents={Math.abs(overallRemaining)} emphasis="strong" /> acima do
-                          total de limites
-                        </>
-                      )}
-                    </p>
-                  </div>
-                </div>
-
                 <ul className="flex flex-col gap-4">
                   {statuses.map((row) => (
                     <li key={row.categoryId}>
