@@ -23,6 +23,8 @@ export interface NavDestination {
 export const PRIMARY_NAV: NavDestination[] = [
   { to: '/', label: 'Painel', icon: 'layout-dashboard', tour: 'nav-painel' },
   { to: '/transacoes', label: 'Transações', icon: 'arrow-left-right', tour: 'nav-transacoes' },
+  { to: '/parcelamentos', label: 'Parcelamentos', icon: 'credit-card' },
+  { to: '/assinaturas', label: 'Assinaturas', icon: 'repeat' },
   { to: '/orcamento', label: 'Orçamento', icon: 'chart-column', tour: 'nav-orcamento' },
   { to: '/metas', label: 'Metas', icon: 'target', tour: 'nav-metas' },
   { to: '/contas', label: 'Contas', icon: 'credit-card', tour: 'nav-contas' },

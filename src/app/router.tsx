@@ -14,6 +14,8 @@ import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { TransactionsPage } from '@/pages/TransactionsPage'
+import { InstallmentsPage } from '@/pages/InstallmentsPage'
+import { SubscriptionsPage } from '@/pages/SubscriptionsPage'
 
 /**
  * `BASE_URL` vem do `base` do Vite: em produção o GitHub Pages serve a partir
@@ -39,6 +41,8 @@ export const router = createBrowserRouter(
       children: [
         { index: true, element: <DashboardPage /> },
         { path: 'transacoes', element: <TransactionsPage /> },
+        { path: 'parcelamentos', element: <InstallmentsPage /> },
+        { path: 'assinaturas', element: <SubscriptionsPage /> },
         { path: 'orcamento', element: <BudgetPage /> },
         { path: 'metas', element: <GoalsPage /> },
         { path: 'contas', element: <AccountsPage /> },

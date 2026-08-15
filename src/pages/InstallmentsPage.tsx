@@ -1,0 +1,181 @@
+import { useMemo, useState } from 'react'
+import { Icon } from '@/components/Icon'
+import { PageHeader } from '@/components/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { Segmented, Progress, type SegmentOption } from '@/components/ui/Controls'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Money } from '@/components/ui/Money'
+import { installmentPurchases, installmentSummary, type Installment } from '@/domain/installments'
+import { SeriesSummary } from '@/features/series/SeriesSummary'
+import { formatMonthLong, monthOf } from '@/lib/date'
+import { formatPercent } from '@/lib/format'
+import { useCategories, usePrivacy, useTransactions } from '@/store/hooks'
+
+type Aba = 'ongoing' | 'done'
+
+/**
+ * As compras parceladas, em andamento e finalizadas.
+ *
+ * A página existe separada de Transações porque a unidade aqui é a **compra**,
+ * não a parcela. Em Transações um notebook em 10x são dez linhas soltas que
+ * não somam nada; aqui é uma linha só, com total, pago e o que falta — que é
+ * a forma como a pessoa pensa na dívida.
+ *
+ * Os totais do topo contam só o que está em andamento. Somar o que já foi
+ * quitado inflaria o número que a página existe para responder ("quanto eu
+ * devo"), e a aba de finalizadas continua ali para quem quiser conferir.
+ */
+export function InstallmentsPage() {
+  const transactions = useTransactions()
+  const categories = useCategories()
+  const [aba, setAba] = useState<Aba>('ongoing')
+
+  const compras = useMemo(
+    () => installmentPurchases(transactions, categories),
+    [transactions, categories],
+  )
+  const resumo = useMemo(() => installmentSummary(compras), [compras])
+
+  const emAndamento = compras.filter((item) => !item.done)
+  const finalizadas = compras.filter((item) => item.done)
+  const visiveis = aba === 'ongoing' ? emAndamento : finalizadas
+
+  const abas: readonly SegmentOption<Aba>[] = [
+    { value: 'ongoing', label: `Em andamento (${emAndamento.length})` },
+    { value: 'done', label: `Finalizadas (${finalizadas.length})` },
+  ]
+
+  return (
+    <>
+      <PageHeader
+        title="Parcelamentos"
+        description="Compras fatiadas, com o que já foi pago e o que ainda falta."
+      />
+
+      {compras.length === 0 ? (
+        <Card>
+          <EmptyState
+            icon="credit-card"
+            title="Nenhuma compra parcelada"
+            description="Ao lançar uma despesa, marque “Repetir lançamento” e escolha Parcelamento para a compra aparecer aqui."
+          />
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-5">
+          <SeriesSummary
+            stats={[
+              {
+                label: 'Em andamento',
+                icon: 'credit-card',
+                count: resumo.ongoing,
+                countUnit: resumo.ongoing === 1 ? 'compra parcelada' : 'compras parceladas',
+              },
+              { label: 'Valor total', cents: resumo.totalCents },
+              { label: 'Já pago', cents: resumo.paidCents },
+              { label: 'Restante', cents: resumo.remainingCents },
+            ]}
+          >
+            {resumo.ongoing > 0 ? (
+              <div className="mt-6 border-t border-hairline pt-5">
+                <ProgressoGeral progress={resumo.progress} />
+                {resumo.lastMonth ? (
+                  <p className="mt-4 flex items-center gap-1.5 text-xs text-muted">
+                    <Icon name="calendar" size={13} className="shrink-0" />
+                    Última parcela em{' '}
+                    <strong className="font-medium text-ink">
+                      {formatMonthLong(monthOf(resumo.lastMonth))}
+                    </strong>
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </SeriesSummary>
+
+          <Segmented label="Situação" options={abas} value={aba} onChange={setAba} />
+
+          {visiveis.length === 0 ? (
+            <Card>
+              <EmptyState
+                icon="credit-card"
+                size="sm"
+                title={aba === 'ongoing' ? 'Nada em andamento' : 'Nada finalizado'}
+                description={
+                  aba === 'ongoing'
+                    ? 'Todas as suas compras parceladas já foram quitadas.'
+                    : 'Nenhuma compra parcelada chegou ao fim ainda.'
+                }
+              />
+            </Card>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {visiveis.map((compra) => (
+                <li key={compra.seriesId}>
+                  <LinhaDeCompra compra={compra} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+    </>
+  )
+}
+
+function ProgressoGeral({ progress }: { progress: number }) {
+  const masked = usePrivacy()
+
+  return (
+    <>
+      <div className="mb-2 flex items-baseline justify-between gap-3">
+        <span className="text-xs text-muted">Progresso geral</span>
+        <span className="tnum text-xs font-medium text-ink">
+          {formatPercent(progress, { masked })} pago
+        </span>
+      </div>
+      <Progress value={progress * 100} label="Progresso geral das compras parceladas" />
+    </>
+  )
+}
+
+function LinhaDeCompra({ compra }: { compra: Installment }) {
+  const masked = usePrivacy()
+
+  return (
+    <Card className="flex flex-col gap-3">
+      <div className="flex items-start justify-between gap-4">
+        <span className="flex min-w-0 items-center gap-3">
+          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-sm bg-sunken text-faint">
+            <Icon name={compra.icon} size={16} />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-medium text-ink">{compra.label}</span>
+            <span className="mt-0.5 block truncate text-xs text-muted">
+              {compra.paidCount}/{compra.totalCount}x · <Money cents={compra.installmentCents} className="text-xs text-muted" /> por parcela
+            </span>
+          </span>
+        </span>
+
+        <span className="shrink-0 text-right">
+          <Money cents={compra.totalCents} emphasis="strong" className="block text-sm" />
+          <span className="mt-0.5 block text-xs text-muted">total</span>
+        </span>
+      </div>
+
+      <div>
+        <Progress value={compra.progress * 100} label={`Progresso de ${compra.label}`} />
+        <div className="mt-2 flex items-baseline justify-between gap-3 text-xs text-muted">
+          <span>
+            {compra.done ? (
+              'Quitada'
+            ) : (
+              <>
+                Faltam <Money cents={compra.remainingCents} className="text-xs text-muted" />
+              </>
+            )}
+          </span>
+          <span className="tnum">{formatPercent(compra.progress, { masked })}</span>
+        </div>
+      </div>
+    </Card>
+  )
+}
