@@ -39,13 +39,35 @@ const BASE_MONTH: Entry[] = [
   { day: 14, kind: 'expense', description: 'Almoço no trabalho', amount: 218.5, categoryId: 'alimentacao', account: 'cartao' },
   { day: 15, kind: 'contribution', description: '', amount: 700, categoryId: 'meta', goalIndex: 0 },
   { day: 16, kind: 'expense', description: 'Academia', amount: 129.9, categoryId: 'saude', account: 'cartao' },
-  { day: 18, kind: 'expense', description: 'Streaming', amount: 55.8, categoryId: 'assinaturas', account: 'cartao' },
   { day: 20, kind: 'expense', description: 'Farmácia', amount: 96.3, categoryId: 'saude', account: 'cartao' },
   { day: 22, kind: 'expense', description: 'Cinema e jantar', amount: 178, categoryId: 'lazer', account: 'cartao' },
   { day: 24, kind: 'expense', description: 'Supermercado', amount: 398.2, categoryId: 'alimentacao', account: 'cartao' },
   { day: 25, kind: 'contribution', description: '', amount: 400, categoryId: 'meta', goalIndex: 1 },
   { day: 27, kind: 'expense', description: 'Transporte por app', amount: 143.6, categoryId: 'transporte', account: 'cartao' },
 ]
+
+/**
+ * As assinaturas, que não cabem em `BASE_MONTH`.
+ *
+ * `BASE_MONTH` produz lançamentos soltos, um por mês, sem `seriesId` — e uma
+ * assinatura só existe como série: é o `seriesId` compartilhado que permite
+ * dizer "esta cobrança se repete" e mostrar a data da próxima. Por isso elas
+ * saem daqui, expandidas em doze cobranças que atravessam o presente.
+ *
+ * Sem isso a demonstração não teria nenhuma recorrência, e o painel de
+ * assinaturas — junto com o recurso de repetir lançamento, que é o que o
+ * alimenta — nasceria invisível para quem abre os dados de exemplo.
+ */
+const SUBSCRIPTIONS: { day: number; description: string; amount: number; categoryId: string }[] = [
+  { day: 20, description: 'Streaming de vídeo', amount: 55.8, categoryId: 'assinaturas' },
+  { day: 8, description: 'Plano de celular', amount: 79.9, categoryId: 'moradia' },
+  { day: 15, description: 'Streaming de música', amount: 21.9, categoryId: 'assinaturas' },
+  { day: 3, description: 'Armazenamento na nuvem', amount: 12.9, categoryId: 'assinaturas' },
+]
+
+/** Quantas cobranças cada assinatura tem, e quantas delas já passaram. */
+const COBRANCAS = 12
+const COBRANCAS_PASSADAS = 5
 
 /**
  * O que muda em cada mês, contando do mais antigo para o atual.
@@ -186,6 +208,35 @@ export function createDemoData(): FinanceData {
       sequence += 1
     }
   })
+
+  // As assinaturas, cada uma como uma série só, atravessando o presente: cinco
+  // cobranças para trás e sete para a frente. É a parte para a frente que as
+  // torna ativas — série sem cobrança futura é histórico, não assinatura.
+  for (const assinatura of SUBSCRIPTIONS) {
+    const seriesId = createId('series')
+
+    for (let index = 0; index < COBRANCAS; index += 1) {
+      const month = shiftMonth(thisMonth, index - COBRANCAS_PASSADAS)
+      transactions.push({
+        id: createId('tx'),
+        kind: 'expense',
+        description: `${assinatura.description} (${index + 1}/${COBRANCAS})`,
+        amountCents: Math.round(assinatura.amount * 100),
+        date: `${month}-${String(assinatura.day).padStart(2, '0')}`,
+        categoryId: assinatura.categoryId,
+        goalId: null,
+        accountId: accountByKey.cartao,
+        source: 'recurring',
+        externalId: null,
+        seriesId,
+        installment: { index: index + 1, total: COBRANCAS },
+        notes: null,
+        createdAt: now + sequence,
+        updatedAt: now + sequence,
+      })
+      sequence += 1
+    }
+  }
 
   return {
     ...base,
