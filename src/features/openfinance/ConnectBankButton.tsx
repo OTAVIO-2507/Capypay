@@ -19,6 +19,29 @@ const PluggyConnect = lazy(async () => {
   return { default: modulo.PluggyConnect }
 })
 
+/**
+ * Extrai algo legível do que o widget chama de erro.
+ *
+ * Não é `Error` garantido: pode ser objeto do SDK, resposta da API embrulhada,
+ * ou string. `String(objeto)` daria "[object Object]", que é pior que nada —
+ * então o objeto vira JSON antes, e só aí desiste.
+ */
+function detalharFalha(falha: unknown): string {
+  if (falha instanceof Error) return falha.message
+  if (typeof falha === 'string') return falha
+  if (falha && typeof falha === 'object') {
+    const dele = falha as { message?: unknown; error?: unknown }
+    if (typeof dele.message === 'string') return dele.message
+    if (typeof dele.error === 'string') return dele.error
+    try {
+      return JSON.stringify(falha)
+    } catch {
+      // Objeto com referência circular: sobra o tipo, que ainda diz algo.
+    }
+  }
+  return 'sem detalhe (veja o console)'
+}
+
 interface ConnectBankButtonProps {
   /** Chamada depois de a autorização ser gravada, para a tela reagir. */
   onConnected?: (itemId: string) => void
@@ -115,10 +138,23 @@ export function ConnectBankButton({ onConnected }: ConnectBankButtonProps) {
               onConnected?.(itemId)
             }}
             onError={(falha) => {
-              // A mensagem do agregador é técnica e em inglês; o que a pessoa
-              // precisa saber é que nada foi conectado e pode tentar de novo.
+              /*
+               * Em produção a mensagem do agregador não sobe para a tela: é
+               * técnica, em inglês, e quem está conectando o banco não tem o
+               * que fazer com ela — precisa saber que nada foi conectado e que
+               * pode tentar de novo.
+               *
+               * Em desenvolvimento ela sobe, porque aí quem lê é quem está
+               * integrando, e a mensagem genérica obriga a abrir o console para
+               * descobrir qualquer coisa. Foi exatamente o que aconteceu na
+               * primeira conexão de teste.
+               */
               console.error('pluggy connect:', falha)
-              setErro('A conexão com o banco não foi concluída. Você pode tentar de novo.')
+              setErro(
+                import.meta.env.DEV
+                  ? `A conexão não foi concluída: ${detalharFalha(falha)}`
+                  : 'A conexão com o banco não foi concluída. Você pode tentar de novo.',
+              )
               fechar()
             }}
             onClose={fechar}
