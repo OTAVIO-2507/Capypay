@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react'
 import { Button } from '@/components/ui/Button'
+import { registrarConexao } from './connectionsApi'
 import { criarConnectToken } from './pluggyApi'
 import { useFinanceStore } from '@/store/financeStore'
 
@@ -91,8 +92,26 @@ export function ConnectBankButton({ onConnected }: ConnectBankButtonProps) {
                 fechar()
                 return
               }
+
+              /*
+               * Grava nos dois lugares, e os dois são necessários. O documento
+               * do usuário é a lista que a tela mostra; a tabela é o que o
+               * webhook consegue encontrar — ele chega sem sessão e sem saber
+               * de quem é o item, e não teria como procurar dentro de um jsonb
+               * por usuário.
+               *
+               * A gravação local vem primeiro e é síncrona: se a tabela
+               * falhar, a conexão não se perde, e a consequência é só o aviso
+               * automático não chegar até a próxima reconexão.
+               */
               registrar('pluggy', itemId)
               fechar()
+              registrarConexao(itemId).catch((falha) => {
+                console.error('registrarConexao:', falha)
+                setErro(
+                  'O banco foi conectado, mas o aviso automático de novidades não pôde ser ativado.',
+                )
+              })
               onConnected?.(itemId)
             }}
             onError={(falha) => {

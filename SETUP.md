@@ -121,6 +121,86 @@ bancária carimbada como de outra, e as contas conectadas chegariam vinculadas
 Como as duas variáveis são lidas na chamada, **trocar um secret exige
 `supabase functions deploy pluggy-connect-token` de novo.**
 
+### Aviso automático de novidades (webhook)
+
+Opcional dentro da etapa opcional. Sem ele, conectar o banco funciona; o que
+não acontece é o aplicativo ficar sabendo sozinho que há dados novos.
+
+Rode este SQL no **SQL Editor** do Supabase:
+
+```sql
+create table public.bank_connections (
+  user_id       uuid not null references auth.users(id) on delete cascade,
+  provider      text not null default 'pluggy',
+  item_id       text primary key,
+  pending_sync  boolean not null default true,
+  last_event    text,
+  last_event_at timestamptz,
+  last_error    text,
+  created_at    timestamptz not null default now()
+);
+create index bank_connections_user_id_idx on public.bank_connections (user_id);
+
+alter table public.bank_connections enable row level security;
+
+-- O usuário enxerga e mexe só nas próprias conexões.
+create policy "select own connections" on public.bank_connections
+  for select using (auth.uid() = user_id);
+create policy "insert own connections" on public.bank_connections
+  for insert with check (auth.uid() = user_id);
+create policy "delete own connections" on public.bank_connections
+  for delete using (auth.uid() = user_id);
+
+-- Reconectar o mesmo banco é um upsert, então o update precisa existir.
+create policy "update own connections" on public.bank_connections
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+grant select, insert, update, delete on public.bank_connections to authenticated;
+revoke all on public.bank_connections from anon;
+```
+
+Depois publique a função e registre a URL na Pluggy:
+
+```bash
+# Um segredo longo e aleatório. Ele é a única porta da função.
+supabase secrets set PLUGGY_WEBHOOK_SECRET=$(openssl rand -hex 32)
+supabase functions deploy pluggy-webhook --no-verify-jwt
+```
+
+O `--no-verify-jwt` é obrigatório e tem consequência: webhook chega de
+servidor para servidor, sem sessão, então a função fica **alcançável por
+qualquer um que descubra a URL**. É por isso que o segredo vai na própria
+URL, registrada uma vez na Pluggy:
+
+```
+https://<ref-do-projeto>.functions.supabase.co/pluggy-webhook?token=<o-segredo>
+```
+
+A comparação do segredo é feita em tempo constante. Comparar com `===` sai no
+primeiro caractere diferente, e essa diferença de tempo é medível pela rede —
+dá para descobrir o segredo letra a letra sem nunca acertá-lo. Quem erra o
+token recebe **404**, e não 401: um 401 confirmaria que existe algo ali e que
+só falta a chave certa.
+
+**A função não importa nada**, e isso é decisão de projeto, não etapa que
+falta. Ela anota que aquele item tem novidade e responde. Dois motivos:
+
+- A Pluggy exige resposta 2XX em cinco segundos. Buscar contas e lançamentos
+  na API deles em cascata estoura isso, e resposta lenta é tratada como falha
+  e reenviada — uma importação demorada viraria uma importação repetida.
+- `user_finance_data` guarda o documento inteiro do usuário numa coluna
+  `jsonb`, e o navegador reescreve o documento todo a cada gravação. Uma
+  escrita vinda do servidor seria apagada pela gravação seguinte do
+  navegador, e vice-versa. Como sincronização acontece justamente enquanto a
+  pessoa usa o app, não é risco remoto: é o caso comum.
+
+Quem vai importar é o próprio aplicativo, lendo a marca da tabela — assim a
+gravação do documento continua tendo um escritor só.
+
+**Ainda não existe** a tela para remover uma conexão. Enquanto isso, apagar a
+linha em `bank_connections` pelo painel do Supabase desliga o aviso daquele
+banco.
+
 **Ponto de atenção:** a função usa `ban_duration: '876000h'`/`'none'` para
 desativar/reativar contas. Esse formato pode ter mudado entre versões do SDK
 — se `Desativar conta` no painel admin falhar, confira a assinatura atual de
