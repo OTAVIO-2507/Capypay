@@ -8,6 +8,13 @@ import { usePrivacy } from '@/store/hooks'
 
 interface CategoryBreakdownProps {
   data: CategorySpend[]
+  /**
+   * Quantas barras aparecem. O que sobra vira uma linha de rodapé com o total,
+   * nunca some calado: a soma das barras precisa poder ser conferida contra o
+   * total de despesas do mês, e uma lista que esconde a cauda sem dizer quanto
+   * ela vale quebra essa conta.
+   */
+  limit?: number
   className?: string
 }
 
@@ -23,7 +30,7 @@ interface CategoryBreakdownProps {
  * ("Alimentação", "Assinaturas") cabe sem truncar, a lista é navegável e o
  * leitor de tela recebe uma estrutura que faz sentido.
  */
-export function CategoryBreakdown({ data, className }: CategoryBreakdownProps) {
+export function CategoryBreakdown({ data, limit, className }: CategoryBreakdownProps) {
   const masked = usePrivacy()
 
   if (data.length === 0) {
@@ -38,12 +45,15 @@ export function CategoryBreakdown({ data, className }: CategoryBreakdownProps) {
   }
 
   const largest = data[0].amount
+  const visiveis = limit ? data.slice(0, limit) : data
+  const cauda = data.slice(visiveis.length)
+  const totalDaCauda = cauda.reduce((soma, item) => soma + item.amount, 0)
 
   return (
     // `justify-between` para as linhas se distribuírem quando o painel cresce
     // até a altura da coluna, em vez de amontoarem no topo com sobra embaixo.
     <ul className={cn('flex flex-col justify-between gap-4', className)}>
-      {data.map((item) => (
+      {visiveis.map((item) => (
         <li key={item.categoryId}>
           <div className="mb-2 flex items-baseline justify-between gap-3">
             <span className="flex min-w-0 items-center gap-2.5">
@@ -70,6 +80,15 @@ export function CategoryBreakdown({ data, className }: CategoryBreakdownProps) {
           </div>
         </li>
       ))}
+
+      {cauda.length > 0 ? (
+        <li className="flex items-baseline justify-between gap-3 border-t border-hairline pt-3 text-xs text-muted">
+          <span>
+            +{cauda.length} {cauda.length === 1 ? 'categoria' : 'categorias'}
+          </span>
+          <Money cents={totalDaCauda} className="text-xs text-muted" />
+        </li>
+      ) : null}
     </ul>
   )
 }

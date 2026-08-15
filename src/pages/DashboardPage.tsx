@@ -129,10 +129,10 @@ export function DashboardPage() {
 
           <Card className="flex flex-1 flex-col">
             <CardHeader
-              title="Para onde o dinheiro foi"
-              description={`Despesas de ${formatMonthLong(month).toLowerCase()}`}
+              title="Principais categorias"
+              description={`Onde você mais gastou em ${formatMonthLong(month).toLowerCase()}`}
             />
-            <CategoryBreakdown data={categorySpend} className="flex-1" />
+            <CategoryBreakdown data={categorySpend} limit={5} className="flex-1" />
           </Card>
         </div>
 
