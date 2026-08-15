@@ -42,6 +42,13 @@ interface PluggyEvent {
  * entre "errou na primeira letra" e "errou na última" é medível pela rede.
  * Com isso dá para descobrir o segredo letra a letra, sem nunca acertá-lo.
  */
+function json(corpo: unknown): Response {
+  return new Response(JSON.stringify(corpo), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 function segredoConfere(recebido: string, esperado: string): boolean {
   if (recebido.length !== esperado.length) return false
   let diferenca = 0
@@ -78,8 +85,26 @@ Deno.serve(async (req) => {
   }
 
   const { event, itemId, eventId } = evento
-  if (!event || !itemId) {
-    return new Response('Evento sem event ou itemId.', { status: 400 })
+
+  /*
+   * O que esta função sabe fazer. O cadastro do webhook na Pluggy costuma
+   * ficar em "all", e "all" inclui evento de conector, de pagamento e o que
+   * eles vierem a criar depois.
+   *
+   * O que não está aqui recebe 200 e é descartado, e não 400. Um 4xx num
+   * evento que simplesmente não nos interessa faz o provedor reenviar em
+   * intervalos crescentes e, em alguns casos, marcar o endpoint como
+   * defeituoso — punição para quem está funcionando exatamente como deveria.
+   * Confirmar o recebimento é dizer "chegou", não "concordo".
+   */
+  const CONHECIDOS = new Set(['item/created', 'item/updated', 'item/error'])
+
+  if (!event) {
+    return new Response('Evento sem campo event.', { status: 400 })
+  }
+
+  if (!CONHECIDOS.has(event) || !itemId) {
+    return json({ received: true, ignored: event })
   }
 
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
@@ -113,8 +138,5 @@ Deno.serve(async (req) => {
   // Sempre 200, e sempre rápido. Item desconhecido também sai por aqui: pode
   // ser de uma conexão que o usuário removeu, e insistir num evento órfão não
   // leva a lugar nenhum.
-  return new Response(JSON.stringify({ received: true }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' },
-  })
+  return json({ received: true })
 })
