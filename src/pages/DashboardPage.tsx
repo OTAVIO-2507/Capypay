@@ -8,6 +8,7 @@ import { Badge, Progress } from '@/components/ui/Controls'
 import { Dialog } from '@/components/ui/Dialog'
 import { Donut } from '@/components/ui/Donut'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { QuietLink } from '@/components/ui/QuietLink'
 import { Delta, Figure, FlowIndicator, Money } from '@/components/ui/Money'
 import {
   budgetStatuses,
@@ -22,12 +23,13 @@ import {
   type BudgetStatus,
   type GoalProgress,
 } from '@/domain/selectors'
+import { activeSubscriptions } from '@/domain/subscriptions'
 import type { TransactionKind } from '@/domain/types'
 import { BalanceTrend, FlowChart } from '@/features/charts/LazyCharts'
 import { CategoryBreakdown } from '@/features/charts/CategoryBreakdown'
 import { dueTodayText, greetingTextFor } from '@/features/dashboard/Greeting'
 import { TodayLeaf } from '@/features/dashboard/TodayLeaf'
-import { UpcomingPanel } from '@/features/dashboard/UpcomingPanel'
+import { SubscriptionsPanel } from '@/features/dashboard/SubscriptionsPanel'
 import { PaymentCard } from '@/features/dashboard/PaymentCard'
 import { WelcomePanel } from '@/features/dashboard/WelcomePanel'
 import { TransactionForm } from '@/features/transactions/TransactionForm'
@@ -72,6 +74,12 @@ export function DashboardPage() {
   const categorySpend = useMemo(
     () => spendingByCategory(transactions, categories, month),
     [transactions, categories, month],
+  )
+  // Sem `month`: assinatura fala do presente para a frente, e não do mês
+  // que a página está mostrando.
+  const subscriptions = useMemo(
+    () => activeSubscriptions(transactions, categories),
+    [transactions, categories],
   )
   const flow = useMemo(() => monthlyFlow(transactions, month, 6), [transactions, month])
   const yearData = useMemo(() => yearlyNet(transactions, trendYear), [transactions, trendYear])
@@ -181,13 +189,12 @@ export function DashboardPage() {
         </div>
 
         {/*
-          A linha de baixo fecha as duas colunas juntas. O que ainda vence fica
-          ao lado do que já aconteceu — as duas metades da mesma pergunta — e a
-          largura de cada um segue o peso: a lista é tabela, o vencimento é
-          resumo.
+          A linha de baixo fecha as duas colunas juntas. O que se repete todo
+          mês fica ao lado do que acabou de acontecer, e a largura de cada um
+          segue o peso: a lista é tabela, a assinatura é resumo.
         */}
         <div className="flex lg:col-span-4">
-          <UpcomingPanel transactions={transactions} categories={categories} month={month} />
+          <SubscriptionsPanel subscriptions={subscriptions} />
         </div>
 
         <Card className="lg:col-span-8">
@@ -237,18 +244,6 @@ export function DashboardPage() {
         />
       </Dialog>
     </>
-  )
-}
-
-function QuietLink({ to, children }: { to: string; children: string }) {
-  return (
-    <Link
-      to={to}
-      className="inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-xs font-semibold text-muted transition-colors duration-150 hover:bg-sunken hover:text-ink"
-    >
-      {children}
-      <Icon name="arrow-right" size={13} />
-    </Link>
   )
 }
 

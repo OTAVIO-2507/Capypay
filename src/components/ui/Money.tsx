@@ -144,7 +144,13 @@ export function Delta({ cents, since, onBlock = false, className }: DeltaProps) 
 interface FigureProps {
   cents: Cents
   onBlock?: boolean
-  size?: 'md' | 'lg'
+  /**
+   * `'sm'` existe para o painel que tem uma figura própria mas divide a tela
+   * com a figura principal. A Regra da Figura Solitária vale por painel, não
+   * por página — mas dois números de 44px na mesma tela disputam mesmo em
+   * linhas diferentes, e o segundo precisa ceder.
+   */
+  size?: 'sm' | 'md' | 'lg'
   /**
    * `'auto'` veste a figura na identidade de fluxo pelo sinal — verde se
    * sobrou, terracota se faltou. Reservado a números que já são "o
@@ -181,7 +187,9 @@ export function Figure({ cents, onBlock = false, size = 'md', tone, className }:
         // a tela existe para mostrar; dar a ele o desenho do logotipo amarra o
         // painel à identidade sem repetir a marca em lugar nenhum.
         'figure font-[Figtree_Variable,var(--font-sans)] font-extrabold',
-        size === 'lg' ? 'text-[2.75rem] sm:text-[3.5rem]' : 'text-[2.75rem]',
+        size === 'lg' && 'text-[2.75rem] sm:text-[3.5rem]',
+        size === 'md' && 'text-[2.75rem]',
+        size === 'sm' && 'text-[2rem]',
         onBlock ? 'text-block-ink' : (corDoSinal ?? 'text-ink'),
         className,
       )}
