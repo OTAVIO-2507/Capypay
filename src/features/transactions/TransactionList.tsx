@@ -132,10 +132,26 @@ function Identity({
 }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
+      {/*
+        A mesma pastilha colorida do Orçamento, para a categoria ser a mesma
+        coisa nas duas telas — reconhecer "o laranja" ali e aqui só funciona se
+        a marca for idêntica, e não uma versão reduzida dela.
+
+        O quadro cinza continua para o que não tem matiz: receita, aporte e
+        categoria criada pelo usuário. Nesses casos ele volta a ser a forma que
+        codifica o tipo — contorno para entrada, tracejado para aporte.
+
+        Na despesa colorida essa leitura sai do quadro, e isso é aceito com
+        conta feita: o tipo continua dito pela seta antes do valor, pelo sinal
+        `+`/`−` e pelo peso da tinta. Eram quatro leituras e ficam três, todas
+        independentes de matiz. A quarta era a mais fraca das quatro, e é a
+        única que a cor de categoria pode ocupar sem apagar nada.
+      */}
       <span
+        style={{ backgroundColor: categoryColor(transaction.categoryId) ?? undefined }}
         className={cn(
-          'inline-flex size-9 shrink-0 items-center justify-center rounded-sm',
-          FRAME_CLASS[view.frame],
+          'inline-flex size-9 shrink-0 items-center justify-center rounded-lg',
+          categoryColor(transaction.categoryId) ? 'text-white' : FRAME_CLASS[view.frame],
         )}
       >
         <Icon name={view.icon} size={15} />
@@ -151,27 +167,7 @@ function Identity({
             </Badge>
           ) : null}
         </span>
-        {/*
-          O ponto de categoria. O quadro do ícone à esquerda já codifica o
-          **tipo** pela forma — entrada contornada, saída preenchida, aporte
-          tracejada — e pintá-lo de categoria seria a mesma marca dizendo duas
-          coisas. A identidade ganha marca própria: um ponto ao lado do nome,
-          que é onde a categoria já estava escrita.
-
-          Só as oito nativas de despesa têm matiz; meta, receita e categoria
-          criada pelo usuário não recebem ponto nenhum, e continuam se lendo
-          pelo nome.
-        */}
-        <span className="flex items-center gap-1.5 text-xs text-muted">
-          {categoryColor(transaction.categoryId) ? (
-            <span
-              aria-hidden="true"
-              className="size-2 shrink-0 rounded-full"
-              style={{ backgroundColor: categoryColor(transaction.categoryId) ?? undefined }}
-            />
-          ) : null}
-          <span className="truncate">{view.subtitle}</span>
-        </span>
+        <span className="block truncate text-xs text-muted">{view.subtitle}</span>
       </span>
     </div>
   )

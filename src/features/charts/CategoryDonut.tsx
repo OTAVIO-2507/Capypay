@@ -63,7 +63,7 @@ export function CategoryDonut({ data, legendLimit = 5, size = 132, className }: 
   const totalRestante = data.slice(nomeadas.length).reduce((soma, item) => soma + item.amount, 0)
 
   return (
-    <div className={cn('flex flex-col items-center gap-4 sm:flex-row sm:items-start', className)}>
+    <div className={cn('flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:justify-center', className)}>
       <svg
         width={size}
         height={size}
