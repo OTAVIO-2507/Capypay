@@ -139,6 +139,51 @@ function ProgressoGeral({ progress }: { progress: number }) {
   )
 }
 
+/** Acima disto o segmento fica mais fino que o vão e a barra vira listra. */
+const MAXIMO_DE_SEGMENTOS = 24
+
+/**
+ * A barra de uma compra, com um segmento por parcela.
+ *
+ * Uma barra contínua diz a proporção e perde a contagem, que numa compra
+ * parcelada é metade da resposta: "60%" não é o que a pessoa pensa, "faltam
+ * quatro" é. Segmentada, as duas leituras aparecem de uma vez, e ainda ligam a
+ * barra à lista que abre logo abaixo — cada bloco é uma linha de lá.
+ *
+ * Acima de 24 parcelas ela volta a ser contínua. Um segmento mais fino que o
+ * vão entre eles deixa de ser contável, e aí a divisão só atrapalha o que a
+ * barra contínua já fazia bem.
+ */
+function BarraDeParcelas({ compra }: { compra: Installment }) {
+  const rotulo = `${compra.label}: ${compra.paidCount} de ${compra.totalCount} parcelas pagas`
+
+  if (compra.totalCount > MAXIMO_DE_SEGMENTOS) {
+    return <Progress value={compra.progress * 100} label={rotulo} />
+  }
+
+  return (
+    <div
+      role="progressbar"
+      aria-valuenow={compra.paidCount}
+      aria-valuemin={0}
+      aria-valuemax={compra.totalCount}
+      aria-label={rotulo}
+      className="flex h-2 w-full gap-1"
+    >
+      {compra.parcels.map((parcela) => (
+        <span
+          key={parcela.id}
+          aria-hidden="true"
+          className={cn(
+            'h-full flex-1 rounded-full transition-colors duration-300',
+            parcela.paid ? 'bg-ink' : 'bg-sunken',
+          )}
+        />
+      ))}
+    </div>
+  )
+}
+
 function LinhaDeCompra({ compra }: { compra: Installment }) {
   const masked = usePrivacy()
   const [aberta, setAberta] = useState(false)
@@ -166,28 +211,51 @@ function LinhaDeCompra({ compra }: { compra: Installment }) {
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium text-ink">{compra.label}</span>
             <span className="mt-0.5 block truncate text-xs text-muted">
-              {compra.paidCount}/{compra.totalCount}x · <Money cents={compra.installmentCents} className="text-xs text-muted" /> por parcela
+              {compra.paidCount} de {compra.totalCount} parcelas ·{' '}
+              <Money cents={compra.installmentCents} className="text-xs text-muted" /> cada
             </span>
           </span>
         </span>
 
+        {/*
+          A linha lidera pelo que **falta**, e não pelo total.
+
+          O total é contexto — foi decidido na compra e não muda. A pergunta da
+          página é "quanto eu ainda devo", e era ela que aparecia pequena, no
+          rodapé, enquanto o número já resolvido ocupava o lugar de destaque.
+          Quitada, o que sobra é zero e o total volta a ser a informação: aí ele
+          sobe.
+        */}
         <span className="shrink-0 text-right">
-          <Money cents={compra.totalCents} emphasis="strong" className="block text-sm" />
-          <span className="mt-0.5 block text-xs text-muted">total</span>
+          {compra.done ? (
+            <>
+              <Money cents={compra.totalCents} emphasis="strong" className="block text-sm" />
+              <span className="mt-0.5 block text-xs text-muted">total pago</span>
+            </>
+          ) : (
+            <>
+              <Money cents={compra.remainingCents} emphasis="strong" className="block text-sm" />
+              <span className="mt-0.5 block text-xs text-muted">
+                de <Money cents={compra.totalCents} className="text-xs text-muted" />
+              </span>
+            </>
+          )}
         </span>
       </div>
 
       <div>
-        <Progress value={compra.progress * 100} label={`Progresso de ${compra.label}`} />
+        <BarraDeParcelas compra={compra} />
         <div className="mt-2 flex items-baseline justify-between gap-3 text-xs text-muted">
-          <span>
-            {compra.done ? (
-              'Quitada'
-            ) : (
-              <>
-                Faltam <Money cents={compra.remainingCents} className="text-xs text-muted" />
-              </>
-            )}
+          {/*
+            A data de fim é o fato mais interessante de um parcelamento depois
+            de quanto falta: é quando o mês volta a ser inteiro. Ela existia só
+            no resumo do topo, somada entre todas as compras, e ali não responde
+            por nenhuma delas.
+          */}
+          <span className="flex items-center gap-1.5">
+            <Icon name="calendar" size={12} className="shrink-0" />
+            {compra.done ? 'Quitada em ' : 'Termina em '}
+            <span className="text-ink">{formatMonthLong(monthOf(compra.lastDate))}</span>
           </span>
           <span className="tnum">{formatPercent(compra.progress, { masked })}</span>
         </div>
