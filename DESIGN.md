@@ -307,7 +307,13 @@ Dois regimes, um por gráfico, nunca misturados.
 
 **A Regra da Marca que Não Muda de Forma.** A marca de categoria é sempre a seta de direção — nunca uma forma inventada para um lugar específico. Legenda, tooltip e resumo mostram a mesma seta que a lista de lançamentos já usa; o que muda entre eles é só a cor, e só quando a superfície exige.
 
-**A Regra da Cor que Se Adapta à Superfície.** A identidade de fluxo é validada contra Folha e Rebaixado — as superfícies onde a maior parte da tela vive — não contra o bloco de tinta, que é o inverso do tema. No balão do gráfico, que é bloco, a cor comum de Receita no tema escuro cai para 2,76:1 contra o bloco claro — abaixo do piso de 3:1. A correção não é um contorno: é uma segunda variante da mesma identidade (`--income-on-block` e as duas irmãs), calibrada e validada contra os dois blocos, e usada só onde a marca pousa sobre tinta cheia. Fora do balão, a variante comum já basta. Esta regra sucede uma versão anterior que resolvia o mesmo problema com um anel de contorno em vez de recalibrar a cor — o anel escondia o sintoma; a variante corrige a causa.
+**A Regra da Cor que Se Adapta à Superfície.** A identidade de fluxo é validada contra Folha e Rebaixado — as superfícies onde a maior parte da tela vive — não contra o bloco de tinta, que é o inverso do tema. Onde a marca pousa sobre tinta cheia, a cor comum falha: Receita no tema escuro cai para 2,76:1 contra o bloco claro, abaixo do piso de 3:1. A correção não é um contorno: é uma segunda variante da mesma identidade (`--income-on-block` e as duas irmãs), calibrada e validada contra os dois blocos. Esta regra sucede uma versão anterior que resolvia o mesmo problema com um anel de contorno em vez de recalibrar a cor — o anel escondia o sintoma; a variante corrige a causa.
+
+**A Regra do que Flutua ser Folha.** O balão do gráfico já foi bloco de tinta, e por isso invertia: preto sobre a tela clara, quase branco sobre a escura. Passou a ser **folha erguida**, com hairline e sombra, acompanhando o tema em vez de contrariá-lo.
+
+A razão não é de gosto, é de orçamento. A Regra da Tinta Escassa dá ao bloco uma cota de dois ou três por tela, e um balão que aparece a cada movimento do ponteiro furava essa cota o tempo todo — gastando no elemento mais efêmero da interface o recurso reservado ao que é permanente e importante. Como folha erguida ele pousa sobre o gráfico em vez de perfurá-lo, e a separação que a inversão dava à força passa a vir da hairline e da sombra, que é como toda folha se separa do que está atrás.
+
+Consequência direta: dentro do balão, a marca de fluxo volta à variante comum. A superfície de trás voltou a ser aquela contra a qual as três foram validadas — 3,54:1 no pior caso, medido. A variante `*-on-block` continua existindo para quem de fato pousa sobre tinta cheia, como o cartão e a barra lateral.
 
 ## Typography
 
