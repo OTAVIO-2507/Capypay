@@ -69,7 +69,7 @@
    * isso a cor nunca é a única leitura nem veste o algarismo pequeno.
    */
   --income: #009970;
-  --expense: #e0521f;
+  --expense: #db0606;
   --contribution: #7b4dea;
 
   /*
@@ -115,7 +115,7 @@
    * repetir em `.dark`.
    */
   --income-on-block: #009970;
-  --expense-on-block: #e0521f;
+  --expense-on-block: #db0606;
   --contribution-on-block: #7b4dea;
   --chart-axis: #8a9099;
 
@@ -211,7 +211,7 @@
 
   /* Mesma identidade, passo escuro — validada de novo contra as superfícies escuras. */
   --income: #00ad85;
-  --expense: #e85f37;
+  --expense: #e50606;
   --contribution: #9070e0;
 
   /*
