@@ -30,13 +30,13 @@ colors:
   series-1: "#101114"
   series-1-night: "#F4F5F6"
   income: "#009970"
-  expense: "#E0521F"
+  expense: "#DB0606"
   contribution: "#7B4DEA"
   income-night: "#00AD85"
-  expense-night: "#E85F37"
+  expense-night: "#E50606"
   contribution-night: "#9070E0"
   income-on-block: "#009970"
-  expense-on-block: "#E0521F"
+  expense-on-block: "#DB0606"
   contribution-on-block: "#7B4DEA"
   cat-alimentacao: "#EC6618"
   cat-moradia: "#1065C6"
@@ -211,7 +211,7 @@ A ausência de cor é a decisão, não a economia. Sem matiz para carregar signi
 
 O acento monocromático existe, e é o inverso: um **bloco de tinta cheia**, retângulo preto sólido com texto branco. É a mancha de tinta na folha. Ele carrega o cartão, o saldo poupado, o item de navegação ativo e o alerta de orçamento estourado — sempre no máximo dois ou três por tela, porque uma folha com metade da área impressa em preto deixa de ter hierarquia.
 
-O sistema recusa duas coisas que a categoria costuma entregar: o gradiente colorido como sinal de modernidade, e o **semáforo** vermelho/verde. A identidade de fluxo é a cor real que a categoria pede — receita e despesa distinguíveis à primeira vista — mas verde-e-terracota, não verde-e-vermelho de painel de carro; validada contra as duas formas de daltonismo mais comuns, para não reproduzir o par que menos funciona para menos gente. E ela nunca é a única leitura: um limite estourado continua se anunciando invertendo o painel inteiro para tinta cheia, que num campo majoritariamente monocromático é o evento mais alto disponível — e continua sem cor, de propósito, porque um alerta não é uma categoria, é um estado.
+O sistema recusa duas coisas que a categoria costuma entregar: o gradiente colorido como sinal de modernidade, e o **semáforo** vermelho/verde. A identidade de fluxo é a cor real que a categoria pede — receita e despesa distinguíveis à primeira vista — e é verde-azulado com vermelho, não o verde-grama com vermelho do painel de carro. A distinção não é de gosto: é o verde-grama que colapsa contra o vermelho no daltonismo mais comum. Com o verde-azulado, a separação medida é ΔE 10,4 no tema claro e 13,2 no escuro, contra um piso de 8 — folga suficiente para o vermelho ser vermelho de verdade. E ela nunca é a única leitura: um limite estourado continua se anunciando invertendo o painel inteiro para tinta cheia, que num campo majoritariamente monocromático é o evento mais alto disponível — e continua sem cor, de propósito, porque um alerta não é uma categoria, é um estado.
 
 **Key Characteristics:**
 
@@ -252,7 +252,7 @@ A separação por daltonismo desta paleta fica em ΔE 6.1 — dentro da faixa de
 
 ### Identidade de fluxo
 
-Três matizes fixos — receita, despesa, aporte — nunca escolhidos, nunca reordenados, nunca aplicados a uma quarta categoria. Verde e terracota, não verde e vermelho: um par pensado para não coincidir com a confusão vermelho-verde que afeta a maioria dos daltonismos, com um terceiro matiz (violeta) longe o bastante dos dois para não ser confundido com nenhum.
+Três matizes fixos — receita, despesa, aporte — nunca escolhidos, nunca reordenados, nunca aplicados a uma quarta categoria. Verde-azulado e vermelho, com um terceiro matiz (violeta) longe o bastante dos dois. O par que falha no daltonismo mais comum é verde-**grama** com vermelho; deslocar o verde para o azul abre a distância sem tirar o vermelho da despesa, e a busca sobre o validador confirmou: o vermelho puro passa com ΔE 10,4 (claro) e 13,2 (escuro), acima do piso de 8. Uma versão anterior usava terracota por precaução, e a medição mostrou que a precaução custava um vermelho que ninguém lia como vermelho.
 
 - **Receita** (`{colors.income}` / `{colors.income-night}`) — `#008B6D` / `#00A88B`
 - **Despesa** (`{colors.expense}` / `{colors.expense-night}`) — `#B8492E` / `#DB684C`
@@ -287,7 +287,11 @@ Validados como paleta categórica contra `--sheet` e `--sunken`, nos dois temas,
 
 **A Regra do Alerta Invertido.** Um limite estourado inverte o painel para tinta cheia. Num campo monocromático, inverter é o evento mais alto disponível, e é por isso que ele fica reservado a uma condição só.
 
-**A Regra do Status Emprestado.** O anel (`Donut`) e a barra (`Progress`) de Orçamento e Metas podem vestir a prop `tone`, que aplica a mesma Receita/Despesa já validada — nunca uma terceira cor de "alerta" ou "aviso". É empréstimo, não uma nova exceção: a paleta continua fechada em duas rampas. A leitura é binária, não a três vias que `BudgetStatus.state` permitiria — dentro do limite usa Receita, estourado usa Despesa; não existe um meio-termo colorido para o estado `warning`, porque uma terceira cor no mesmo par é o primeiro passo para o "painel colorido genérico" que este sistema evita. Meta nunca tem estado negativo, então usa Receita sempre. Como em toda aplicação da identidade de fluxo, a cor nunca é a única leitura: o valor exato, o rótulo e — no estouro — a faixa hachurada e o `BlockPanel` de "Atenção" já contam a mesma história sem ela.
+**A Regra do Status Emprestado.** O anel (`Donut`) e a barra (`Progress`) podem vestir a prop `tone`, que aplica a mesma Receita/Despesa já validada — nunca uma terceira cor de "alerta" ou "aviso". É empréstimo, não uma nova exceção. A leitura é binária, não a três vias que `BudgetStatus.state` permitiria: dentro do limite usa Receita, estourado usa Despesa, e não existe meio-termo colorido para o estado `warning`. Meta nunca tem estado negativo, então usa Receita sempre.
+
+**Em Orçamento, porém, a barra tem dois trabalhos, e eles se dividem por canal.** Numa lista de seis limites, todas as barras vestindo o mesmo verde tornavam impossível distinguir uma linha da outra sem ler o rótulo — a cor estava dizendo o que já se sabia (que está dentro do limite) e calando o que se procurava (qual categoria é). Então o trecho cheio veste o matiz da **categoria** (`fillColor`) e o estouro fica na **hachura**, que é textura antes de ser cor. Identidade na cor sólida, status na textura: dois canais, duas informações, nenhuma disputa.
+
+O estouro não perde nada com isso, e é a Regra das Quatro Leituras funcionando: continua dito pela faixa hachurada, pelo selo "Estourou", pelo texto "R$ X acima do limite" e pelo próprio percentual acima de 100. A cor era a quarta dessas leituras, e a única que a identidade de categoria podia ocupar sem apagar nenhuma.
 
 ### Séries de gráfico
 
