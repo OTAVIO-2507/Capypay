@@ -289,9 +289,9 @@ Validados como paleta categórica contra `--sheet` e `--sunken`, nos dois temas,
 
 **A Regra do Status Emprestado.** O anel (`Donut`) e a barra (`Progress`) podem vestir a prop `tone`, que aplica a mesma Receita/Despesa já validada — nunca uma terceira cor de "alerta" ou "aviso". É empréstimo, não uma nova exceção. A leitura é binária, não a três vias que `BudgetStatus.state` permitiria: dentro do limite usa Receita, estourado usa Despesa, e não existe meio-termo colorido para o estado `warning`. Meta nunca tem estado negativo, então usa Receita sempre.
 
-**Em Orçamento, porém, a barra tem dois trabalhos, e eles se dividem por canal.** Numa lista de seis limites, todas as barras vestindo o mesmo verde tornavam impossível distinguir uma linha da outra sem ler o rótulo — a cor estava dizendo o que já se sabia (que está dentro do limite) e calando o que se procurava (qual categoria é). Então o trecho cheio veste o matiz da **categoria** (`fillColor`) e o estouro fica na **hachura**, que é textura antes de ser cor. Identidade na cor sólida, status na textura: dois canais, duas informações, nenhuma disputa.
+A barra não veste cor de categoria, e a tentação existe: numa lista de seis limites elas ficam todas do mesmo verde. Mas esta lista responde "como estou indo", não "qual categoria é" — quem identifica a categoria é a pastilha colorida da lista ao lado, e repetir o matiz aqui gastaria a barra dizendo o que já está dito, para calar o que só ela diz.
 
-O estouro não perde nada com isso, e é a Regra das Quatro Leituras funcionando: continua dito pela faixa hachurada, pelo selo "Estourou", pelo texto "R$ X acima do limite" e pelo próprio percentual acima de 100. A cor era a quarta dessas leituras, e a única que a identidade de categoria podia ocupar sem apagar nenhuma.
+Como em toda aplicação da identidade de fluxo, a cor nunca é a única leitura: o valor exato, o rótulo e — no estouro — a faixa hachurada e o  de "Atenção" já contam a mesma história sem ela.
 
 ### Séries de gráfico
 

@@ -50,7 +50,7 @@ export function ChartTooltipBody({ title, rows }: ChartTooltipProps) {
      * de perfurá-lo, e a hairline mais a sombra dão a separação que a inversão
      * dava à força.
      */
-    <div className="rounded-sm border border-hairline bg-sheet-raised px-3.5 py-3 text-ink shadow-[var(--shadow-float)]">
+    <div className="rounded-sm border border-hairline bg-raised px-3.5 py-3 text-ink shadow-[var(--shadow-float)]">
       <p className="text-xs font-semibold">{title}</p>
       <ul className="mt-2 flex flex-col gap-1.5">
         {rows.map((row) => (
