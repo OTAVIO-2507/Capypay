@@ -163,6 +163,13 @@ interface ProgressProps {
    * Tinta: nem todo progresso é sinal de alerta ou de saúde financeira.
    */
   tone?: keyof typeof TONE_BG
+  /**
+   * Veste o preenchimento numa cor de categoria, que é **identidade** e não
+   * status. Vence `tone` no trecho cheio, e não toca na hachura do estouro —
+   * assim uma barra diz as duas coisas ao mesmo tempo, cada uma no seu canal:
+   * qual categoria é, na cor do trecho cheio; se estourou, na textura.
+   */
+  fillColor?: string | null
   className?: string
 }
 
@@ -174,7 +181,15 @@ interface ProgressProps {
  * preto e branco, à impressão e à cor que falta enxergar. `tone`, quando
  * presente, soma a identidade de fluxo a essa leitura — nunca a substitui.
  */
-export function Progress({ value, label, overflow, onBlock = false, tone, className }: ProgressProps) {
+export function Progress({
+  value,
+  label,
+  overflow,
+  onBlock = false,
+  tone,
+  fillColor,
+  className,
+}: ProgressProps) {
   const exceeded = typeof overflow === 'number' && overflow > 100
   const overflowWidth = exceeded ? Math.min(overflow - 100, 100) : 0
 
@@ -194,9 +209,12 @@ export function Progress({ value, label, overflow, onBlock = false, tone, classN
       <div
         className={cn(
           'h-full transition-[width,background-color] duration-300',
-          tone ? TONE_BG[tone] : onBlock ? 'bg-block-ink' : 'bg-ink',
+          fillColor ? undefined : tone ? TONE_BG[tone] : onBlock ? 'bg-block-ink' : 'bg-ink',
         )}
-        style={{ width: `${Math.max(Math.min(value, 100), 0)}%` }}
+        style={{
+          width: `${Math.max(Math.min(value, 100), 0)}%`,
+          backgroundColor: fillColor ?? undefined,
+        }}
       />
       {exceeded ? (
         <div

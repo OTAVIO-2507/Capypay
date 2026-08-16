@@ -249,12 +249,19 @@ export function BudgetPage() {
                         </span>
                         <span className="tnum shrink-0 text-xs text-muted">{row.percent}%</span>
                       </div>
-                      {/* `overflow` desenha o transbordo hachurado quando passa de 100%. */}
+                      {/*
+                        A barra diz duas coisas em canais separados: o trecho
+                        cheio veste o matiz da **categoria**, para a linha ser
+                        reconhecível numa lista de seis barras que antes eram
+                        todas do mesmo verde; e o estouro continua na hachura,
+                        que é textura e não cor. `tone` segue valendo para ela.
+                      */}
                       <Progress
                         value={row.barPercent}
                         overflow={row.percent}
                         label={`${row.label}: ${row.percent}% do limite usado`}
                         tone={row.state === 'exceeded' ? 'expense' : 'income'}
+                        fillColor={categoryColor(row.categoryId)}
                       />
                       <p className="mt-1 text-xs text-muted">
                         {row.remainingCents >= 0 ? (

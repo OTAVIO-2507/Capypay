@@ -23,6 +23,7 @@ import {
   type BudgetStatus,
   type GoalProgress,
 } from '@/domain/selectors'
+import { categoryColor } from '@/domain/categories'
 import { activeSubscriptions } from '@/domain/subscriptions'
 import type { TransactionKind } from '@/domain/types'
 import { BalanceTrend, FlowChart } from '@/features/charts/LazyCharts'
@@ -391,11 +392,17 @@ function BudgetSummary({ rows }: { rows: BudgetStatus[] }) {
               <span className="tnum shrink-0 text-xs text-muted">{row.percent}%</span>
             )}
           </div>
+          {/*
+            Trecho cheio na cor da categoria, estouro na hachura. Sem isso as
+            quatro barras deste painel eram todas do mesmo verde, e distinguir
+            uma da outra exigia ler o rótulo de cada uma.
+          */}
           <Progress
             value={row.barPercent}
             overflow={row.percent}
             label={`${row.label}: ${row.percent}% do limite usado`}
             tone={row.state === 'exceeded' ? 'expense' : 'income'}
+            fillColor={categoryColor(row.categoryId)}
           />
           <p className="mt-2 text-xs text-muted">
             <Money cents={row.spentCents} /> de{' '}
