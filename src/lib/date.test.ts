@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   formatDayMonth,
+  formatDayMonthYear,
   formatDayNumber,
   formatFullDate,
   formatMonthLong,
@@ -182,5 +183,21 @@ describe('monthsOfYear', () => {
   it('cai no ano atual quando o ano não é um número', () => {
     // Sem isto, um ano NaN gerava "NaN-01" e cada rótulo do eixo lançava.
     expect(monthsOfYear(Number.NaN).every(isValidMonthKey)).toBe(true)
+  })
+})
+
+describe('formatDayMonthYear', () => {
+  it('mostra dia, mês abreviado sem ponto, e ano', () => {
+    expect(formatDayMonthYear('2026-08-10')).toBe('10 ago 2026')
+  })
+
+  /*
+   * Este teste existe por causa de um defeito real: a limpeza do ponto do mês
+   * abreviado foi escrita como `/./g` em vez de `/\./g`, e um ponto sem escape
+   * casa com qualquer caractere — a função devolvia string vazia para toda
+   * data. Typecheck e build passavam limpos.
+   */
+  it('não devolve vazio', () => {
+    expect(formatDayMonthYear('2026-12-01')).toBe('01 dez 2026')
   })
 })

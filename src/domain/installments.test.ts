@@ -141,3 +141,40 @@ describe('installmentSummary', () => {
     })
   })
 })
+
+describe('as parcelas de uma compra', () => {
+  it('lista cada uma com posição, data, valor e se já passou', () => {
+    const transactions = compra('c1', 'Sofá', 32000, ['2026-07', '2026-08', '2026-09'])
+
+    const [sofa] = installmentPurchases(transactions, DEFAULT_CATEGORIES, HOJE)
+
+    expect(sofa.parcels).toHaveLength(3)
+    expect(sofa.parcels.map((p) => [p.index, p.date, p.paid])).toEqual([
+      [1, '2026-07-10', true],
+      [2, '2026-08-10', true],
+      [3, '2026-09-10', false],
+    ])
+    expect(sofa.parcels[0].amountCents).toBe(32000)
+  })
+
+  it('numera pela ordem de data, e não pelo índice gravado', () => {
+    // Uma parcela apagada deixa buraco em `installment.index`; a lista na tela
+    // não pode herdar esse buraco.
+    const transactions = compra('c1', 'Sofá', 32000, ['2026-07', '2026-08', '2026-09']).filter(
+      (item) => item.installment?.index !== 2,
+    )
+
+    const [sofa] = installmentPurchases(transactions, DEFAULT_CATEGORIES, HOJE)
+
+    expect(sofa.parcels.map((p) => p.index)).toEqual([1, 2])
+  })
+
+  it('usa o valor de cada lançamento, e não o total dividido', () => {
+    const transactions = compra('c1', 'Viagem', 10000, ['2026-07', '2026-08', '2026-09'])
+    transactions[0] = { ...transactions[0], amountCents: 50000 }
+
+    const [viagem] = installmentPurchases(transactions, DEFAULT_CATEGORIES, HOJE)
+
+    expect(viagem.parcels.map((p) => p.amountCents)).toEqual([50000, 10000, 10000])
+  })
+})

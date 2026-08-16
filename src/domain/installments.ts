@@ -18,6 +18,18 @@ import type { Cents } from '@/lib/money'
  * a evidência que existe, e é a mesma que o saldo já usa.
  */
 
+/** Uma parcela da compra, como ela aparece na lista aberta. */
+export interface InstallmentParcel {
+  /** Id do lançamento, para a lista ter chave estável. */
+  id: string
+  /** Posição na compra, começando em 1. */
+  index: number
+  date: IsoDate
+  amountCents: Cents
+  /** "Paga" aqui é "com data até hoje" — ver o cabeçalho deste módulo. */
+  paid: boolean
+}
+
 export interface Installment {
   seriesId: string
   label: string
@@ -38,6 +50,16 @@ export interface Installment {
   /** Data da última parcela da série, paga ou não. */
   lastDate: IsoDate
   done: boolean
+  /**
+   * As parcelas, em ordem de data.
+   *
+   * Os agregados acima respondem "quanto falta"; esta lista responde "quando
+   * e quanto", que é a pergunta de quem quer conferir uma cobrança contra o
+   * extrato do cartão. O valor vem de cada lançamento, e não do total dividido
+   * pelo número de parcelas: parcela é editável, e a primeira costuma diferir
+   * das outras por causa de entrada ou arredondamento.
+   */
+  parcels: InstallmentParcel[]
 }
 
 const SUFIXO_DE_PARCELA = /\s*\(\d+\/\d+\)\s*$/
@@ -85,6 +107,19 @@ export function installmentPurchases(
       next: abertas[0]?.date ?? null,
       lastDate: parcelas[parcelas.length - 1].date,
       done: abertas.length === 0,
+      /*
+       * A posição vem da ordem de data, e não de `installment.index`. Os dois
+       * concordam no caso normal, mas uma parcela apagada deixaria buracos na
+       * numeração gravada — e "3/8" com sete linhas na tela é a tela mentindo
+       * sobre si mesma. A ordem cronológica é sempre densa.
+       */
+      parcels: parcelas.map((item, indice) => ({
+        id: item.id,
+        index: indice + 1,
+        date: item.date,
+        amountCents: item.amountCents,
+        paid: item.date <= today,
+      })),
     })
   }
 

@@ -134,6 +134,7 @@ const MONTH_LABEL = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'num
 const MONTH_SHORT = new Intl.DateTimeFormat('pt-BR', { month: 'short' })
 const DAY_MONTH = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short' })
 const FULL_DATE = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' })
+const DAY_MONTH_YEAR = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 const WEEKDAY_SHORT = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' })
 
 function capitalize(value: string): string {
@@ -163,6 +164,33 @@ export function formatMonthShort(month: MonthKey): string {
 export function formatDayMonth(iso: IsoDate): string {
   const date = fromIsoDate(iso)
   return date ? DAY_MONTH.format(date).replace('.', '') : INVALID_DATE_LABEL
+}
+
+/**
+ * "10 ago 2026" — para lista que atravessa a virada do ano.
+ *
+ * `formatDayMonth` omite o ano, o que basta dentro de um mês. Uma compra em
+ * 12x não cabe num ano só, e "10 ago" duas vezes na mesma lista seriam duas
+ * parcelas diferentes parecendo a mesma.
+ */
+export function formatDayMonthYear(iso: IsoDate): string {
+  const date = fromIsoDate(iso)
+  if (!date) return INVALID_DATE_LABEL
+
+  /*
+   * Montado a partir das partes, e não de `format()`.
+   *
+   * O pt-BR compõe esse conjunto como "10 de ago. de 2026" — dois "de" e um
+   * ponto, quinze caracteres para dizer uma data numa lista onde cabem dez.
+   * Pegar dia, mês e ano e juntar com espaço dá "10 ago 2026" sem depender de
+   * remendar a string com `replace`, que é o que quebra quando a biblioteca
+   * muda a pontuação entre versões.
+   */
+  const partes = DAY_MONTH_YEAR.formatToParts(date)
+  const pegar = (tipo: Intl.DateTimeFormatPartTypes) =>
+    (partes.find((parte) => parte.type === tipo)?.value ?? '').replace('.', '')
+
+  return `${pegar('day')} ${pegar('month')} ${pegar('year')}`
 }
 
 /** "15 de março de 2024" — título acessível e tooltip. */

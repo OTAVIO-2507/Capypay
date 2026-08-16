@@ -9,7 +9,7 @@ import { categoryColor } from '@/domain/categories'
 import { installmentPurchases, installmentSummary, type Installment } from '@/domain/installments'
 import { SeriesSummary } from '@/features/series/SeriesSummary'
 import { cn } from '@/lib/cn'
-import { formatMonthLong, monthOf } from '@/lib/date'
+import { formatDayMonthYear, formatMonthLong, monthOf } from '@/lib/date'
 import { formatPercent } from '@/lib/format'
 import { useCategories, usePrivacy, useTransactions } from '@/store/hooks'
 
@@ -141,6 +141,8 @@ function ProgressoGeral({ progress }: { progress: number }) {
 
 function LinhaDeCompra({ compra }: { compra: Installment }) {
   const masked = usePrivacy()
+  const [aberta, setAberta] = useState(false)
+  const idDaLista = `parcelas-${compra.seriesId}`
 
   return (
     <Card className="flex flex-col gap-3">
@@ -189,6 +191,65 @@ function LinhaDeCompra({ compra }: { compra: Installment }) {
           </span>
           <span className="tnum">{formatPercent(compra.progress, { masked })}</span>
         </div>
+      </div>
+
+      {/*
+        As parcelas ficam fechadas por padrão. Uma compra em 12x abriria doze
+        linhas, e três compras dariam trinta e seis — a página deixaria de
+        responder "quanto eu devo" para virar um extrato. Quem abre está
+        conferindo uma cobrança específica contra a fatura, que é outra tarefa
+        e acontece bem menos.
+      */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setAberta((valor) => !valor)}
+          aria-expanded={aberta}
+          aria-controls={idDaLista}
+          className="inline-flex items-center gap-1.5 rounded-full text-xs font-medium text-muted transition-colors duration-150 hover:text-ink"
+        >
+          <Icon
+            name="chevron-down"
+            size={14}
+            className={cn('transition-transform duration-200', aberta && 'rotate-180')}
+          />
+          {aberta ? 'Ocultar parcelas' : `Ver as ${compra.totalCount} parcelas`}
+        </button>
+
+        {aberta ? (
+          <ul id={idDaLista} className="mt-3 flex flex-col divide-y divide-hairline rounded-md bg-sunken px-3">
+            {compra.parcels.map((parcela) => (
+              <li
+                key={parcela.id}
+                className="flex items-center justify-between gap-3 py-2.5 text-xs"
+              >
+                <span className="flex items-center gap-2.5">
+                  {/*
+                    Paga e em aberto se distinguem pela **forma** antes de tudo:
+                    círculo cheio com o visto, ou círculo vazio. A cor não entra
+                    — já paga não é receita, e pintar de verde diria que é.
+                  */}
+                  <Icon
+                    name={parcela.paid ? 'check' : 'circle-dashed'}
+                    size={13}
+                    className={cn('shrink-0', parcela.paid ? 'text-ink' : 'text-faint')}
+                  />
+                  <span className={cn('tnum', parcela.paid ? 'text-muted' : 'font-medium text-ink')}>
+                    {parcela.index}/{compra.totalCount}
+                  </span>
+                </span>
+
+                <span className="flex items-center gap-4">
+                  <span className="tnum text-muted">{formatDayMonthYear(parcela.date)}</span>
+                  <Money
+                    cents={parcela.amountCents}
+                    className={cn('w-24 text-right text-xs', parcela.paid && 'text-muted')}
+                  />
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
     </Card>
   )
