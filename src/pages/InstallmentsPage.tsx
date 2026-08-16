@@ -52,6 +52,18 @@ export function InstallmentsPage() {
       <PageHeader
         title="Parcelamentos"
         description="Compras fatiadas, com o que já foi pago e o que ainda falta."
+        /*
+          O seletor vive no cabeçalho, como o de período em Transações. Solto
+          no corpo da página ele esticava de ponta a ponta: `Segmented`
+          distribui os botões em `flex-1`, e dois botões numa página de 1400px
+          viram dois botões de 700px. No cabeçalho ele se dimensiona pelo
+          conteúdo, que é o tamanho que um filtro deve ter.
+        */
+        actions={
+          compras.length > 0 ? (
+            <Segmented label="Situação" options={abas} value={aba} onChange={setAba} />
+          ) : null
+        }
       />
 
       {compras.length === 0 ? (
@@ -63,60 +75,75 @@ export function InstallmentsPage() {
           />
         </Card>
       ) : (
-        <div className="flex flex-col gap-5">
-          <SeriesSummary
-            stats={[
-              {
-                label: 'Em andamento',
-                icon: 'credit-card',
-                count: resumo.ongoing,
-                countUnit: resumo.ongoing === 1 ? 'compra parcelada' : 'compras parceladas',
-              },
-              { label: 'Valor total', cents: resumo.totalCents },
-              { label: 'Já pago', cents: resumo.paidCents },
-              { label: 'Restante', cents: resumo.remainingCents, highlight: true },
-            ]}
-          >
-            {resumo.ongoing > 0 ? (
-              <div className="mt-6 border-t border-hairline pt-5">
-                <ProgressoGeral progress={resumo.progress} />
-                {resumo.lastMonth ? (
-                  <p className="mt-4 flex items-center gap-1.5 text-xs text-muted">
-                    <Icon name="calendar" size={13} className="shrink-0" />
-                    Última parcela em{' '}
-                    <strong className="font-medium text-ink">
-                      {formatMonthLong(monthOf(resumo.lastMonth))}
-                    </strong>
-                  </p>
+        /*
+          A mesma moldura de duas colunas de Contas, Orçamento e Transações.
+          Esta página era a única em coluna única, e numa tela de 1400px isso
+          esticava linha de lista de ponta a ponta — o nome num extremo, o
+          valor no outro, com meio metro de vazio no meio.
+
+          O resumo fica fixo à esquerda enquanto a lista rola: ele é a resposta
+          da página, e some da tela justamente quando alguém desce para
+          conferir a compra que a produziu.
+        */
+        <div className="grid gap-5 lg:grid-cols-12">
+          <div className="lg:col-span-4">
+            <div className="lg:sticky lg:top-6">
+              <SeriesSummary
+                compact
+                stats={[
+                  {
+                    label: 'Em andamento',
+                    icon: 'credit-card',
+                    count: resumo.ongoing,
+                    countUnit: resumo.ongoing === 1 ? 'compra' : 'compras',
+                  },
+                  { label: 'Valor total', cents: resumo.totalCents },
+                  { label: 'Já pago', cents: resumo.paidCents },
+                  { label: 'Restante', cents: resumo.remainingCents, highlight: true },
+                ]}
+              >
+                {resumo.ongoing > 0 ? (
+                  <div className="mt-6 border-t border-hairline pt-5">
+                    <ProgressoGeral progress={resumo.progress} />
+                    {resumo.lastMonth ? (
+                      <p className="mt-4 flex items-center gap-1.5 text-xs text-muted">
+                        <Icon name="calendar" size={13} className="shrink-0" />
+                        Última parcela em{' '}
+                        <strong className="font-medium text-ink">
+                          {formatMonthLong(monthOf(resumo.lastMonth))}
+                        </strong>
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
-              </div>
-            ) : null}
-          </SeriesSummary>
+              </SeriesSummary>
+            </div>
+          </div>
 
-          <Segmented label="Situação" options={abas} value={aba} onChange={setAba} />
-
-          {visiveis.length === 0 ? (
-            <Card>
-              <EmptyState
-                icon="credit-card"
-                size="sm"
-                title={aba === 'ongoing' ? 'Nada em andamento' : 'Nada finalizado'}
-                description={
-                  aba === 'ongoing'
-                    ? 'Todas as suas compras parceladas já foram quitadas.'
-                    : 'Nenhuma compra parcelada chegou ao fim ainda.'
-                }
-              />
-            </Card>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {visiveis.map((compra) => (
-                <li key={compra.seriesId}>
-                  <LinhaDeCompra compra={compra} />
-                </li>
-              ))}
-            </ul>
-          )}
+          <div className="lg:col-span-8">
+            {visiveis.length === 0 ? (
+              <Card>
+                <EmptyState
+                  icon="credit-card"
+                  size="sm"
+                  title={aba === 'ongoing' ? 'Nada em andamento' : 'Nada finalizado'}
+                  description={
+                    aba === 'ongoing'
+                      ? 'Todas as suas compras parceladas já foram quitadas.'
+                      : 'Nenhuma compra parcelada chegou ao fim ainda.'
+                  }
+                />
+              </Card>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {visiveis.map((compra) => (
+                  <li key={compra.seriesId}>
+                    <LinhaDeCompra compra={compra} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       )}
     </>

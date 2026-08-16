@@ -36,10 +36,31 @@ export interface SeriesStat {
   highlight?: boolean
 }
 
-export function SeriesSummary({ stats, children }: { stats: SeriesStat[]; children?: React.ReactNode }) {
+export function SeriesSummary({
+  stats,
+  /**
+   * Duas colunas fixas, para quando a faixa vive numa coluna estreita.
+   *
+   * O padrão abre até quatro em telas largas, e isso só funciona quando ele
+   * ocupa a largura da página. Espremido num terço dela, quatro colunas viram
+   * quatro números de cem pixels — os breakpoints do Tailwind olham a janela,
+   * não o contêiner, e não têm como saber a diferença.
+   */
+  compact = false,
+  children,
+}: {
+  stats: SeriesStat[]
+  compact?: boolean
+  children?: React.ReactNode
+}) {
   return (
     <Card>
-      <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+      <dl
+        className={cn(
+          'grid gap-x-8 gap-y-6',
+          compact ? 'grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-4',
+        )}
+      >
         {stats.map((stat) => (
           <div key={stat.label}>
             <dt className="flex items-center gap-1.5 text-xs text-muted">

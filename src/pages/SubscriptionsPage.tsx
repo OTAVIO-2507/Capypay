@@ -59,25 +59,32 @@ export function SubscriptionsPage() {
           />
         </Card>
       ) : (
-        <div className="flex flex-col gap-5">
-          <SeriesSummary
-            stats={[
-              {
-                label: 'Assinaturas',
-                icon: 'repeat',
-                count: assinaturas.length,
-                countUnit: assinaturas.length === 1 ? 'ativa' : 'ativas',
-              },
-              { label: 'Gasto mensal', cents: mensal },
-              { label: 'Projeção anual', cents: mensal * 12, highlight: true },
-              {
-                label: 'Média por serviço',
-                cents: Math.round(mensal / assinaturas.length),
-              },
-            ]}
-          />
+        /* A mesma moldura de Parcelamentos, e pelo mesmo motivo: são páginas
+           irmãs, e eram as duas únicas do produto em coluna única. */
+        <div className="grid gap-5 lg:grid-cols-12">
+          <div className="lg:col-span-4">
+            <div className="lg:sticky lg:top-6">
+              <SeriesSummary
+                compact
+                stats={[
+                  {
+                    label: 'Assinaturas',
+                    icon: 'repeat',
+                    count: assinaturas.length,
+                    countUnit: assinaturas.length === 1 ? 'ativa' : 'ativas',
+                  },
+                  { label: 'Gasto mensal', cents: mensal },
+                  { label: 'Projeção anual', cents: mensal * 12, highlight: true },
+                  {
+                    label: 'Média por serviço',
+                    cents: Math.round(mensal / assinaturas.length),
+                  },
+                ]}
+              />
+            </div>
+          </div>
 
-          <ul className="flex flex-col gap-3">
+          <ul className="flex flex-col gap-3 lg:col-span-8">
             {assinaturas.map((assinatura) => (
               <li key={assinatura.seriesId}>
                 <Card className="flex items-center justify-between gap-4">
