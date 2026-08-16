@@ -291,7 +291,7 @@ Validados como paleta categórica contra `--sheet` e `--sunken`, nos dois temas,
 
 A barra não veste cor de categoria, e a tentação existe: numa lista de seis limites elas ficam todas do mesmo verde. Mas esta lista responde "como estou indo", não "qual categoria é" — quem identifica a categoria é a pastilha colorida da lista ao lado, e repetir o matiz aqui gastaria a barra dizendo o que já está dito, para calar o que só ela diz.
 
-Como em toda aplicação da identidade de fluxo, a cor nunca é a única leitura: o valor exato, o rótulo e — no estouro — a faixa hachurada e o  de "Atenção" já contam a mesma história sem ela.
+Como em toda aplicação da identidade de fluxo, a cor nunca é a única leitura: o valor exato, o rótulo e — no estouro — a faixa hachurada e o `BlockPanel` de "Atenção" já contam a mesma história sem ela.
 
 ### Séries de gráfico
 
