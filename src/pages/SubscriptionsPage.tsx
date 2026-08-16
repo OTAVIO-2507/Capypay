@@ -4,12 +4,14 @@ import { PageHeader } from '@/components/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Money } from '@/components/ui/Money'
+import { categoryColor } from '@/domain/categories'
 import {
   activeSubscriptions,
   monthlySubscriptionCost,
   type Subscription,
 } from '@/domain/subscriptions'
 import { SeriesSummary } from '@/features/series/SeriesSummary'
+import { cn } from '@/lib/cn'
 import { formatDayMonth } from '@/lib/date'
 import { useCategories, useTransactions } from '@/store/hooks'
 
@@ -67,7 +69,7 @@ export function SubscriptionsPage() {
                 countUnit: assinaturas.length === 1 ? 'ativa' : 'ativas',
               },
               { label: 'Gasto mensal', cents: mensal },
-              { label: 'Projeção anual', cents: mensal * 12 },
+              { label: 'Projeção anual', cents: mensal * 12, highlight: true },
               {
                 label: 'Média por serviço',
                 cents: Math.round(mensal / assinaturas.length),
@@ -80,7 +82,21 @@ export function SubscriptionsPage() {
               <li key={assinatura.seriesId}>
                 <Card className="flex items-center justify-between gap-4">
                   <span className="flex min-w-0 items-center gap-3">
-                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-sm bg-sunken text-faint">
+                    {/*
+                      A mesma pastilha de Orçamento e do extrato. Estas duas
+                      páginas nasceram antes da cor de categoria existir e
+                      ficaram no cinza antigo — a categoria era a mesma coisa
+                      em três telas e se apresentava de dois jeitos.
+                    */}
+                    <span
+                      style={{ backgroundColor: categoryColor(assinatura.categoryId) ?? undefined }}
+                      className={cn(
+                        'inline-flex size-9 shrink-0 items-center justify-center rounded-lg',
+                        categoryColor(assinatura.categoryId)
+                          ? 'text-white'
+                          : 'bg-sunken text-faint',
+                      )}
+                    >
                       <Icon name={assinatura.icon} size={16} />
                     </span>
                     <span className="min-w-0">

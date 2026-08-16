@@ -189,7 +189,7 @@ export function Figure({ cents, onBlock = false, size = 'md', tone, className }:
         'figure font-[Figtree_Variable,var(--font-sans)] font-extrabold',
         size === 'lg' && 'text-[2.75rem] sm:text-[3.5rem]',
         size === 'md' && 'text-[2.75rem]',
-        size === 'sm' && 'text-[2rem]',
+        size === 'sm' && 'text-[1.75rem]',
         onBlock ? 'text-block-ink' : (corDoSinal ?? 'text-ink'),
         className,
       )}

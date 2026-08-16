@@ -5,8 +5,10 @@ import { Card } from '@/components/ui/Card'
 import { Segmented, Progress, type SegmentOption } from '@/components/ui/Controls'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Money } from '@/components/ui/Money'
+import { categoryColor } from '@/domain/categories'
 import { installmentPurchases, installmentSummary, type Installment } from '@/domain/installments'
 import { SeriesSummary } from '@/features/series/SeriesSummary'
+import { cn } from '@/lib/cn'
 import { formatMonthLong, monthOf } from '@/lib/date'
 import { formatPercent } from '@/lib/format'
 import { useCategories, usePrivacy, useTransactions } from '@/store/hooks'
@@ -72,7 +74,7 @@ export function InstallmentsPage() {
               },
               { label: 'Valor total', cents: resumo.totalCents },
               { label: 'Já pago', cents: resumo.paidCents },
-              { label: 'Restante', cents: resumo.remainingCents },
+              { label: 'Restante', cents: resumo.remainingCents, highlight: true },
             ]}
           >
             {resumo.ongoing > 0 ? (
@@ -144,7 +146,19 @@ function LinhaDeCompra({ compra }: { compra: Installment }) {
     <Card className="flex flex-col gap-3">
       <div className="flex items-start justify-between gap-4">
         <span className="flex min-w-0 items-center gap-3">
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-sm bg-sunken text-faint">
+          {/*
+            A mesma pastilha de Orçamento e do extrato. Esta página nasceu
+            antes da cor de categoria existir e ficou no cinza antigo — a
+            categoria era a mesma coisa em três telas e se apresentava de dois
+            jeitos.
+          */}
+          <span
+            style={{ backgroundColor: categoryColor(compra.categoryId) ?? undefined }}
+            className={cn(
+              'inline-flex size-9 shrink-0 items-center justify-center rounded-lg',
+              categoryColor(compra.categoryId) ? 'text-white' : 'bg-sunken text-faint',
+            )}
+          >
             <Icon name={compra.icon} size={16} />
           </span>
           <span className="min-w-0">

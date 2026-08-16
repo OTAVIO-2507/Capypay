@@ -24,6 +24,16 @@ export interface SeriesStat {
   countUnit?: string
   cents?: Cents
   icon?: IconName
+  /**
+   * O número que a página existe para mostrar, e só um por faixa.
+   *
+   * Sem isto os quatro saem do mesmo tamanho, e uma faixa em que tudo tem o
+   * mesmo peso não tem hierarquia nenhuma — o olho começa pelo primeiro
+   * porque é o primeiro, não porque é o que importa. Em Assinaturas isso
+   * chegava a contradizer a própria página: a projeção anual, que é o
+   * argumento inteiro, saía do mesmo tamanho da média por serviço.
+   */
+  highlight?: boolean
 }
 
 export function SeriesSummary({ stats, children }: { stats: SeriesStat[]; children?: React.ReactNode }) {
@@ -40,11 +50,14 @@ export function SeriesSummary({ stats, children }: { stats: SeriesStat[]; childr
               <Money
                 cents={stat.cents ?? 0}
                 emphasis="strong"
-                className={cn('mt-1.5 block text-[1.375rem]')}
+                className={cn(
+                  'mt-1.5 block',
+                  stat.highlight ? 'text-[1.75rem] tracking-[-0.03em]' : 'text-[1.375rem]',
+                )}
               />
             ) : (
               <dd className="mt-1.5 flex items-baseline gap-1.5">
-                <span className="tnum text-[1.75rem] font-semibold tracking-[-0.02em] text-ink">
+                <span className="tnum text-[1.375rem] font-semibold tracking-[-0.02em] text-ink">
                   {stat.count}
                 </span>
                 {stat.countUnit ? (
