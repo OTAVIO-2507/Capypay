@@ -133,19 +133,28 @@ Ler uma conexão que já existe não custa, e é isso que o
 dele, gratuitamente e sem prazo, e o aplicativo lê de lá com as credenciais do
 mesmo Dashboard.
 
-A ordem importa, e o terceiro passo é o que costuma faltar:
+A ordem importa, e os passos 3 e 4 são os que não se descobrem sozinho:
 
 1. Criar conta no [meu.pluggy.ai](https://meu.pluggy.ai).
 2. Conectar os bancos por lá. Cada conexão vira um **Item**.
-3. **No Dashboard, entrar na aplicação _demo_ e conectar os itens do Meu
-   Pluggy.** É este passo que liga uma coisa na outra: o Meu Pluggy funciona
-   como proxy dos consentimentos que você já deu, e sem ele a API autentica
-   normalmente e não enxerga conexão nenhuma. Nenhuma permissão nova é pedida.
-4. Usar o `clientId` e o `clientSecret` **da aplicação demo** nos secrets abaixo.
+3. No Dashboard, **Dados Financeiros → Customização**, adicionar **"Meu Pluggy"**
+   à lista de conectores. Sem isso ele não aparece como opção no passo seguinte,
+   e a tela oferece só bancos e o sandbox.
+4. Abrir a aplicação demo (botão ▷ em Aplicações) → **Conectar Conta** →
+   escolher **Meu Pluggy** → autorizar por OAuth. A autorização é um **proxy**
+   do consentimento que você já deu no portal: nenhuma permissão nova é pedida,
+   e os dados passam a atualizar diariamente.
+5. Usar o `clientId` e o `clientSecret` **da aplicação demo** nos secrets abaixo.
 
-O item 4 merece atenção porque falha em silêncio: credenciais de outra
-aplicação autenticam com sucesso e devolvem lista vazia, que é indistinguível
-de "não há lançamentos no período".
+No uso pessoal a aplicação demo é a única que existe, então as credenciais dela
+são as certas. Se um dia houver outra, vale saber que credencial de aplicação
+errada falha em silêncio: autentica com sucesso e devolve lista vazia, que é
+indistinguível de "não há lançamentos no período".
+
+**Cada banco do Meu Pluggy exige o passo 4 uma vez.** Conectou um banco novo no
+portal? Repita a autorização, senão ele não aparece pela API. E o item de
+sandbox ("Pluggy Bank") que a demo cria sozinha não serve: ele vive com
+`INVALID CREDENTIALS` e sem contas, e o Item ID dele não é o seu.
 
 ```bash
 npx supabase secrets set PLUGGY_CLIENT_ID=<da-aplicacao-demo> --project-ref mkxjmrmkgsetnclfkxcj
