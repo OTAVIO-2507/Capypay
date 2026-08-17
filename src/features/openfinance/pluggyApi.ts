@@ -28,6 +28,9 @@ export interface ExtratoSincronizado {
   accountKey: string
   accountLabel: string
   kind: 'checking' | 'credit_card'
+  /** Saldo informado pela instituição. Nulo quando ela não informa. */
+  balanceCents: number | null
+  number: string | null
   entries: { key: string; date: string; amountCents: number; description: string }[]
 }
 

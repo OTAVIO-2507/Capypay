@@ -21,6 +21,23 @@ const repository = createSupabaseRepository()
 
 type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
 
+/**
+ * A conta de onde um lote importado veio.
+ *
+ * `externalKey` é o que amarra as importações seguintes à mesma conta, e por
+ * isso precisa ser estável na origem: o id da conta na Pluggy, ou o número da
+ * conta no OFX.
+ */
+export interface ImportedAccount {
+  externalKey: string
+  name: string
+  kind: Account['kind']
+  provider: string
+  number?: string | null
+  /** Saldo informado pela instituição. `null` quando ela não diz. */
+  balanceCents?: Cents | null
+}
+
 interface FinanceState {
   data: FinanceData
   /** Ciclo de vida do carregamento remoto — ver `mutate()` e `loadForUser()`. */
@@ -44,7 +61,7 @@ interface FinanceState {
 
   addTransaction: (draft: TransactionDraft, recurrence?: RecurrenceDraft | null) => void
   /** Grava um extrato conferido de uma vez. Ver a nota na implementação. */
-  importTransactions: (drafts: readonly TransactionDraft[]) => void
+  importTransactions: (drafts: readonly TransactionDraft[], account?: ImportedAccount) => void
   updateTransaction: (id: TransactionId, patch: Partial<Transaction>) => void
   deleteTransaction: (id: TransactionId) => void
   deleteSeries: (seriesId: string) => void
@@ -146,12 +163,81 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
      * falhar e deixar metade de um extrato dentro do histórico. Um lote é uma
      * escrita e um resultado só.
      */
-    importTransactions: (drafts) =>
+    importTransactions: (drafts, account) =>
       mutate((data) => {
         const now = Date.now()
 
+        /*
+         * A conta de origem é aberta na primeira importação e reencontrada nas
+         * seguintes pela chave externa, e não pelo nome: nome é editável, e
+         * quem renomeasse "Conta 1234" para "Nubank" ganharia uma conta nova a
+         * cada sincronização.
+         */
+        let accounts = data.accounts
+        let accountId: string | null = null
+
+        if (account) {
+          const existente = accounts.find((item) => item.sync?.itemId === account.externalKey)
+
+          if (existente) {
+            accountId = existente.id
+            accounts = accounts.map((item) =>
+              item.id === existente.id
+                ? {
+                    ...item,
+                    balanceCents: account.balanceCents ?? item.balanceCents ?? null,
+                    balanceUpdatedAt: account.balanceCents === null ? item.balanceUpdatedAt : now,
+                    sync: { ...item.sync!, lastSyncedAt: now },
+                  }
+                : item,
+            )
+          } else {
+            accountId = createId('acc')
+            accounts = [
+              ...accounts,
+              {
+                id: accountId,
+                name: account.name,
+                kind: account.kind,
+                institution: null,
+                last4: account.number?.slice(-4) ?? null,
+                creditCard: null,
+                balanceCents: account.balanceCents ?? null,
+                balanceUpdatedAt: account.balanceCents == null ? null : now,
+                sync: {
+                  provider: account.provider,
+                  itemId: account.externalKey,
+                  lastSyncedAt: now,
+                },
+                archived: false,
+                createdAt: now,
+              },
+            ]
+          }
+        }
+
+        /*
+         * As chaves de agrupamento viram ids de série aqui.
+         *
+         * A detecção trabalha com chaves derivadas do texto ("parc:notebook:10")
+         * porque precisa reconhecer que duas linhas são a mesma compra. Guardar
+         * essa chave como `seriesId` faria o histórico depender do texto do
+         * extrato: importar o mês seguinte com a descrição levemente diferente
+         * abriria uma segunda série para a mesma compra. O id é gerado uma vez
+         * por chave, e o texto fica para trás.
+         */
+        const seriesPorChave = new Map<string, string>()
+        const idDaSerie = (chave: string) => {
+          const existente = seriesPorChave.get(chave)
+          if (existente) return existente
+          const novo = createId('series')
+          seriesPorChave.set(chave, novo)
+          return novo
+        }
+
         return {
           ...data,
+          accounts,
           transactions: [
             ...data.transactions,
             ...drafts.map((draft) =>
@@ -162,13 +248,13 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
                 description: draft.description,
                 date: draft.date,
                 goalId: draft.goalId ?? null,
-                accountId: draft.accountId ?? null,
+                accountId: draft.accountId ?? accountId,
                 source: 'imported',
                 externalId: draft.externalId ?? null,
                 notes: draft.notes ?? null,
-                seriesId: null,
-                seriesKind: null,
-                installment: null,
+                seriesId: draft.seriesId ? idDaSerie(draft.seriesId) : null,
+                seriesKind: draft.seriesKind ?? null,
+                installment: draft.installment ?? null,
                 id: createId('tx'),
                 createdAt: now,
                 updatedAt: now,

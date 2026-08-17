@@ -133,6 +133,17 @@ export interface Account {
   last4?: string | null
   creditCard?: CreditCardTerms | null
   sync?: AccountSyncLink | null
+  /**
+   * Saldo informado pela instituição, quando a conta veio de importação.
+   *
+   * Fica **fora** do cálculo de saldo do produto, que soma lançamentos, e isso
+   * é deliberado. Transformá-lo num lançamento de abertura faria o valor
+   * aparecer como receita do mês em que caísse, inflando "entrou" com dinheiro
+   * que ninguém recebeu ali. Aqui ele é o que é: o número que o banco diz, com
+   * a data em que disse.
+   */
+  balanceCents?: Cents | null
+  balanceUpdatedAt?: number | null
   archived: boolean
   createdAt: number
 }

@@ -106,9 +106,11 @@ async function pluggyGet(caminho: string): Promise<Record<string, unknown>> {
 interface ContaPluggy {
   id: string
   type?: string
+  subtype?: string
   name?: string
   marketingName?: string
   number?: string
+  balance?: number
 }
 
 interface LancamentoPluggy {
@@ -257,6 +259,17 @@ Deno.serve(async (req) => {
         accountLabel:
           conta.marketingName ?? conta.name ?? (conta.type === 'CREDIT' ? 'Cartão' : 'Conta'),
         kind: conta.type === 'CREDIT' ? 'credit_card' : 'checking',
+        /*
+         * O saldo vai junto porque o aplicativo calcula saldo somando o
+         * histórico, e um histórico que começa há noventa dias produz um número
+         * que não é o da conta. Com o saldo real, a importação consegue abrir a
+         * conta pelo valor certo em vez de deixar a tela mentir com convicção.
+         *
+         * `null` quando a instituição não informa: melhor não ter saldo do que
+         * ter um zero que parece saldo.
+         */
+        balanceCents: typeof conta.balance === 'number' ? paraCentavos(conta.balance) : null,
+        number: conta.number ?? null,
         entries: lancamentos
           .filter((item) => typeof item.amount === 'number' && item.date)
           .map((item) => ({
