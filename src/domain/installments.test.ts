@@ -236,7 +236,56 @@ describe('compra parcelada vinda de importação, com parcelas ausentes', () => 
       HOJE,
     )
 
-    expect(notebook.parcels.map((p) => p.index)).toEqual([5, 6])
+    const reais = notebook.parcels.filter((p) => !p.projected)
+    expect(reais.map((p) => p.index)).toEqual([5, 6])
+  })
+
+  /*
+   * A lista completa é o que responde a pergunta da página. Mostrar três linhas
+   * de uma compra em oito, sem dizer onde estão as outras cinco, é responder
+   * "quanto falta" escondendo justamente o que falta.
+   */
+  it('projeta as parcelas que ainda não existem no histórico', () => {
+    const [notebook] = installmentPurchases(
+      [parcela('2026-07', 5), parcela('2026-08', 6)],
+      DEFAULT_CATEGORIES,
+      HOJE,
+    )
+
+    expect(notebook.parcels).toHaveLength(10)
+    expect(notebook.parcels.map((p) => p.index)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    // As duas reais continuam distinguíveis das projetadas: uma pode ser
+    // conferida contra a fatura, a outra é conta nossa.
+    expect(notebook.parcels.filter((p) => p.projected)).toHaveLength(8)
+  })
+
+  it('projeta as datas de mês em mês a partir da última conhecida', () => {
+    const [notebook] = installmentPurchases(
+      [parcela('2026-07', 5), parcela('2026-08', 6)],
+      DEFAULT_CATEGORIES,
+      HOJE,
+    )
+
+    const setima = notebook.parcels.find((p) => p.index === 7)
+    expect(setima?.date).toBe('2026-09-15')
+    expect(setima?.paid).toBe(false)
+  })
+
+  /*
+   * "Termina em" saía da última parcela importada, e a última importada não é a
+   * última da compra: o extrato acaba, a dívida não. A tela anunciava o fim do
+   * parcelamento para o mês em que o período pedido terminava.
+   */
+  it('termina na última parcela de verdade, e não na última importada', () => {
+    const [notebook] = installmentPurchases(
+      [parcela('2026-07', 5), parcela('2026-08', 6)],
+      DEFAULT_CATEGORIES,
+      HOJE,
+    )
+
+    expect(notebook.lastDate).toBe('2026-12-15')
+    expect(notebook.next).toBe('2026-08-15')
+    expect(notebook.done).toBe(false)
   })
 
   it('continua fechando o buraco quando a compra é do próprio app', () => {

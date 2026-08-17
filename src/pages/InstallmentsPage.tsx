@@ -365,6 +365,13 @@ function LinhaDeCompra({ compra }: { compra: Installment }) {
                         size={13}
                         className={cn('shrink-0', parcela.paid ? 'text-ink' : 'text-faint')}
                       />
+                      {/*
+                        A projetada é desenhada mais apagada porque a diferença
+                        é real: a parcela importada pode ser conferida contra a
+                        fatura, e esta é uma conta feita a partir do "3 de 8".
+                        Mostrá-las iguais convidaria a conferir uma previsão
+                        como se fosse extrato.
+                      */}
                       <span
                         className={cn(
                           'tnum shrink-0',
@@ -378,13 +385,21 @@ function LinhaDeCompra({ compra }: { compra: Installment }) {
                           Próxima
                         </span>
                       ) : null}
+                      {parcela.projected ? (
+                        <span className="shrink-0 text-xs text-faint">prevista</span>
+                      ) : null}
                     </span>
 
                     <span className="flex shrink-0 items-center gap-4">
-                      <span className="tnum text-muted">{formatDayMonthYear(parcela.date)}</span>
+                      <span className={cn('tnum', parcela.projected ? 'text-faint' : 'text-muted')}>
+                        {formatDayMonthYear(parcela.date)}
+                      </span>
                       <Money
                         cents={parcela.amountCents}
-                        className={cn('w-24 text-right text-xs', parcela.paid && 'text-muted')}
+                        className={cn(
+                          'w-24 text-right text-xs',
+                          parcela.projected ? 'text-faint' : parcela.paid ? 'text-muted' : '',
+                        )}
                       />
                     </span>
                   </li>

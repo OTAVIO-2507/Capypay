@@ -1,6 +1,6 @@
 import { categoryIcon, categoryLabel } from './categories'
 import type { Category, CategoryId, Transaction } from './types'
-import { todayIso, type IsoDate } from '@/lib/date'
+import { shiftDate, todayIso, type IsoDate } from '@/lib/date'
 import type { Cents } from '@/lib/money'
 
 /**
@@ -28,6 +28,15 @@ export interface InstallmentParcel {
   amountCents: Cents
   /** "Paga" aqui é "com data até hoje" — ver o cabeçalho deste módulo. */
   paid: boolean
+  /**
+   * Parcela que ainda não existe no histórico, projetada pela declaração.
+   *
+   * Uma compra importada traz só as parcelas que caíram no período, e são as
+   * ausentes que respondem a pergunta da página. Elas são desenhadas de outro
+   * jeito porque a diferença importa: a parcela real pode ser conferida contra
+   * a fatura, e a projetada é uma conta que fizemos a partir do "3 de 8".
+   */
+  projected?: boolean
 }
 
 export interface Installment {
@@ -144,6 +153,27 @@ export function installmentPurchases(
       ? valorDaParcela * pagasCount
       : pagas.reduce((soma, item) => soma + item.amountCents, 0)
 
+    /*
+     * A lista completa vem antes dos agregados porque eles dependem dela.
+     *
+     * "Termina em" e "a próxima é" saíam das parcelas importadas, e a última
+     * importada não é a última da compra: o extrato acaba, a dívida não. A tela
+     * anunciava o fim do parcelamento para o mês em que o período pedido
+     * terminava.
+     */
+    const parcels = comProjetadas(
+      parcelas.map((item, indice) => ({
+        id: item.id,
+        index: faltando ? (item.installment?.index ?? indice + 1) : indice + 1,
+        date: item.date,
+        amountCents: item.amountCents,
+        paid: item.date <= today,
+      })),
+      { seriesId, totalCount, valorDaParcela, faltando, today },
+    )
+
+    const emAberto = parcels.filter((item) => !item.paid)
+
     compras.push({
       seriesId,
       label: referencia.description.replace(SUFIXO_DE_PARCELA, '').trim() || 'Compra parcelada',
@@ -157,28 +187,10 @@ export function installmentPurchases(
       paidCount: pagasCount,
       totalCount,
       progress: totalCents === 0 ? 0 : paidCents / totalCents,
-      next: abertas[0]?.date ?? null,
-      lastDate: parcelas[parcelas.length - 1].date,
-      // Com parcelas ausentes, a última importada não é a última da compra: a
-      // dívida continua depois do fim do extrato.
-      done: abertas.length === 0 && !faltando,
-      /*
-       * A posição vem da ordem de data quando temos a compra inteira. Os dois
-       * concordam no caso normal, mas uma parcela apagada deixaria buracos na
-       * numeração gravada — e "3/8" com sete linhas na tela é a tela mentindo
-       * sobre si mesma. A ordem cronológica é sempre densa.
-       *
-       * Faltando parcelas, é o contrário: a lista tem três linhas de uma compra
-       * de dez, e numerá-las 1, 2 e 3 renomearia a parcela 5 de alguém para 1.
-       * Aí a posição declarada é a única que diz a verdade.
-       */
-      parcels: parcelas.map((item, indice) => ({
-        id: item.id,
-        index: faltando ? (item.installment?.index ?? indice + 1) : indice + 1,
-        date: item.date,
-        amountCents: item.amountCents,
-        paid: item.date <= today,
-      })),
+      next: emAberto[0]?.date ?? null,
+      lastDate: parcels[parcels.length - 1]?.date ?? parcelas[parcelas.length - 1].date,
+      done: emAberto.length === 0,
+      parcels,
     })
   }
 
@@ -223,4 +235,58 @@ export function installmentSummary(purchases: readonly Installment[]): Installme
     progress: totalCents === 0 ? 0 : paidCents / totalCents,
     lastMonth,
   }
+}
+
+/**
+ * Completa a lista com as parcelas que ainda não existem no histórico.
+ *
+ * Uma compra importada chega só com as parcelas que caíram no período pedido, e
+ * são justamente as ausentes que respondem a pergunta da página. Mostrar três
+ * linhas de uma compra em oito, sem dizer onde estão as outras cinco, é a tela
+ * responder "quanto falta" escondendo o que falta.
+ *
+ * A projeção sai da posição declarada pelo banco: conhecendo a data da parcela
+ * 3 e sabendo que existem 8, as cinco seguintes caem de mês em mês. Elas ficam
+ * marcadas como projetadas porque a diferença é real — a parcela importada pode
+ * ser conferida contra a fatura, e esta é uma conta que fizemos.
+ */
+function comProjetadas(
+  existentes: InstallmentParcel[],
+  contexto: {
+    seriesId: string
+    totalCount: number
+    valorDaParcela: Cents
+    faltando: boolean
+    today: IsoDate
+  },
+): InstallmentParcel[] {
+  const { seriesId, totalCount, valorDaParcela, faltando, today } = contexto
+  if (!faltando || existentes.length === 0) return existentes
+
+  const porIndice = new Map(existentes.map((item) => [item.index, item]))
+  // A âncora é a última parcela conhecida: a data dela mais a distância em
+  // posições dá a data de qualquer outra, para frente ou para trás.
+  const ancora = existentes[existentes.length - 1]
+
+  const completa: InstallmentParcel[] = []
+
+  for (let index = 1; index <= totalCount; index += 1) {
+    const existente = porIndice.get(index)
+    if (existente) {
+      completa.push(existente)
+      continue
+    }
+
+    const date = shiftDate(ancora.date, index - ancora.index, 'month')
+    completa.push({
+      id: `${seriesId}:prevista:${index}`,
+      index,
+      date,
+      amountCents: valorDaParcela,
+      paid: date <= today,
+      projected: true,
+    })
+  }
+
+  return completa
 }
