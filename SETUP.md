@@ -133,7 +133,23 @@ Ler uma conexão que já existe não custa, e é isso que o
 dele, gratuitamente e sem prazo, e o aplicativo lê de lá com as credenciais do
 mesmo Dashboard.
 
+A ordem importa, e o terceiro passo é o que costuma faltar:
+
+1. Criar conta no [meu.pluggy.ai](https://meu.pluggy.ai).
+2. Conectar os bancos por lá. Cada conexão vira um **Item**.
+3. **No Dashboard, entrar na aplicação _demo_ e conectar os itens do Meu
+   Pluggy.** É este passo que liga uma coisa na outra: o Meu Pluggy funciona
+   como proxy dos consentimentos que você já deu, e sem ele a API autentica
+   normalmente e não enxerga conexão nenhuma. Nenhuma permissão nova é pedida.
+4. Usar o `clientId` e o `clientSecret` **da aplicação demo** nos secrets abaixo.
+
+O item 4 merece atenção porque falha em silêncio: credenciais de outra
+aplicação autenticam com sucesso e devolvem lista vazia, que é indistinguível
+de "não há lançamentos no período".
+
 ```bash
+npx supabase secrets set PLUGGY_CLIENT_ID=<da-aplicacao-demo> --project-ref mkxjmrmkgsetnclfkxcj
+npx supabase secrets set PLUGGY_CLIENT_SECRET=<da-aplicacao-demo> --project-ref mkxjmrmkgsetnclfkxcj
 npx supabase functions deploy pluggy-sync --project-ref mkxjmrmkgsetnclfkxcj
 ```
 

@@ -98,8 +98,9 @@ export function MeuPluggyPanel({ onExtratos }: Props) {
           <div className="min-w-0">
             <h2 className="text-sm font-medium text-ink">Meu Pluggy</h2>
             <p className="mt-1 text-xs text-muted">
-              Conecte seus bancos no portal do Meu Pluggy e vincule a conexão aqui. A partir daí os
-              lançamentos vêm sozinhos, sem arquivo. O uso pessoal é gratuito e não expira.
+              Conecte seus bancos no portal do Meu Pluggy, ligue os itens à aplicação demo no
+              Dashboard, e vincule a conexão aqui. A partir daí os lançamentos vêm sozinhos, sem
+              arquivo. O uso pessoal é gratuito e não expira.
             </p>
           </div>
         </div>
