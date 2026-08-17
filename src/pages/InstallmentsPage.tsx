@@ -89,7 +89,6 @@ export function InstallmentsPage() {
           <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-6">
               <SeriesSummary
-                compact
                 stats={[
                   {
                     label: 'Em andamento',
@@ -103,7 +102,7 @@ export function InstallmentsPage() {
                 ]}
               >
                 {resumo.ongoing > 0 ? (
-                  <div className="mt-6 border-t border-hairline pt-5">
+                  <div className="border-t border-hairline pt-4">
                     <ProgressoGeral progress={resumo.progress} />
                     {resumo.lastMonth ? (
                       <p className="mt-4 flex items-center gap-1.5 text-xs text-muted">

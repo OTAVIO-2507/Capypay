@@ -65,7 +65,6 @@ export function SubscriptionsPage() {
           <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-6">
               <SeriesSummary
-                compact
                 stats={[
                   {
                     label: 'Assinaturas',

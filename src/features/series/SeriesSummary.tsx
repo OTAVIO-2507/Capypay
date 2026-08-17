@@ -1,7 +1,6 @@
 import { Icon, type IconName } from '@/components/Icon'
 import { Card } from '@/components/ui/Card'
 import { Money } from '@/components/ui/Money'
-import { cn } from '@/lib/cn'
 import type { Cents } from '@/lib/money'
 
 /**
@@ -11,15 +10,21 @@ import type { Cents } from '@/lib/money'
  * disto existe, e quanto custa" — então dividem o componente em vez de
  * repetir o layout duas vezes e ele divergir na terceira mudança.
  *
- * Os totais ficam em `Money` e não em `Figure`: são quatro lado a lado, e
- * quatro figuras de 44px numa faixa só é exatamente o que a Regra da Figura
- * Solitária existe para impedir. O primeiro item é a contagem, que ganha o
- * corpo maior por ser o assunto da página; os outros três são dinheiro.
+ * **Um número grande, o resto em linhas.** A versão anterior punha os quatro
+ * numa grade de duas colunas, e numa coluna de um terço da tela isso viraram
+ * quatro números grandes espremidos, sem hierarquia e cada um lutando pelo
+ * espaço do vizinho. Aqui o destaque é um só e tem a coluna inteira; os outros
+ * viram linhas de rótulo e valor, que é o formato que o resto do produto já
+ * usa para listar fato ao lado de número.
+ *
+ * Nenhum deles ganha caixa própria: a Regra da Folha Única é explícita —
+ * agrupamento interno é Rebaixado, nunca outra folha — e aqui nem Rebaixado é
+ * preciso, porque a hairline entre linhas já separa.
  */
 
 export interface SeriesStat {
   label: string
-  /** Contagem crua, para o primeiro item. Exclui `cents`. */
+  /** Contagem crua. Exclui `cents`. */
   count?: number
   countUnit?: string
   cents?: Cents
@@ -27,60 +32,53 @@ export interface SeriesStat {
   /**
    * O número que a página existe para mostrar, e só um por faixa.
    *
-   * Sem isto os quatro saem do mesmo tamanho, e uma faixa em que tudo tem o
-   * mesmo peso não tem hierarquia nenhuma — o olho começa pelo primeiro
-   * porque é o primeiro, não porque é o que importa. Em Assinaturas isso
-   * chegava a contradizer a própria página: a projeção anual, que é o
-   * argumento inteiro, saía do mesmo tamanho da média por serviço.
+   * Sem isto os quatro saem do mesmo tamanho, e faixa em que tudo pesa igual
+   * não tem hierarquia: o olho começa pelo primeiro porque é o primeiro, não
+   * porque é o que importa.
    */
   highlight?: boolean
 }
 
 export function SeriesSummary({
   stats,
-  /**
-   * Duas colunas fixas, para quando a faixa vive numa coluna estreita.
-   *
-   * O padrão abre até quatro em telas largas, e isso só funciona quando ele
-   * ocupa a largura da página. Espremido num terço dela, quatro colunas viram
-   * quatro números de cem pixels — os breakpoints do Tailwind olham a janela,
-   * não o contêiner, e não têm como saber a diferença.
-   */
-  compact = false,
   children,
 }: {
   stats: SeriesStat[]
-  compact?: boolean
   children?: React.ReactNode
 }) {
+  const heroi = stats.find((stat) => stat.highlight)
+  const linhas = stats.filter((stat) => stat !== heroi)
+
   return (
     <Card>
-      <dl
-        className={cn(
-          'grid gap-x-8 gap-y-6',
-          compact ? 'grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-4',
-        )}
-      >
-        {stats.map((stat) => (
-          <div key={stat.label}>
+      {heroi ? (
+        <div className="mb-5">
+          <p className="flex items-center gap-1.5 text-xs text-muted">
+            {heroi.icon ? <Icon name={heroi.icon} size={13} className="shrink-0" /> : null}
+            {heroi.label}
+          </p>
+          <Money
+            cents={heroi.cents ?? 0}
+            emphasis="strong"
+            className="mt-1.5 block text-[1.75rem] tracking-[-0.03em]"
+          />
+        </div>
+      ) : null}
+
+      <dl className="flex flex-col divide-y divide-hairline border-t border-hairline">
+        {linhas.map((stat) => (
+          <div key={stat.label} className="flex items-baseline justify-between gap-4 py-2.5">
             <dt className="flex items-center gap-1.5 text-xs text-muted">
               {stat.icon ? <Icon name={stat.icon} size={13} className="shrink-0" /> : null}
               {stat.label}
             </dt>
             {stat.count === undefined ? (
-              <Money
-                cents={stat.cents ?? 0}
-                emphasis="strong"
-                className={cn(
-                  'mt-1.5 block',
-                  stat.highlight ? 'text-[1.75rem] tracking-[-0.03em]' : 'text-[1.375rem]',
-                )}
-              />
+              <dd>
+                <Money cents={stat.cents ?? 0} className="text-[0.8125rem]" />
+              </dd>
             ) : (
-              <dd className="mt-1.5 flex items-baseline gap-1.5">
-                <span className="tnum text-[1.375rem] font-semibold tracking-[-0.02em] text-ink">
-                  {stat.count}
-                </span>
+              <dd className="flex items-baseline gap-1.5">
+                <span className="tnum text-[0.8125rem] font-medium text-ink">{stat.count}</span>
                 {stat.countUnit ? (
                   <span className="text-xs text-muted">{stat.countUnit}</span>
                 ) : null}
@@ -89,6 +87,7 @@ export function SeriesSummary({
           </div>
         ))}
       </dl>
+
       {children}
     </Card>
   )
