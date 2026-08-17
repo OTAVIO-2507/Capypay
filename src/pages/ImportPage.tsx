@@ -69,7 +69,12 @@ export function ImportPage() {
   const [etapa, setEtapa] = useState<Etapa>('escolher')
   const [origem, setOrigem] = useState<Origem>('arquivo')
   const [erro, setErro] = useState<string | null>(null)
-  const [lote, setLote] = useState<ImportBatch | null>(null)
+  /*
+   * Todos os lotes, e não só o primeiro. Uma conexão do Meu Pluggy traz um
+   * extrato por conta, e guardar apenas o primeiro fazia o cartão inteiro ser
+   * gravado como se fosse da conta corrente — quando chegava a ser gravado.
+   */
+  const [lotes, setLotes] = useState<ImportBatch[]>([])
   const [fonte, setFonte] = useState<string>('arquivo')
   const [candidatos, setCandidatos] = useState<ImportCandidate[]>([])
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
@@ -93,7 +98,7 @@ export function ImportPage() {
       buildImportCandidates(lote, transactions, categories),
     )
 
-    setLote(lotes[0] ?? null)
+    setLotes(lotes)
     setFonte(origem)
     setCandidatos(todos)
     // Duplicata exata começa desmarcada: é o único caso em que a resposta
@@ -194,6 +199,7 @@ export function ImportPage() {
         date: item.date,
         categoryId: item.categoryId,
         externalId: item.externalId,
+        accountKey: item.accountKey,
         seriesId: item.series?.groupKey ?? null,
         seriesKind: item.series?.kind ?? null,
         installment:
@@ -201,16 +207,19 @@ export function ImportPage() {
             ? { index: item.series.index, total: item.series.total }
             : null,
       })),
-      lote?.account
-        ? {
-            externalKey: lote.accountKey,
-            name: lote.accountLabel,
-            kind: lote.account.kind,
-            provider: fonte === 'pluggy' ? 'pluggy' : 'ofx',
-            number: lote.account.number,
-            balanceCents: lote.account.balanceCents,
-          }
-        : undefined,
+      // Uma conta por lote, e não só a do primeiro: uma conexão que traz conta
+      // e cartão juntos criava apenas a conta corrente, e todo o cartão ficava
+      // pendurado nela.
+      lotes
+        .filter((item) => item.account)
+        .map((item) => ({
+          externalKey: item.accountKey,
+          name: item.accountLabel,
+          kind: item.account!.kind,
+          provider: fonte === 'pluggy' ? 'pluggy' : 'ofx',
+          number: item.account!.number,
+          balanceCents: item.account!.balanceCents,
+        })),
     )
 
     navegar('/transacoes')
@@ -228,7 +237,7 @@ export function ImportPage() {
               onClick={() => {
                 setEtapa('escolher')
                 setCandidatos([])
-                setLote(null)
+                setLotes([])
               }}
             >
               Voltar
@@ -276,9 +285,11 @@ export function ImportPage() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-xs text-muted">
-                  {lote?.accountLabel ?? 'Extrato'}
-                  {lote?.start && lote.end
-                    ? ` · ${formatDayMonthYear(lote.start)} a ${formatDayMonthYear(lote.end)}`
+                  {lotes.length > 1
+                    ? `${lotes.length} contas`
+                    : (lotes[0]?.accountLabel ?? 'Extrato')}
+                  {lotes[0]?.start && lotes[0].end
+                    ? ` · ${formatDayMonthYear(lotes[0].start)} a ${formatDayMonthYear(lotes[0].end)}`
                     : ''}
                 </p>
                 <p className="mt-1 text-sm text-ink">

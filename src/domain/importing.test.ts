@@ -255,3 +255,19 @@ describe('lançamento que completa o que já existe', () => {
     expect(candidato.enriches).toBeNull()
   })
 })
+
+/**
+ * O defeito que o diagnóstico revelou: uma conexão que traz conta e cartão
+ * produzia dois lotes, mas só a conta do primeiro era criada, e o cartão inteiro
+ * ficava pendurado nela. Na tela de Contas isso aparecia como "1, sendo 0
+ * cartões" mesmo com o cartão sincronizado.
+ */
+describe('lote com mais de uma conta', () => {
+  it('carrega em cada candidato a conta de onde ele veio', () => {
+    const daConta = buildImportCandidates(extrato([lancamento('a', '2026-08-01', -100)], '111'), [], DEFAULT_CATEGORIES)
+    const doCartao = buildImportCandidates(extrato([lancamento('b', '2026-08-02', -200)], '222'), [], DEFAULT_CATEGORIES)
+
+    expect(daConta[0].accountKey).toBe('111')
+    expect(doCartao[0].accountKey).toBe('222')
+  })
+})

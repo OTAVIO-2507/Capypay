@@ -121,6 +121,14 @@ export type DuplicateReason = 'exact' | 'possible' | null
 export interface ImportCandidate {
   /** Chave estável no histórico: conta e identificador na instituição. */
   externalId: string
+  /**
+   * A conta de onde este lançamento veio.
+   *
+   * Sem isto, uma conexão que traz conta e cartão juntos perdia a separação na
+   * hora de gravar: os dois viravam uma lista só, e todo lançamento acabava
+   * pendurado na primeira conta. O cartão nem chegava a existir no produto.
+   */
+  accountKey: string
   kind: TransactionKind
   description: string
   /** Sempre positivo, como no modelo. O sinal virou `kind`. */
@@ -264,6 +272,7 @@ export function buildImportCandidates(
 
     return {
       externalId,
+      accountKey: batch.accountKey,
       kind,
       description: lancamento.description,
       amountCents,

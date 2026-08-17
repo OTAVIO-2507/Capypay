@@ -29,6 +29,9 @@ type LoadStatus = 'idle' | 'loading' | 'ready' | 'error'
  * isso precisa ser estável na origem: o id da conta na Pluggy, ou o número da
  * conta no OFX.
  */
+/** Um lançamento a importar, com a conta de origem junto. */
+export type ImportedDraft = TransactionDraft & { accountKey?: string | null }
+
 export interface ImportedAccount {
   externalKey: string
   name: string
@@ -62,7 +65,10 @@ interface FinanceState {
 
   addTransaction: (draft: TransactionDraft, recurrence?: RecurrenceDraft | null) => void
   /** Grava um extrato conferido de uma vez. Ver a nota na implementação. */
-  importTransactions: (drafts: readonly TransactionDraft[], account?: ImportedAccount) => void
+  importTransactions: (
+    drafts: readonly ImportedDraft[],
+    account?: readonly ImportedAccount[],
+  ) => void
   /** Aplica séries reconhecidas em lançamentos que já estavam no histórico. */
   applySeriesPlans: (plans: readonly SeriesPlan[]) => void
   updateTransaction: (id: TransactionId, patch: Partial<Transaction>) => void
@@ -177,41 +183,39 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
          * cada sincronização.
          */
         let accounts = data.accounts
-        let accountId: string | null = null
+        /** Conta do produto para cada chave externa do lote importado. */
+        const idPorChave = new Map<string, string>()
 
-        if (account) {
-          const existente = accounts.find((item) => item.sync?.itemId === account.externalKey)
+        for (const conta of account ?? []) {
+          const existente = accounts.find((item) => item.sync?.itemId === conta.externalKey)
 
           if (existente) {
-            accountId = existente.id
+            idPorChave.set(conta.externalKey, existente.id)
             accounts = accounts.map((item) =>
               item.id === existente.id
                 ? {
                     ...item,
-                    balanceCents: account.balanceCents ?? item.balanceCents ?? null,
-                    balanceUpdatedAt: account.balanceCents === null ? item.balanceUpdatedAt : now,
+                    balanceCents: conta.balanceCents ?? item.balanceCents ?? null,
+                    balanceUpdatedAt: conta.balanceCents == null ? item.balanceUpdatedAt : now,
                     sync: { ...item.sync!, lastSyncedAt: now },
                   }
                 : item,
             )
           } else {
-            accountId = createId('acc')
+            const novo = createId('acc')
+            idPorChave.set(conta.externalKey, novo)
             accounts = [
               ...accounts,
               {
-                id: accountId,
-                name: account.name,
-                kind: account.kind,
+                id: novo,
+                name: conta.name,
+                kind: conta.kind,
                 institution: null,
-                last4: account.number?.slice(-4) ?? null,
+                last4: conta.number?.slice(-4) ?? null,
                 creditCard: null,
-                balanceCents: account.balanceCents ?? null,
-                balanceUpdatedAt: account.balanceCents == null ? null : now,
-                sync: {
-                  provider: account.provider,
-                  itemId: account.externalKey,
-                  lastSyncedAt: now,
-                },
+                balanceCents: conta.balanceCents ?? null,
+                balanceUpdatedAt: conta.balanceCents == null ? null : now,
+                sync: { provider: conta.provider, itemId: conta.externalKey, lastSyncedAt: now },
                 archived: false,
                 createdAt: now,
               },
@@ -251,7 +255,8 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
                 description: draft.description,
                 date: draft.date,
                 goalId: draft.goalId ?? null,
-                accountId: draft.accountId ?? accountId,
+                accountId:
+                  draft.accountId ?? (draft.accountKey ? (idPorChave.get(draft.accountKey) ?? null) : null),
                 source: 'imported',
                 externalId: draft.externalId ?? null,
                 notes: draft.notes ?? null,
