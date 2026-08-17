@@ -125,12 +125,13 @@ const MINIMO_DE_COBRANCAS = 3
 /**
  * Quanto o valor pode variar entre cobranças e ainda ser a mesma assinatura.
  *
- * Serviço reajusta, e câmbio move o preço de quem cobra em dólar. Zero de
- * tolerância perderia justamente as assinaturas mais caras; tolerância larga
- * juntaria compras diferentes no mesmo lugar. Cinco por cento cobre reajuste
- * anual sem alcançar dois jantares no mesmo restaurante.
+ * Medida contra a mediana do grupo, e não entre extremos. Serviço reajusta, e
+ * câmbio move o preço de quem cobra em dólar: em dois anos a diferença entre a
+ * primeira e a última cobrança passa de dez por cento com facilidade. A folga
+ * é segura porque a regularidade mensal já foi exigida antes, e o que sobra
+ * para recusar é a compra de valor aleatório no mesmo estabelecimento.
  */
-const TOLERANCIA_DE_VALOR = 0.05
+const TOLERANCIA_DE_VALOR = 0.25
 
 export function detectSeries(entries: readonly ImportEntry[]): Map<string, SeriesHint> {
   const achados = new Map<string, SeriesHint>()
@@ -231,17 +232,43 @@ export function detectSeries(entries: readonly ImportEntry[]): Map<string, Serie
 
     const ordenado = [...grupo].sort((a, b) => (a.date < b.date ? -1 : 1))
 
-    // Uma por mês, em meses seguidos. Três compras no mesmo mês são três
-    // compras no mesmo lugar, não três meses de assinatura.
-    const mensal = ordenado.every(
-      (item, indice) => indice === 0 || mesesEntre(ordenado[indice - 1].date, item.date) === 1,
-    )
-    if (!mensal) continue
+    /*
+     * A maioria dos intervalos precisa ser de um mês, e não todos.
+     *
+     * Exigir a régua perfeita quebrava em histórico longo, que é justamente
+     * onde a evidência é mais forte: em dois anos de assinatura, basta um mês
+     * de falha na cobrança, uma cobrança dobrada ou um estorno para aparecer um
+     * intervalo diferente, e a série inteira era descartada por causa dele.
+     *
+     * Três idas ao mesmo restaurante continuam de fora, porque ali quase nenhum
+     * intervalo é de um mês.
+     */
+    const intervalos = ordenado
+      .slice(1)
+      .map((item, indice) => mesesEntre(ordenado[indice].date, item.date))
+    const mensais = intervalos.filter((meses) => meses === 1).length
+    if (intervalos.length === 0 || mensais < Math.ceil(intervalos.length / 2)) continue
 
-    const valores = ordenado.map((item) => Math.abs(item.amountCents))
-    const maior = Math.max(...valores)
-    const menor = Math.min(...valores)
-    if (maior > 0 && (maior - menor) / maior > TOLERANCIA_DE_VALOR) continue
+    /*
+     * O valor de cada cobrança é medido contra a **mediana** do grupo.
+     *
+     * Comparar o extremo mais barato com o mais caro descartava assinatura
+     * antiga: dois anos de reajuste passam de dez por cento com facilidade, e
+     * eram justamente as séries mais bem documentadas que caíam. Comparar só
+     * vizinhas tinha o defeito oposto, recusando o mês exato do reajuste.
+     *
+     * A mediana resolve os dois: ela absorve a subida gradual, porque continua
+     * no meio da faixa, e continua longe do valor avulso que aparece uma vez.
+     * Uma tolerância folgada é segura aqui porque a regularidade mensal já foi
+     * exigida antes — o que sobra para recusar é a compra de valor aleatório.
+     */
+    const valores = ordenado.map((item) => Math.abs(item.amountCents)).sort((a, b) => a - b)
+    const mediana = valores[Math.floor(valores.length / 2)]
+
+    const foraDaFaixa = valores.some(
+      (valor) => mediana > 0 && Math.abs(valor - mediana) / mediana > TOLERANCIA_DE_VALOR,
+    )
+    if (foraDaFaixa) continue
 
     for (const item of ordenado) {
       achados.set(item.key, {

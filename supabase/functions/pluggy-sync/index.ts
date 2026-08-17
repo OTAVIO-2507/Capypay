@@ -149,6 +149,27 @@ function paraCentavos(valor: number): number {
   return Math.round(valor * 100)
 }
 
+/**
+ * Conta e cartão usam convenções de sinal **opostas** na Pluggy.
+ *
+ * Em conta corrente, saída de dinheiro é negativa, como todo mundo espera. Em
+ * cartão de crédito é ao contrário: a compra vem positiva, porque aumenta o
+ * saldo devedor da fatura, e o negativo fica para pagamento e estorno, que o
+ * reduzem.
+ *
+ * Ler as duas com a mesma regra fazia toda compra de cartão entrar como
+ * **receita** no produto. O estrago era silencioso e completo: o painel somava
+ * gasto como ganho, e Parcelamentos e Assinaturas descartavam tudo, porque as
+ * duas telas só olham despesa. Nenhuma mensagem de erro em lugar nenhum.
+ *
+ * Inverter aqui mantém a conta fechando quando as duas contas são importadas: o
+ * pagamento da fatura sai como despesa na corrente e entra como crédito no
+ * cartão, e o líquido é o valor pago uma vez só.
+ */
+function normalizarSinal(centavos: number, tipoDaConta?: string): number {
+  return tipoDaConta === 'CREDIT' ? -centavos : centavos
+}
+
 function dataDeCalendario(bruta: string): string {
   // A Pluggy devolve ISO completo com fuso. Só a data importa, e interpretar o
   // carimbo faria a compra da madrugada cair no dia anterior.
@@ -294,7 +315,7 @@ Deno.serve(async (req) => {
             return {
               key: item.id,
               date: dataDeCalendario(item.date as string),
-              amountCents: paraCentavos(item.amount as number),
+              amountCents: normalizarSinal(paraCentavos(item.amount as number), conta.type),
               description: item.description ?? item.descriptionRaw ?? 'Lançamento sem descrição',
               // Só vale como parcelamento se houver mais de uma: o campo vem
               // preenchido com 1/1 em compra à vista, que não é parcelamento

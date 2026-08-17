@@ -333,3 +333,71 @@ describe('parcelamento declarado pela origem', () => {
     expect(achados.get('a')).toMatchObject({ index: 4, total: 12 })
   })
 })
+
+/**
+ * Os defeitos que só aparecem com histórico longo, e que por isso passaram por
+ * todos os testes de três meses. Quem importa dois anos traz a evidência mais
+ * forte que existe de recorrência, e era justamente esse caso que a detecção
+ * descartava.
+ */
+describe('detectSeries com histórico longo', () => {
+  const mensal = (key: string, mes: number, ano: number, cents: number) => ({
+    key,
+    description: 'NETFLIX.COM',
+    date: `${ano}-${String(mes).padStart(2, '0')}-10`,
+    amountCents: -cents,
+  })
+
+  it('sobrevive a um mês sem cobrança no meio da série', () => {
+    // Falha de cobrança acontece. Antes, um único intervalo de dois meses
+    // descartava dois anos de evidência.
+    const doisAnos = [
+      mensal('a', 1, 2026, 3990),
+      mensal('b', 2, 2026, 3990),
+      // março não veio
+      mensal('d', 4, 2026, 3990),
+      mensal('e', 5, 2026, 3990),
+      mensal('f', 6, 2026, 3990),
+    ]
+
+    expect(detectSeries(doisAnos).get('a')?.kind).toBe('subscription')
+  })
+
+  it('aceita o reajuste acumulado de um histórico longo', () => {
+    // De R$ 39,90 para R$ 44,90 são 11% entre a primeira e a última cobrança, e
+    // nenhum salto entre vizinhas. Medir pelos extremos descartava as
+    // assinaturas mais antigas, que são as mais bem documentadas.
+    const comReajuste = [
+      mensal('a', 1, 2026, 3990),
+      mensal('b', 2, 2026, 3990),
+      mensal('c', 3, 2026, 4190),
+      mensal('d', 4, 2026, 4190),
+      mensal('e', 5, 2026, 4490),
+      mensal('f', 6, 2026, 4490),
+    ]
+
+    expect(detectSeries(comReajuste).get('a')?.kind).toBe('subscription')
+  })
+
+  it('continua recusando o salto brusco entre cobranças vizinhas', () => {
+    const comSalto = [
+      mensal('a', 1, 2026, 1000),
+      mensal('b', 2, 2026, 1000),
+      mensal('c', 3, 2026, 9000),
+      mensal('d', 4, 2026, 1000),
+    ]
+
+    expect(detectSeries(comSalto).size).toBe(0)
+  })
+
+  it('continua recusando frequência num lugar só', () => {
+    // Quase nenhum intervalo é de um mês, então a maioria não se sustenta.
+    const noMesmoMes = [
+      { key: 'a', description: 'RESTAURANTE X', date: '2026-08-03', amountCents: -5000 },
+      { key: 'b', description: 'RESTAURANTE X', date: '2026-08-14', amountCents: -5000 },
+      { key: 'c', description: 'RESTAURANTE X', date: '2026-08-27', amountCents: -5000 },
+    ]
+
+    expect(detectSeries(noMesmoMes).size).toBe(0)
+  })
+})
