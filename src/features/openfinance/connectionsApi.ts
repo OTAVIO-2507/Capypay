@@ -16,11 +16,49 @@ const TABELA = 'bank_connections'
  * conexão — se há dados novos esperando, qual foi o último evento, se a
  * autorização quebrou. Só o `itemId` aparece nos dois, e é a chave que liga um
  * ao outro.
- *
- * A leitura desses campos ainda não tem quem a use: ela nasce junto com a
- * importação, que é a etapa seguinte. Escrever agora uma função de leitura sem
- * chamador seria adivinhar a forma de que ela vai precisar.
  */
+
+/** Uma conexão como a tela de importação precisa dela. */
+export interface Conexao {
+  itemId: string
+  provider: string
+  pendingSync: boolean
+  lastEvent: string | null
+  lastEventAt: string | null
+  lastError: string | null
+}
+
+/**
+ * As conexões desta conta.
+ *
+ * Sem filtro por `user_id`: a política de RLS já restringe a leitura às linhas
+ * de quem pede, e repetir a condição aqui daria a impressão de que ela é o que
+ * protege — se um dia a política mudasse, o filtro no cliente continuaria
+ * parecendo suficiente sem ser.
+ */
+export async function listarConexoes(): Promise<Conexao[]> {
+  const { data, error } = await supabase
+    .from(TABELA)
+    .select('item_id, provider, pending_sync, last_event, last_event_at, last_error')
+    .order('created_at', { ascending: true })
+
+  if (error) throw new Error('Não foi possível ler suas conexões bancárias.', { cause: error })
+
+  return (data ?? []).map((linha) => ({
+    itemId: linha.item_id as string,
+    provider: linha.provider as string,
+    pendingSync: Boolean(linha.pending_sync),
+    lastEvent: (linha.last_event as string | null) ?? null,
+    lastEventAt: (linha.last_event_at as string | null) ?? null,
+    lastError: (linha.last_error as string | null) ?? null,
+  }))
+}
+
+/** Desfaz o vínculo. Não desconecta no Meu Pluggy, que é o portal de lá. */
+export async function esquecerConexao(itemId: string): Promise<void> {
+  const { error } = await supabase.from(TABELA).delete().eq('item_id', itemId)
+  if (error) throw new Error('Não foi possível remover a conexão.', { cause: error })
+}
 
 /**
  * Registra a autorização recém-concedida.
