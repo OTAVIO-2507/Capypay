@@ -82,6 +82,22 @@ export function ImportPage() {
 
   const resumo = useMemo(() => summarizeCandidates(candidatos), [candidatos])
 
+  /** O que o botão de confirmar vai fazer, em português e por tipo de ação. */
+  const acoes = useMemo(() => {
+    const escolhidos = candidatos.filter((item) => selecionados.has(item.externalId))
+    const corrige = escolhidos.filter((item) => item.corrects).length
+    const completa = escolhidos.filter((item) => item.enriches && !item.corrects).length
+    const entra = escolhidos.length - corrige - completa
+
+    const partes = [
+      entra > 0 ? `${entra} ${entra === 1 ? 'entra' : 'entram'} no histórico` : null,
+      corrige > 0 ? `${corrige} ${corrige === 1 ? 'corrigido' : 'corrigidos'}` : null,
+      completa > 0 ? `${completa} ${completa === 1 ? 'completado' : 'completados'}` : null,
+    ].filter((parte): parte is string => parte !== null)
+
+    return partes.length === 0 ? 'Nada a fazer.' : `${partes.join(', ')}.`
+  }, [candidatos, selecionados])
+
   /**
    * O ponto onde as duas origens viram a mesma coisa.
    *
@@ -366,10 +382,15 @@ export function ImportPage() {
             volta até o fim de uma lista que a pessoa acabou de percorrer.
           */}
           <div className="sticky bottom-0 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-t-2xl border-t border-hairline bg-sheet px-5 py-4 shadow-float">
+            {/*
+              O rodapé diz o que vai acontecer, e não quantos itens estão
+              marcados. Depois que a reimportação passou a corrigir e completar
+              lançamentos existentes, "entram no histórico" virou mentira para a
+              maior parte da lista: quem vai confirmar precisa saber que o botão
+              mexe em algo que já está gravado.
+            */}
             <p className="text-xs text-muted">
-              {selecionados.size === 0
-                ? 'Nenhum lançamento selecionado.'
-                : `${selecionados.size} de ${resumo.total} entram no histórico.`}
+              {selecionados.size === 0 ? 'Nenhum lançamento selecionado.' : acoes}
             </p>
             <Button onClick={confirmar} disabled={selecionados.size === 0}>
               Importar {selecionados.size > 0 ? selecionados.size : ''}
