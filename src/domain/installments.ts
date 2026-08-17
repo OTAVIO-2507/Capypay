@@ -1,4 +1,4 @@
-import { categoryIcon } from './categories'
+import { categoryIcon, categoryLabel } from './categories'
 import type { Category, CategoryId, Transaction } from './types'
 import { todayIso, type IsoDate } from '@/lib/date'
 import type { Cents } from '@/lib/money'
@@ -35,6 +35,8 @@ export interface Installment {
   label: string
   icon: string
   categoryId: CategoryId
+  /** O nome da categoria, para a compra aberta poder dizer de que ela é. */
+  categoryName: string
   /** Quanto a compra custa somando todas as parcelas. */
   totalCents: Cents
   paidCents: Cents
@@ -97,6 +99,7 @@ export function installmentPurchases(
       label: referencia.description.replace(SUFIXO_DE_PARCELA, '').trim() || 'Compra parcelada',
       icon: categoryIcon(categories, referencia.categoryId),
       categoryId: referencia.categoryId,
+      categoryName: categoryLabel(categories, referencia.categoryId),
       totalCents,
       paidCents,
       remainingCents: totalCents - paidCents,

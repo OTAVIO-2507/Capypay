@@ -61,6 +61,10 @@ describe('installmentPurchases', () => {
     expect(sofa.totalCount).toBe(4)
     expect(sofa.next).toBe('2026-09-10')
     expect(sofa.done).toBe(false)
+    // O nome da categoria vem resolvido do catálogo, e não do id cru: é ele
+    // que a compra aberta exibe, e "compras" minúsculo na tela seria o
+    // identificador vazando para fora do domínio.
+    expect(sofa.categoryName).toBe('Compras')
   })
 
   it('marca como terminada a compra sem parcela em aberto', () => {

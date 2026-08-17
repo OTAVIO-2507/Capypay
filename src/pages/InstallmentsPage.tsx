@@ -311,38 +311,87 @@ function LinhaDeCompra({ compra }: { compra: Installment }) {
         </button>
 
         {aberta ? (
-          <ul id={idDaLista} className="mt-3 flex flex-col divide-y divide-hairline rounded-md bg-sunken px-3">
-            {compra.parcels.map((parcela) => (
-              <li
-                key={parcela.id}
-                className="flex items-center justify-between gap-3 py-2.5 text-xs"
-              >
-                <span className="flex items-center gap-2.5">
-                  {/*
-                    Paga e em aberto se distinguem pela **forma** antes de tudo:
-                    círculo cheio com o visto, ou círculo vazio. A cor não entra
-                    — já paga não é receita, e pintar de verde diria que é.
-                  */}
-                  <Icon
-                    name={parcela.paid ? 'check' : 'circle-dashed'}
-                    size={13}
-                    className={cn('shrink-0', parcela.paid ? 'text-ink' : 'text-faint')}
-                  />
-                  <span className={cn('tnum', parcela.paid ? 'text-muted' : 'font-medium text-ink')}>
-                    {parcela.index}/{compra.totalCount}
-                  </span>
-                </span>
+          <div id={idDaLista} className="mt-3 rounded-md bg-sunken px-3 py-1">
+            {/*
+              O cabeçalho responde de onde a compra veio e de quando até quando
+              ela pega: a categoria e as datas das pontas. São os fatos que a
+              linha fechada não tem espaço para dizer e que quem abre está
+              justamente procurando. A pastilha de categoria é a mesma de
+              Orçamento e do extrato — a mesma coisa se apresenta igual em toda
+              parte.
+            */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-hairline py-2.5 text-xs text-muted">
+              <span className="flex items-center gap-1.5 text-ink">
+                <span
+                  style={{ backgroundColor: categoryColor(compra.categoryId) ?? undefined }}
+                  className={cn(
+                    'size-2 shrink-0 rounded-full',
+                    categoryColor(compra.categoryId) ? '' : 'bg-faint',
+                  )}
+                />
+                {compra.categoryName}
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>
+                1ª em <span className="text-ink">{formatDayMonthYear(compra.parcels[0].date)}</span>
+              </span>
+              <span aria-hidden="true">·</span>
+              <span>
+                última em <span className="text-ink">{formatDayMonthYear(compra.lastDate)}</span>
+              </span>
+            </div>
 
-                <span className="flex items-center gap-4">
-                  <span className="tnum text-muted">{formatDayMonthYear(parcela.date)}</span>
-                  <Money
-                    cents={parcela.amountCents}
-                    className={cn('w-24 text-right text-xs', parcela.paid && 'text-muted')}
-                  />
-                </span>
-              </li>
-            ))}
-          </ul>
+            <ul className="flex flex-col divide-y divide-hairline">
+              {compra.parcels.map((parcela) => {
+                // A próxima em aberto é a única parcela sobre a qual a pessoa
+                // ainda pode fazer alguma coisa. Ela ganha o rótulo; as outras
+                // em aberto são só futuro, e futuro em série não tem urgência.
+                const proxima = !parcela.paid && parcela.date === compra.next
+
+                return (
+                  <li
+                    key={parcela.id}
+                    className="flex items-center justify-between gap-3 py-2.5 text-xs"
+                  >
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      {/*
+                        Paga e em aberto se distinguem pela **forma** antes de
+                        tudo: círculo cheio com o visto, ou círculo vazio. A cor
+                        não entra — já paga não é receita, e pintar de verde
+                        diria que é.
+                      */}
+                      <Icon
+                        name={parcela.paid ? 'check' : 'circle-dashed'}
+                        size={13}
+                        className={cn('shrink-0', parcela.paid ? 'text-ink' : 'text-faint')}
+                      />
+                      <span
+                        className={cn(
+                          'tnum shrink-0',
+                          parcela.paid ? 'text-muted' : 'font-medium text-ink',
+                        )}
+                      >
+                        {parcela.index}/{compra.totalCount}
+                      </span>
+                      {proxima ? (
+                        <span className="truncate rounded-full bg-block px-2 py-0.5 text-xs font-medium text-block-ink">
+                          Próxima
+                        </span>
+                      ) : null}
+                    </span>
+
+                    <span className="flex shrink-0 items-center gap-4">
+                      <span className="tnum text-muted">{formatDayMonthYear(parcela.date)}</span>
+                      <Money
+                        cents={parcela.amountCents}
+                        className={cn('w-24 text-right text-xs', parcela.paid && 'text-muted')}
+                      />
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
         ) : null}
       </div>
     </Card>
