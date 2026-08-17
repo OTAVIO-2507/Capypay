@@ -51,9 +51,16 @@ export function CategoryBreakdown({ data, limit, className }: CategoryBreakdownP
   const totalDaCauda = cauda.reduce((soma, item) => soma + item.amount, 0)
 
   return (
-    // `justify-between` para as linhas se distribuírem quando o painel cresce
-    // até a altura da coluna, em vez de amontoarem no topo com sobra embaixo.
-    <ul className={cn('flex flex-col justify-between gap-4', className)}>
+    /*
+     * As linhas ficam juntas no topo, e a sobra fica embaixo.
+     *
+     * Distribuí-las pela altura da coluna funcionava com cinco categorias e
+     * quebrava com duas: as duas iam para as pontas opostas do painel, com um
+     * vazio enorme entre elas, e a lista deixava de parecer uma lista. Sobra
+     * embaixo de um painel lê como respiro; buraco no meio de uma lista lê como
+     * defeito.
+     */
+    <ul className={cn('flex flex-col gap-4', className)}>
       {visiveis.map((item) => (
         <li key={item.categoryId}>
           <div className="mb-2 flex items-baseline justify-between gap-3">

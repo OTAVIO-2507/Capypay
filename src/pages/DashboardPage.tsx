@@ -93,7 +93,16 @@ export function DashboardPage() {
     [transactions, month],
   )
 
-  const primaryCard = accounts.find((account) => account.kind === 'credit_card' && !account.archived)
+  /*
+   * O cartão vem primeiro, mas conta corrente serve.
+   *
+   * Procurar só por `credit_card` fazia o painel pedir "cadastre um cartão" a
+   * quem tinha acabado de sincronizar o banco inteiro: a conta existia, e o
+   * espaço continuava vazio como se nada tivesse sido importado.
+   */
+  const ativas = accounts.filter((account) => !account.archived)
+  const primaryCard =
+    ativas.find((account) => account.kind === 'credit_card') ?? ativas[0]
   const leadGoal = goalRows.find((row) => !row.reached) ?? goalRows[0]
   // A saudação toma o lugar do título. Desligada, o painel volta a se chamar
   // "Painel" — o cabeçalho nunca fica sem nome.

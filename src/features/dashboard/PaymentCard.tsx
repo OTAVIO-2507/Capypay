@@ -9,31 +9,19 @@ interface PaymentCardProps {
 }
 
 /**
- * O cartão cadastrado, desenhado em proporção real (1,586:1).
+ * O cartão da conta, desenhado em proporção real (1,586:1).
  *
- * Não é ornamento: os dados vêm da conta que o usuário cadastrou. Sem conta,
- * o espaço mostra um convite a cadastrar em vez de um cartão fictício — um
- * painel financeiro que exibe um cartão inventado ensina o usuário a
- * desconfiar de tudo que ele mostra.
+ * Sem conta cadastrada, o espaço mostra o mesmo desenho preenchido com dados
+ * de exemplo, e **dito** como exemplo: a etiqueta no canto e o convite embaixo
+ * existem para que ninguém confunda o desenho com um cartão de verdade. Um
+ * painel financeiro que exibe número inventado sem avisar ensina a desconfiar
+ * de tudo que ele mostra, e é essa a linha que a etiqueta não deixa cruzar.
  */
 export function PaymentCard({ account, holder }: PaymentCardProps) {
   const masked = usePrivacy()
 
   if (!account) {
-    return (
-      <Link
-        to="/contas"
-        className="flex aspect-[1.586] w-full flex-col items-center justify-center gap-2.5 rounded-md border border-dashed border-hairline-strong p-6 text-center transition-colors duration-150 hover:bg-sunken"
-      >
-        <span className="inline-flex size-11 items-center justify-center rounded-full bg-sunken text-faint">
-          <Icon name="credit-card" size={20} />
-        </span>
-        <span className="text-[0.8125rem] font-semibold text-ink">Cadastrar um cartão</span>
-        <span className="max-w-[32ch] text-xs leading-relaxed text-muted">
-          Para separar de onde cada gasto saiu e acompanhar o ciclo da fatura.
-        </span>
-      </Link>
-    )
+    return <ExampleCard />
   }
 
   // Agrupamento de quatro em quatro, como no cartão físico. Só os últimos
@@ -120,5 +108,42 @@ function ChipGlyph() {
       <path d="M0 8.5h9M0 17.5h9M25 8.5h9M25 17.5h9M9 0.5v25M25 0.5v25" stroke="currentColor" strokeWidth="1.2" opacity="0.45" />
       <rect x="9" y="8.5" width="16" height="9" rx="1.6" stroke="currentColor" strokeWidth="1.2" opacity="0.65" />
     </svg>
+  )
+}
+
+/**
+ * O cartão de exemplo, para o painel não abrir com um buraco.
+ *
+ * Repete o desenho do cartão real de propósito: quem chega sem conta vê o que
+ * vai ganhar ao conectar o banco, em vez de um retângulo tracejado descrevendo
+ * a mesma coisa em palavras. O que separa os dois é a etiqueta "Exemplo" e o
+ * número visivelmente fictício, porque a semelhança só é honesta enquanto a
+ * diferença estiver dita.
+ */
+function ExampleCard() {
+  return (
+    <Link
+      to="/importar"
+      className="group relative flex aspect-[1.586] w-full flex-col justify-between overflow-hidden rounded-md border border-dashed border-hairline-strong p-6 text-muted transition-colors duration-150 hover:border-hairline-strong hover:bg-sunken"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-center gap-3.5 opacity-45">
+          <ChipGlyph />
+          <span className="text-[0.8125rem] font-semibold text-ink">Seu banco aqui</span>
+        </div>
+        <span className="rounded-full bg-sunken px-2 py-0.5 text-xs font-medium text-faint">
+          Exemplo
+        </span>
+      </div>
+
+      <div>
+        <p className="tnum font-mono text-base tracking-[0.14em] opacity-40 sm:text-lg">
+          •••• •••• •••• 0000
+        </p>
+        <p className="mt-5 max-w-[34ch] text-xs leading-relaxed">
+          Conecte o banco ou importe um extrato para o seu cartão aparecer aqui, com o saldo real.
+        </p>
+      </div>
+    </Link>
   )
 }
