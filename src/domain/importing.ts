@@ -1,5 +1,6 @@
 import { categoriesFor } from './categories'
-import type { Category, Transaction, TransactionKind } from './types'
+import { detectSeries, type SeriesHint } from './detectSeries'
+import type { AccountKind, Category, Transaction, TransactionKind } from './types'
 import type { OfxStatement } from '@/lib/ofx'
 import type { IsoDate } from '@/lib/date'
 import type { Cents } from '@/lib/money'
@@ -49,6 +50,18 @@ export interface ImportBatch {
   entries: ImportEntry[]
   start?: IsoDate | null
   end?: IsoDate | null
+  /**
+   * A conta de onde o lote veio, quando a origem sabe dizer.
+   *
+   * O arquivo OFX identifica a conta por número; a Pluggy devolve nome, tipo e
+   * saldo. Com isso a importação consegue abrir a conta no produto em vez de
+   * despejar lançamentos sem dono.
+   */
+  account?: {
+    kind: AccountKind
+    number?: string | null
+    balanceCents?: Cents | null
+  }
 }
 
 /** Converte um extrato OFX no lote neutro que o domínio entende. */
@@ -68,6 +81,9 @@ export function batchFromOfx(statement: OfxStatement): ImportBatch {
     })),
     start: statement.start,
     end: statement.end,
+    account: conta
+      ? { kind: conta.kind === 'credit_card' ? 'credit_card' : 'checking', number: conta.id }
+      : undefined,
   }
 }
 
@@ -97,6 +113,13 @@ export interface ImportCandidate {
   duplicate: DuplicateReason
   /** O que já existe no histórico e motivou a suspeita. */
   duplicateOf: string | null
+  /**
+   * Série reconhecida no extrato, quando há.
+   *
+   * Sem isto, Parcelamentos e Assinaturas ficam vazias com um extrato
+   * importado: as duas telas partem de série, e o banco entrega linhas soltas.
+   */
+  series?: SeriesHint
 }
 
 /**
@@ -191,6 +214,10 @@ export function buildImportCandidates(
     if (transacao.externalId) porExternalId.set(transacao.externalId, transacao)
   }
 
+  // A detecção recebe o lote inteiro, e não uma linha de cada vez: reconhecer
+  // assinatura exige ver a repetição, que só existe no conjunto.
+  const series = detectSeries(batch.entries)
+
   return batch.entries.map((lancamento) => {
     const externalId = `${batch.accountKey}:${lancamento.key}`
     const kind: TransactionKind = lancamento.amountCents < 0 ? 'expense' : 'income'
@@ -215,6 +242,7 @@ export function buildImportCandidates(
       categoryId: suggestCategory(lancamento.description, kind, categories),
       duplicate: exato ? 'exact' : parecido ? 'possible' : null,
       duplicateOf: exato?.id ?? parecido?.id ?? null,
+      series: series.get(lancamento.key),
     }
   })
 }
