@@ -10,8 +10,8 @@ import {
   monthlySubscriptionCost,
   type Subscription,
 } from '@/domain/subscriptions'
+import { BrandMark } from '@/features/series/BrandMark'
 import { SeriesSummary } from '@/features/series/SeriesSummary'
-import { cn } from '@/lib/cn'
 import { formatDayMonth } from '@/lib/date'
 import { useCategories, useTransactions } from '@/store/hooks'
 
@@ -94,17 +94,11 @@ export function SubscriptionsPage() {
                       ficaram no cinza antigo — a categoria era a mesma coisa
                       em três telas e se apresentava de dois jeitos.
                     */}
-                    <span
-                      style={{ backgroundColor: categoryColor(assinatura.categoryId) ?? undefined }}
-                      className={cn(
-                        'inline-flex size-9 shrink-0 items-center justify-center rounded-lg',
-                        categoryColor(assinatura.categoryId)
-                          ? 'text-white'
-                          : 'bg-sunken text-faint',
-                      )}
-                    >
-                      <Icon name={assinatura.icon} size={16} />
-                    </span>
+                    <BrandMark
+                      label={assinatura.label}
+                      fallbackIcon={assinatura.icon}
+                      fallbackColor={categoryColor(assinatura.categoryId)}
+                    />
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-medium text-ink">
                         {assinatura.label}
