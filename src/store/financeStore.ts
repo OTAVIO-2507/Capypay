@@ -43,6 +43,8 @@ interface FinanceState {
   updateProfile: (patch: Partial<FinanceData['profile']>) => void
 
   addTransaction: (draft: TransactionDraft, recurrence?: RecurrenceDraft | null) => void
+  /** Grava um extrato conferido de uma vez. Ver a nota na implementação. */
+  importTransactions: (drafts: readonly TransactionDraft[]) => void
   updateTransaction: (id: TransactionId, patch: Partial<Transaction>) => void
   deleteTransaction: (id: TransactionId) => void
   deleteSeries: (seriesId: string) => void
@@ -136,6 +138,45 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
         ...data,
         transactions: [...data.transactions, ...expandRecurrence(draft, recurrence)],
       })),
+
+    /*
+     * A importação grava de uma vez, e não chamando `addTransaction` numa
+     * repetição: cada chamada persiste o documento inteiro, então trinta
+     * lançamentos seriam trinta idas ao servidor, com a chance de a décima
+     * falhar e deixar metade de um extrato dentro do histórico. Um lote é uma
+     * escrita e um resultado só.
+     */
+    importTransactions: (drafts) =>
+      mutate((data) => {
+        const now = Date.now()
+
+        return {
+          ...data,
+          transactions: [
+            ...data.transactions,
+            ...drafts.map((draft) =>
+              normalizeTransaction({
+                kind: draft.kind,
+                amountCents: draft.amountCents,
+                categoryId: draft.categoryId,
+                description: draft.description,
+                date: draft.date,
+                goalId: draft.goalId ?? null,
+                accountId: draft.accountId ?? null,
+                source: 'imported',
+                externalId: draft.externalId ?? null,
+                notes: draft.notes ?? null,
+                seriesId: null,
+                seriesKind: null,
+                installment: null,
+                id: createId('tx'),
+                createdAt: now,
+                updatedAt: now,
+              }),
+            ),
+          ],
+        }
+      }),
 
     updateTransaction: (id, patch) =>
       mutate((data) => ({

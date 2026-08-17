@@ -10,6 +10,7 @@ import { BudgetPage } from '@/pages/BudgetPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { ErrorPage } from '@/pages/ErrorPage'
 import { GoalsPage } from '@/pages/GoalsPage'
+import { ImportPage } from '@/pages/ImportPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { SettingsPage } from '@/pages/SettingsPage'
@@ -41,6 +42,7 @@ export const router = createBrowserRouter(
       children: [
         { index: true, element: <DashboardPage /> },
         { path: 'transacoes', element: <TransactionsPage /> },
+        { path: 'importar', element: <ImportPage /> },
         { path: 'parcelamentos', element: <InstallmentsPage /> },
         { path: 'assinaturas', element: <SubscriptionsPage /> },
         { path: 'orcamento', element: <BudgetPage /> },

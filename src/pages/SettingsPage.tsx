@@ -116,6 +116,27 @@ export function SettingsPage() {
             description={`${transactions.length} ${transactions.length === 1 ? 'lançamento guardado' : 'lançamentos guardados'} neste navegador.`}
           />
           <div className="flex flex-col gap-3">
+            {/* Antes de exportar: é a única entrada de dados que não passa pelo
+                formulário, e quem procura "meus dados" está atrás dela. */}
+            <div className="flex items-center justify-between gap-4 rounded-md bg-sunken p-3.5">
+              <div className="min-w-0">
+                <p className="text-[0.8125rem] font-medium text-ink">Importar extrato do banco</p>
+                <p className="text-xs text-muted">
+                  Arquivo OFX baixado do seu banco, lido aqui no dispositivo. Sem senha, sem
+                  intermediário.
+                </p>
+              </div>
+              <Button
+                variant="quiet"
+                size="sm"
+                icon="upload"
+                onClick={() => navigate('/importar')}
+                className="shrink-0 bg-sheet"
+              >
+                Importar
+              </Button>
+            </div>
+
             <div className="flex items-center justify-between gap-4 rounded-md bg-sunken p-3.5">
               <div className="min-w-0">
                 <p className="text-[0.8125rem] font-medium text-ink">Exportar para CSV</p>
