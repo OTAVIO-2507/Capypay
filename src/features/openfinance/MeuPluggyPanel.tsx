@@ -16,10 +16,14 @@ import { registrarItemDoMeuPluggy, sincronizarComPluggy, type ExtratoSincronizad
  * já está conectado não.
  *
  * O identificador da conexão é digitado à mão porque a API não tem como listar
- * conexões — não existe endpoint para "quais items são meus". O portal mostra o
- * identificador de cada conexão, e é de lá que ele vem. O webhook preenche
- * sozinho as conexões criadas depois que ele foi configurado; esta tela existe
- * para as que já existiam antes, e para quando o webhook não está no ar.
+ * conexões, e isso é deliberado do lado deles: expor "quais items são meus"
+ * seria transformar a credencial da aplicação numa chave mestra. Cabe a quem
+ * integra guardar o identificador de cada conexão.
+ *
+ * Ele fica no **Dashboard**, e não no portal do Meu Pluggy — em Dados
+ * Financeiros, ou no app Demo da aplicação pelo menu de três pontos. O webhook
+ * preenche sozinho as conexões criadas depois que ele foi configurado; este
+ * campo existe para as anteriores e para quando o webhook não está no ar.
  */
 
 interface Props {
@@ -134,7 +138,7 @@ export function MeuPluggyPanel({ onExtratos }: Props) {
         <div className="mt-5 border-t border-hairline pt-5">
           <Field
             label="Vincular uma conexão"
-            hint="No Meu Pluggy, abra a conexão e copie o identificador (Item ID)."
+            hint="No Dashboard da Pluggy: Dados Financeiros, ou a aplicação e “Ir para Demo”, menu de três pontos, Copiar Item ID."
           >
             {({ id, describedBy }) => (
               <div className="flex gap-2">

@@ -138,14 +138,22 @@ npx supabase functions deploy pluggy-sync --project-ref mkxjmrmkgsetnclfkxcj
 ```
 
 Depois, no aplicativo: **Ajustes → Importar extrato → Meu Pluggy**. Cole o
-identificador (Item ID) que o portal mostra para cada conexão e clique em
-Vincular. A partir daí o botão "Buscar lançamentos" traz os últimos 90 dias
-para a mesma tela de conferência do arquivo OFX.
+identificador (Item ID) da conexão e clique em Vincular. A partir daí o botão
+"Buscar lançamentos" traz os últimos 90 dias para a mesma tela de conferência
+do arquivo OFX.
+
+**O Item ID fica no Dashboard, não no portal do Meu Pluggy.** Dois caminhos:
+
+- `dashboard.pluggy.ai` → **Dados Financeiros**, onde os items aparecem listados;
+- ou a sua aplicação → **Ir para Demo** → menu de três pontos no canto superior
+  direito → **Copiar Item ID**.
 
 O identificador é digitado à mão porque a API da Pluggy **não tem endpoint para
-listar conexões** — não existe "quais items são meus". O webhook da seção
-seguinte preenche sozinho as conexões criadas depois que ele estiver no ar; o
-campo existe para as anteriores, e para quando o webhook não está configurado.
+listar conexões**, e isso é deliberado do lado deles: expor "quais items são
+meus" transformaria a credencial da aplicação numa chave mestra. Cabe a quem
+integra guardar o identificador. O webhook da seção seguinte preenche sozinho as
+conexões criadas depois que ele estiver no ar; o campo existe para as
+anteriores, e para quando o webhook não está configurado.
 
 A função valida o identificador contra a Pluggy antes de gravar, e toda leitura
 exige que a conexão já esteja vinculada à sua conta na tabela `bank_connections`.
