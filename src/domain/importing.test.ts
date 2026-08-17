@@ -3,6 +3,7 @@ import { DEFAULT_CATEGORIES } from './categories'
 import {
   batchFromOfx,
   buildImportCandidates,
+  learnCategories,
   suggestCategory,
   summarizeCandidates,
 } from './importing'
@@ -320,5 +321,89 @@ describe('lançamento que corrige o que está gravado', () => {
     const [candidato] = buildImportCandidates(doBanco(), [igual], DEFAULT_CATEGORIES)
 
     expect(candidato.corrects).toBeNull()
+  })
+})
+
+/**
+ * A memória de categorias. Nenhum catálogo de palavras vai conhecer a padaria
+ * da esquina, e cada extrato tem dezenas delas. Sem memória, quem corrige um
+ * estabelecimento hoje corrige de novo no mês que vem, para sempre.
+ */
+describe('categoria aprendida do histórico', () => {
+  const gravado = (description: string, categoryId: string, updatedAt = 1): Transaction =>
+    existente({ id: `t-${description}-${categoryId}`, description, categoryId, updatedAt })
+
+  it('reconhece o estabelecimento já categorizado', () => {
+    const memoria = learnCategories([
+      gravado('Compra no débito - Mercadinho Aruja Bra', 'alimentacao'),
+    ])
+
+    expect(
+      suggestCategory(
+        'Compra no débito - Mercadinho Aruja Bra 4471',
+        'expense',
+        DEFAULT_CATEGORIES,
+        memoria,
+      ),
+    ).toBe('alimentacao')
+  })
+
+  it('ignora números e prefixo de operação ao reconhecer', () => {
+    // "Compra no débito - X" e "COMPRA NO DEBITO - X 0293" são o mesmo lugar.
+    const memoria = learnCategories([gravado('PADARIA DO ZE 123', 'alimentacao')])
+
+    expect(suggestCategory('padaria do ze 987', 'expense', DEFAULT_CATEGORIES, memoria)).toBe(
+      'alimentacao',
+    )
+  })
+
+  /*
+   * "Outros" não é decisão, é a ausência dela. Aprender com ele faria a
+   * sugestão realimentar o próprio chute: o primeiro erro viraria a regra, e
+   * nada mais sairia de Outros nunca.
+   */
+  it('não aprende com o que ficou em Outros', () => {
+    const memoria = learnCategories([gravado('LOJA QUALQUER', 'outros')])
+
+    expect(memoria.size).toBe(0)
+  })
+
+  it('a decisão mais recente vence', () => {
+    const memoria = learnCategories([
+      gravado('ASSAI ATACADISTA', 'compras', 1),
+      gravado('ASSAI ATACADISTA', 'alimentacao', 2),
+    ])
+
+    expect(suggestCategory('ASSAI ATACADISTA', 'expense', DEFAULT_CATEGORIES, memoria)).toBe(
+      'alimentacao',
+    )
+  })
+
+  it('a memória vence o catálogo de palavras', () => {
+    // Quem move "Amazon" para Assinaturas sabe de algo que a lista não sabe.
+    const memoria = learnCategories([gravado('AMAZON BR', 'assinaturas')])
+
+    expect(suggestCategory('AMAZON BR', 'expense', DEFAULT_CATEGORIES, memoria)).toBe('assinaturas')
+    expect(suggestCategory('AMAZON BR', 'expense', DEFAULT_CATEGORIES)).toBe('compras')
+  })
+
+  it('não aplica memória a uma categoria que o tipo não aceita', () => {
+    const memoria = learnCategories([gravado('ESTORNO LOJA', 'compras')])
+
+    expect(suggestCategory('ESTORNO LOJA', 'income', DEFAULT_CATEGORIES, memoria)).toBe('outros')
+  })
+})
+
+describe('catálogo de categorias mais largo', () => {
+  const paraDespesa = (texto: string) => suggestCategory(texto, 'expense', DEFAULT_CATEGORIES)
+
+  it('reconhece os nomes que o extrato realmente traz', () => {
+    // Todos estes caíam em Outros: a lista exigia "mercado " com espaço, e não
+    // conhecia rede de farmácia nem supermercado brasileiro.
+    expect(paraDespesa('Compra no débito - Mercadinho Aruja Bra')).toBe('alimentacao')
+    expect(paraDespesa('Compra no débito - Sonda Aruja Sao Jose Dos Bra')).toBe('alimentacao')
+    expect(paraDespesa('Compra no débito - Raia3087 Aruja Bra')).toBe('saude')
+    expect(paraDespesa('DM HOSTINGERCOMB SAO PAULO BRA')).toBe('assinaturas')
+    expect(paraDespesa('ALURA SAO PAULO BRA')).toBe('educacao')
   })
 })

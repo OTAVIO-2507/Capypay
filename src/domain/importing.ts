@@ -187,16 +187,20 @@ const REGRAS: readonly (readonly [string, readonly string[]])[] = [
    * catálogo de palavras soltas, quanto mais curto o pedaço, mais silencioso o
    * erro. Marca ambígua entra com o nome inteiro ou não entra.
    */
-  ['assinaturas', ['netflix', 'spotify', 'disney', 'hbo max', 'amazon prime', 'prime video', 'youtube premium', 'icloud', 'google one', 'dropbox', 'adobe']],
-  ['alimentacao', ['ifood', 'rappi', 'mercado ', 'supermerc', 'padaria', 'restaurante', 'lanchonete', 'pizza', 'burger', 'cafe', 'hortifruti', 'acougue', 'atacad']],
-  ['transporte', ['uber', '99app', '99 pop', 'combustivel', 'gasolina', 'posto ', 'ipiranga', 'shell', 'petrobras', 'estacionamento', 'pedagio', 'onibus', 'passagem']],
-  ['saude', ['farmacia', 'drogaria', 'drogasil', 'hospital', 'clinica', 'laboratorio', 'unimed', 'dentista', 'psicolog']],
-  ['moradia', ['aluguel', 'condominio', 'energia eletrica', 'eletropaulo', 'cemig', 'copel', 'sabesp', 'saneamento', 'comgas', 'gas natural', 'internet', 'vivo fibra', 'claro ', 'iptu']],
-  ['educacao', ['faculdade', 'universidade', 'curso ', 'escola', 'colegio', 'alura', 'udemy', 'livraria']],
-  ['lazer', ['cinema', 'teatro', 'ingresso', 'academia', 'smartfit', 'hotel', 'airbnb']],
-  ['compras', ['mercado livre', 'mercadolivre', 'amazon', 'shopee', 'aliexpress', 'magalu', 'americanas', 'casas bahia', 'renner', 'riachuelo', 'shopping']],
-  ['salario', ['salario', 'folha de pagamento', 'proventos', 'remuneracao']],
-  ['investimentos', ['rendimento', 'dividendo', 'resgate', 'cdb', 'tesouro', 'poupanca']],
+  ['assinaturas', ['netflix', 'spotify', 'disney', 'hbo max', 'amazon prime', 'prime video', 'youtube premium', 'icloud', 'google one', 'dropbox', 'adobe', 'hostinger', 'hospedagem', 'openai', 'chatgpt', 'canva', 'microsoft 365', 'office 365', 'deezer', 'globoplay', 'paramount', 'crunchyroll', 'apple.com/bill']],
+  // "mercad" sem espaço no fim, e é o que faltava para "Mercadinho" cair aqui:
+  // a lista anterior exigia a palavra inteira seguida de espaço, então acertava
+  // "mercado central" e errava tudo que o banco escreve grudado ou no
+  // diminutivo, que é a maioria das mercearias de bairro.
+  ['alimentacao', ['ifood', 'rappi', 'mercad', 'supermerc', 'padaria', 'restaurante', 'lanchonete', 'pizza', 'burger', 'cafe', 'hortifruti', 'acougue', 'atacad', 'sonda', 'assai', 'carrefour', 'pao de acucar', 'tenda atacado', 'sacolao', 'emporio', 'delicatessen', 'confeitaria', 'churrascaria', 'sushi', 'lanches', 'burguer', 'doceria', 'dorinhos', 'subway', 'mcdonald', 'bk ', 'habib', 'outback', 'divino fogao', 'coco bambu']],
+  ['transporte', ['uber', '99app', '99 pop', 'combustivel', 'gasolina', 'posto ', 'auto posto', 'ipiranga', 'shell', 'petrobras', 'br mania', 'estacionamento', 'pedagio', 'onibus', 'passagem', 'cabify', 'indriver', 'localiza', 'movida', 'unidas', 'sem parar', 'conectcar', 'veloe', 'detran', 'ipva']],
+  ['saude', ['farmacia', 'drogaria', 'drogasil', 'raia', 'pacheco', 'pague menos', 'nissei', 'panvel', 'hospital', 'clinica', 'laboratorio', 'unimed', 'amil ', 'hapvida', 'dentista', 'odonto', 'psicolog', 'terapia', 'fisioterapia', 'oftalmo', 'exame']],
+  ['moradia', ['aluguel', 'condominio', 'energia eletrica', 'eletropaulo', 'enel', 'cemig', 'copel', 'cpfl', 'light servicos', 'sabesp', 'saneamento', 'sanepar', 'copasa', 'comgas', 'gas natural', 'internet', 'vivo fibra', 'claro ', 'oi fibra', 'net servicos', 'iptu', 'imobiliaria', 'leroy merlin', 'telhanorte', 'obramax']],
+  ['educacao', ['faculdade', 'universidade', 'curso ', 'escola', 'colegio', 'alura', 'udemy', 'coursera', 'rocketseat', 'livraria', 'papelaria', 'kumon', 'wizard', 'cna ', 'fisk', 'estacio', 'anhanguera', 'unip ', 'senai', 'sebrae']],
+  ['lazer', ['cinema', 'cinemark', 'teatro', 'ingresso', 'ticket', 'sympla', 'academia', 'smartfit', 'bluefit', 'hotel', 'airbnb', 'booking', 'decolar', 'latam', 'gol linhas', 'azul linhas', 'parque', 'clube', 'bar e ', 'pub ', 'boliche']],
+  ['compras', ['mercado livre', 'mercadolivre', 'amazon', 'shopee', 'aliexpress', 'magalu', 'magazine luiza', 'americanas', 'casas bahia', 'renner', 'riachuelo', 'shopping', 'c&a', 'marisa', 'centauro', 'netshoes', 'decathlon', 'kalunga', 'fast shop', 'ponto frio', 'extra ', 'shein', 'temu']],
+  ['salario', ['salario', 'folha de pagamento', 'proventos', 'remuneracao', 'pagamento de salario', 'pro labore', 'ferias', 'decimo terceiro']],
+  ['investimentos', ['rendimento', 'dividendo', 'resgate', 'cdb', 'tesouro', 'poupanca', 'juros sobre capital', 'jcp', 'renda fixa', 'b3 ', 'corretora', 'clear', 'rico invest', 'nuinvest', 'btg pactual']],
 ]
 
 /** Sem acento e em minúsculas: "Alimentação" e "ALIMENTACAO" viram a mesma coisa. */
@@ -220,9 +224,24 @@ export function suggestCategory(
   description: string,
   kind: TransactionKind,
   categories: readonly Category[],
+  /**
+   * O que já foi categorizado antes, para a sugestão aprender com a pessoa.
+   *
+   * Nenhum catálogo de palavras vai conhecer a padaria da esquina, e cada
+   * extrato tem dezenas dessas. Sem memória, quem corrige "Mercadinho Aruja"
+   * para Alimentação hoje corrige de novo no mês que vem, e no seguinte — a
+   * mesma decisão, repetida para sempre, que é o jeito mais rápido de fazer
+   * alguém desistir de categorizar.
+   */
+  aprendidas?: ReadonlyMap<string, string>,
 ): string {
   const permitidas = new Set(categoriesFor(categories, kind).map((item) => item.id))
   const texto = normalizar(description)
+
+  // O que a pessoa decidiu vence o catálogo: ela conhece o estabelecimento, e
+  // a lista de palavras só conhece marca grande.
+  const aprendida = aprendidas?.get(chaveDeEstabelecimento(texto))
+  if (aprendida && permitidas.has(aprendida)) return aprendida
 
   for (const [categoryId, palavras] of REGRAS) {
     if (!permitidas.has(categoryId)) continue
@@ -230,6 +249,49 @@ export function suggestCategory(
   }
 
   return permitidas.has('outros') ? 'outros' : (categoriesFor(categories, kind)[0]?.id ?? 'outros')
+}
+
+/**
+ * Reduz a descrição ao nome do estabelecimento, para reconhecê-lo de novo.
+ *
+ * Tira números, prefixos de operação e pontuação, que é o que muda entre duas
+ * compras no mesmo lugar: "Compra no débito - Mercadinho Aruja Bra" e "COMPRA
+ * NO DEBITO - MERCADINHO ARUJA BRA 0293" precisam cair na mesma chave, senão a
+ * memória nunca reconhece nada.
+ */
+function chaveDeEstabelecimento(textoNormalizado: string): string {
+  return textoNormalizado
+    .replace(/compra no debito|compra no credito|compra com cartao|pagamento de|pix (enviado|recebido)|debito automatico|tarifa/g, ' ')
+    .replace(/\d+/g, ' ')
+    .replace(/[^a-z\s]/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+}
+
+/**
+ * Monta a memória de categorias a partir do histórico.
+ *
+ * Só olha o que a pessoa **mudou**: um lançamento importado que continua na
+ * categoria sugerida não ensina nada, e realimentar a própria sugestão faria
+ * um erro inicial se perpetuar sozinho. A última decisão vence, porque é a mais
+ * recente sobre o mesmo lugar.
+ */
+export function learnCategories(transactions: readonly Transaction[]): Map<string, string> {
+  const memoria = new Map<string, string>()
+
+  const ordenadas = [...transactions].sort((a, b) => a.updatedAt - b.updatedAt)
+
+  for (const transaction of ordenadas) {
+    if (transaction.kind === 'contribution') continue
+    if (transaction.categoryId === 'outros') continue
+
+    const chave = chaveDeEstabelecimento(normalizar(transaction.description))
+    if (chave.length < 3) continue
+
+    memoria.set(chave, transaction.categoryId)
+  }
+
+  return memoria
 }
 
 /** Distância em dias entre duas datas de calendário, sem construir `Date`. */
@@ -265,6 +327,7 @@ export function buildImportCandidates(
   // A detecção recebe o lote inteiro, e não uma linha de cada vez: reconhecer
   // assinatura exige ver a repetição, que só existe no conjunto.
   const series = detectSeries(batch.entries)
+  const aprendidas = learnCategories(existing)
 
   return batch.entries.map((lancamento) => {
     const externalId = `${batch.accountKey}:${lancamento.key}`
@@ -289,7 +352,7 @@ export function buildImportCandidates(
       description: lancamento.description,
       amountCents,
       date: lancamento.date,
-      categoryId: suggestCategory(lancamento.description, kind, categories),
+      categoryId: suggestCategory(lancamento.description, kind, categories, aprendidas),
       duplicate: exato ? 'exact' : parecido ? 'possible' : null,
       duplicateOf: exato?.id ?? parecido?.id ?? null,
       series: serie,
