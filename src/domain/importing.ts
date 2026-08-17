@@ -33,6 +33,23 @@ export interface ImportEntry {
   /** **Com sinal**: negativo é saída. Vira `kind` ao virar candidato. */
   amountCents: Cents
   description: string
+  /**
+   * Parcelamento **declarado** pela origem, em campo próprio.
+   *
+   * A Pluggy entrega isto em `creditCardMetadata`, e é evidência de primeira
+   * classe: não depende de o banco escrever "3/10" na descrição, coisa que
+   * muitos não fazem. Quando existe, dispensa a leitura por texto, que é
+   * palpite ao lado de um dado declarado.
+   *
+   * O OFX não tem equivalente, e por isso lá a leitura por texto continua sendo
+   * a única evidência disponível.
+   */
+  declaredInstallment?: {
+    index: number
+    total: number
+    /** Valor da compra inteira, quando a instituição informa. */
+    totalAmountCents?: Cents | null
+  } | null
 }
 
 /** Um lote de lançamentos de uma conta só. */

@@ -31,7 +31,13 @@ export interface ExtratoSincronizado {
   /** Saldo informado pela instituição. Nulo quando ela não informa. */
   balanceCents: number | null
   number: string | null
-  entries: { key: string; date: string; amountCents: number; description: string }[]
+  entries: {
+    key: string
+    date: string
+    amountCents: number
+    description: string
+    declaredInstallment?: { index: number; total: number; totalAmountCents?: number | null } | null
+  }[]
 }
 
 /**

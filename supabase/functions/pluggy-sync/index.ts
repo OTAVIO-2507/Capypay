@@ -120,6 +120,20 @@ interface LancamentoPluggy {
   descriptionRaw?: string
   amount?: number
   type?: string
+  /**
+   * O parcelamento **declarado** pela instituição, em campo próprio.
+   *
+   * Vale muito mais que procurar "3/10" no texto: a descrição de fatura varia
+   * por banco e muitos não escrevem a posição em lugar nenhum, então a leitura
+   * por texto acerta em uns e falha calada em outros. Aqui o dado é estruturado
+   * e obrigatório para a instituição reportar.
+   */
+  creditCardMetadata?: {
+    installmentNumber?: number
+    totalInstallments?: number
+    totalAmount?: number
+    purchaseDate?: string
+  } | null
 }
 
 /**
@@ -272,12 +286,33 @@ Deno.serve(async (req) => {
         number: conta.number ?? null,
         entries: lancamentos
           .filter((item) => typeof item.amount === 'number' && item.date)
-          .map((item) => ({
-            key: item.id,
-            date: dataDeCalendario(item.date as string),
-            amountCents: paraCentavos(item.amount as number),
-            description: item.description ?? item.descriptionRaw ?? 'Lançamento sem descrição',
-          })),
+          .map((item) => {
+            const parcela = item.creditCardMetadata
+            const index = parcela?.installmentNumber
+            const total = parcela?.totalInstallments
+
+            return {
+              key: item.id,
+              date: dataDeCalendario(item.date as string),
+              amountCents: paraCentavos(item.amount as number),
+              description: item.description ?? item.descriptionRaw ?? 'Lançamento sem descrição',
+              // Só vale como parcelamento se houver mais de uma: o campo vem
+              // preenchido com 1/1 em compra à vista, que não é parcelamento
+              // nenhum e encheria a tela de compras de uma parcela só.
+              declaredInstallment:
+                typeof index === 'number' && typeof total === 'number' && total > 1
+                  ? {
+                      index,
+                      total,
+                      totalAmountCents:
+                        typeof parcela?.totalAmount === 'number'
+                          ? paraCentavos(parcela.totalAmount)
+                          : null,
+                      purchaseDate: parcela?.purchaseDate?.slice(0, 10) ?? null,
+                    }
+                  : null,
+            }
+          }),
       })
     }
 

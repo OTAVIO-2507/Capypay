@@ -150,7 +150,33 @@ export function detectSeries(entries: readonly ImportEntry[]): Map<string, Serie
    * de verdade faz e uma data não.
    */
   const candidatas = entries
-    .map((entrada) => ({ entrada, marca: parseInstallmentTag(entrada.description) }))
+    .map((entrada) => {
+      /*
+       * O que a origem declara vence o que o texto sugere.
+       *
+       * A Pluggy entrega posição e total em campo próprio para cartão de
+       * crédito, e vários bancos não repetem essa informação na descrição — o
+       * Inter entre eles. Procurar "3/10" no texto acerta em uns e falha calada
+       * em outros, e falhar calado aqui significa a tela de Parcelamentos vazia
+       * sem nenhuma pista do motivo.
+       */
+      const declarado = entrada.declaredInstallment
+      if (declarado && declarado.total > 1 && declarado.index >= 1) {
+        return {
+          entrada,
+          marca: {
+            index: declarado.index,
+            total: declarado.total,
+            // A descrição já é o nome da compra: o total vive em campo próprio,
+            // então não há sufixo a remover.
+            label: entrada.description.trim(),
+            explicit: true,
+          } satisfies InstallmentTag,
+        }
+      }
+
+      return { entrada, marca: parseInstallmentTag(entrada.description) }
+    })
     .filter((item): item is { entrada: ImportEntry; marca: InstallmentTag } => item.marca !== null)
     .map((item) => ({
       ...item,

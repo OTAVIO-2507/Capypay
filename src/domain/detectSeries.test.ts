@@ -270,3 +270,66 @@ describe('planSeriesForHistory', () => {
     expect(planSeriesForHistory(salarios)).toEqual([])
   })
 })
+
+/**
+ * O grupo que existe porque a leitura por texto não bastava.
+ *
+ * A Pluggy entrega posição e total de parcela em campo próprio, e vários bancos
+ * não repetem isso na descrição. Depender do texto acertava em alguns e falhava
+ * calado em outros, e falhar calado aqui é a tela de Parcelamentos vazia sem
+ * nenhuma pista do motivo.
+ */
+describe('parcelamento declarado pela origem', () => {
+  const comDeclaracao = (
+    key: string,
+    description: string,
+    date: string,
+    index: number,
+    total: number,
+  ): ImportEntry => ({
+    key,
+    description,
+    date,
+    amountCents: -41650,
+    declaredInstallment: { index, total },
+  })
+
+  it('reconhece mesmo sem nenhuma marca na descrição', () => {
+    const achados = detectSeries([comDeclaracao('a', 'MAGAZINE LUIZA', '2026-08-15', 3, 10)])
+
+    expect(achados.get('a')).toMatchObject({ kind: 'installment', index: 3, total: 10 })
+  })
+
+  it('agrupa as parcelas da mesma compra pelo nome e pelo total', () => {
+    const achados = detectSeries([
+      comDeclaracao('a', 'MAGAZINE LUIZA', '2026-06-15', 1, 10),
+      comDeclaracao('b', 'MAGAZINE LUIZA', '2026-07-15', 2, 10),
+    ])
+
+    expect(achados.get('a')?.groupKey).toBe(achados.get('b')?.groupKey)
+  })
+
+  it('mantém a descrição inteira como nome da compra', () => {
+    // Sem sufixo a remover: o total vive em campo próprio, não no texto.
+    const achados = detectSeries([comDeclaracao('a', 'MAGAZINE LUIZA', '2026-08-15', 3, 10)])
+
+    expect(achados.get('a')?.label).toBe('MAGAZINE LUIZA')
+  })
+
+  it('ignora a declaração de compra à vista', () => {
+    // Bancos preenchem 1/1 em compra à vista. Aceitar isso encheria a tela de
+    // Parcelamentos de compras de uma parcela só, que não são parcelamento.
+    const achados = detectSeries([comDeclaracao('a', 'PADARIA', '2026-08-15', 1, 1)])
+
+    expect(achados.size).toBe(0)
+  })
+
+  it('a declaração vence o texto quando os dois existem', () => {
+    // Uma descrição que casaria como "1/2" mas cuja origem declara 4 de 12.
+    const achados = detectSeries([
+      { ...comDeclaracao('a', 'LOJA 1/2', '2026-08-15', 4, 12) },
+    ])
+
+    expect(achados.get('a')).toMatchObject({ index: 4, total: 12 })
+  })
+})
