@@ -1,22 +1,75 @@
 import { categoriesFor } from './categories'
 import type { Category, Transaction, TransactionKind } from './types'
-import type { OfxStatement, OfxTransaction } from '@/lib/ofx'
+import type { OfxStatement } from '@/lib/ofx'
 import type { IsoDate } from '@/lib/date'
 import type { Cents } from '@/lib/money'
 
 /**
- * O que fazer com um extrato depois de lido.
+ * O que fazer com lançamentos vindos de fora, seja qual for a origem.
  *
- * O parser responde "o que o arquivo diz". Este módulo responde as duas
- * perguntas seguintes, que são de domínio e não de formato: **isto já está no
- * histórico?** e **de que categoria é?**. Nenhuma das duas pode ser respondida
- * dentro do `lib/`, que não conhece transação nem categoria.
+ * O leitor de cada origem responde "o que a fonte diz". Este módulo responde as
+ * duas perguntas seguintes, que são de domínio e não de formato: **isto já está
+ * no histórico?** e **de que categoria é?**. Nenhuma das duas pode ser
+ * respondida dentro do `lib/`, que não conhece transação nem categoria.
+ *
+ * **O domínio não conhece OFX nem Pluggy.** As duas origens convertem para
+ * `ImportBatch` antes de chegar aqui, e é por isso que a conferência, a
+ * deduplicação e a sugestão de categoria são as mesmas nas duas. A alternativa
+ * seria duplicar a regra de duplicata por origem, e duas cópias divergem na
+ * primeira correção feita de um lado só.
  *
  * Nada aqui grava. A importação inteira produz uma lista de candidatos que a
  * tela mostra para conferência, e só o que a pessoa confirmar vira lançamento.
  * Importação que escreve direto no histórico é irreversível na prática: são
  * dezenas de linhas de uma vez, e desfazer uma a uma não é uma opção real.
  */
+
+/** Um lançamento de fora, já livre do formato em que chegou. */
+export interface ImportEntry {
+  /** Identificador na origem. `FITID` no OFX, `id` na Pluggy. */
+  key: string
+  date: IsoDate
+  /** **Com sinal**: negativo é saída. Vira `kind` ao virar candidato. */
+  amountCents: Cents
+  description: string
+}
+
+/** Um lote de lançamentos de uma conta só. */
+export interface ImportBatch {
+  /**
+   * Identificador da conta na origem.
+   *
+   * Entra no `externalId` de cada candidato porque bancos reiniciam a
+   * numeração por conta: dois "0001" de contas diferentes são compras
+   * diferentes, e uma chave só com o id do lançamento fundiria as duas.
+   */
+  accountKey: string
+  /** Como a conta se apresenta na tela de conferência. */
+  accountLabel: string
+  entries: ImportEntry[]
+  start?: IsoDate | null
+  end?: IsoDate | null
+}
+
+/** Converte um extrato OFX no lote neutro que o domínio entende. */
+export function batchFromOfx(statement: OfxStatement): ImportBatch {
+  const conta = statement.account
+
+  return {
+    accountKey: conta?.id ?? 'sem-conta',
+    accountLabel: conta
+      ? `${conta.kind === 'credit_card' ? 'Cartão' : 'Conta'} ${conta.id}`
+      : 'Extrato',
+    entries: statement.transactions.map((item) => ({
+      key: item.fitId,
+      date: item.date,
+      amountCents: item.amountCents,
+      description: item.description,
+    })),
+    start: statement.start,
+    end: statement.end,
+  }
+}
 
 /**
  * Por que um candidato é suspeito de já existir.
@@ -123,26 +176,23 @@ function diasEntre(a: IsoDate, b: IsoDate): number {
 const JANELA_DE_SUSPEITA = 2
 
 /**
- * Transforma o extrato lido em candidatos, já cruzados com o histórico.
+ * Transforma o lote lido em candidatos, já cruzados com o histórico.
  *
- * O `externalId` é composto pela conta **e** pelo identificador do lançamento:
- * bancos reiniciam a numeração por conta, e duas contas do mesmo banco podem
- * emitir o mesmo `FITID` para compras diferentes.
+ * O `externalId` é composto pela conta **e** pelo identificador do lançamento,
+ * pelo motivo documentado em `ImportBatch.accountKey`.
  */
 export function buildImportCandidates(
-  statement: OfxStatement,
+  batch: ImportBatch,
   existing: readonly Transaction[],
   categories: readonly Category[],
 ): ImportCandidate[] {
-  const conta = statement.account?.id ?? 'sem-conta'
-
   const porExternalId = new Map<string, Transaction>()
   for (const transacao of existing) {
     if (transacao.externalId) porExternalId.set(transacao.externalId, transacao)
   }
 
-  return statement.transactions.map((lancamento: OfxTransaction) => {
-    const externalId = `${conta}:${lancamento.fitId}`
+  return batch.entries.map((lancamento) => {
+    const externalId = `${batch.accountKey}:${lancamento.key}`
     const kind: TransactionKind = lancamento.amountCents < 0 ? 'expense' : 'income'
     const amountCents = Math.abs(lancamento.amountCents)
 

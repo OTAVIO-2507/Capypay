@@ -1,19 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_CATEGORIES } from './categories'
-import { buildImportCandidates, suggestCategory, summarizeCandidates } from './importing'
+import {
+  batchFromOfx,
+  buildImportCandidates,
+  suggestCategory,
+  summarizeCandidates,
+} from './importing'
 import type { Transaction } from './types'
 import type { OfxStatement } from '@/lib/ofx'
 
-function extrato(
-  transactions: OfxStatement['transactions'],
-  accountId = '1234',
-): OfxStatement {
-  return {
+function extrato(transactions: OfxStatement['transactions'], accountId = '1234') {
+  return batchFromOfx({
     account: { id: accountId, bankId: '077', kind: 'checking' },
     transactions,
     start: null,
     end: null,
-  }
+  })
 }
 
 function lancamento(
