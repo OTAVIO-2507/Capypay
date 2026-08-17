@@ -156,6 +156,18 @@ export interface ImportCandidate {
    * não traz, e o texto da descrição não tem o dado.
    */
   enriches?: string | null
+  /**
+   * Id do lançamento já gravado cujo **valor ou tipo** estão diferentes da
+   * origem.
+   *
+   * Uma duplicata normalmente não tem nada a acrescentar, e recusá-la é o certo.
+   * Mas quando a origem passa a dizer outra coisa sobre o mesmo lançamento — um
+   * sinal que estava invertido, um valor que o banco ajustou depois — o
+   * histórico guarda um número que a fonte já não sustenta, e não existe outro
+   * caminho de correção: reimportar esbarra na deduplicação, e corrigir na mão
+   * centenas de linhas não é uma opção real.
+   */
+  corrects?: string | null
 }
 
 /**
@@ -285,6 +297,8 @@ export function buildImportCandidates(
       // num lançamento que já tem série trocaria uma classificação existente
       // por outra sem que ninguém tenha pedido.
       enriches: exato && serie && !exato.seriesId ? exato.id : null,
+      corrects:
+        exato && (exato.kind !== kind || exato.amountCents !== amountCents) ? exato.id : null,
     }
   })
 }

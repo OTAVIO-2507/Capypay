@@ -64,6 +64,7 @@ export function ImportPage() {
   const categories = useCategories()
   const importTransactions = useFinanceStore((state) => state.importTransactions)
   const applySeriesPlans = useFinanceStore((state) => state.applySeriesPlans)
+  const correctImported = useFinanceStore((state) => state.correctImported)
 
   const entrada = useRef<HTMLInputElement>(null)
   const [etapa, setEtapa] = useState<Etapa>('escolher')
@@ -108,7 +109,7 @@ export function ImportPage() {
     setSelecionados(
       new Set(
         todos
-          .filter((item) => item.duplicate !== 'exact' || item.enriches)
+          .filter((item) => item.duplicate !== 'exact' || item.enriches || item.corrects)
           .map((item) => item.externalId),
       ),
     )
@@ -155,7 +156,18 @@ export function ImportPage() {
      * ficaria na cópia enquanto o original seguiria incompleto no histórico.
      */
     const completam = escolhidos.filter((item) => item.enriches && item.series)
-    const novos = escolhidos.filter((item) => !item.enriches)
+    const corrigem = escolhidos.filter((item) => item.corrects)
+    const novos = escolhidos.filter((item) => !item.enriches && !item.corrects)
+
+    if (corrigem.length > 0) {
+      correctImported(
+        corrigem.map((item) => ({
+          id: item.corrects!,
+          kind: item.kind,
+          amountCents: item.amountCents,
+        })),
+      )
+    }
 
     if (completam.length > 0) {
       const porGrupo = new Map<string, ImportCandidate[]>()
@@ -486,11 +498,19 @@ function LinhaDeCandidato({
    * importado" faria a pessoa desmarcar justamente a linha que traz o dado que
    * faltava.
    */
-  const motivo = candidato.enriches
-    ? { rotulo: 'Completa o que já existe', dica: 'Traz o parcelamento para um lançamento já importado.' }
-    : candidato.duplicate
-      ? MOTIVO[candidato.duplicate]
-      : null
+  const motivo = candidato.corrects
+    ? {
+        rotulo: 'Corrige o que está gravado',
+        dica: 'O valor ou o tipo no histórico não batem com o que o banco informa agora.',
+      }
+    : candidato.enriches
+      ? {
+          rotulo: 'Completa o que já existe',
+          dica: 'Traz o parcelamento para um lançamento já importado.',
+        }
+      : candidato.duplicate
+        ? MOTIVO[candidato.duplicate]
+        : null
 
   return (
     <li

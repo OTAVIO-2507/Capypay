@@ -71,6 +71,10 @@ interface FinanceState {
   ) => void
   /** Aplica séries reconhecidas em lançamentos que já estavam no histórico. */
   applySeriesPlans: (plans: readonly SeriesPlan[]) => void
+  /** Corrige valor e tipo do que já foi importado. Ver a nota na implementação. */
+  correctImported: (
+    correcoes: readonly { id: TransactionId; kind: Transaction['kind']; amountCents: Cents }[],
+  ) => void
   updateTransaction: (id: TransactionId, patch: Partial<Transaction>) => void
   deleteTransaction: (id: TransactionId) => void
   deleteSeries: (seriesId: string) => void
@@ -269,6 +273,33 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
               }),
             ),
           ],
+        }
+      }),
+
+    /*
+     * Corrige valor e tipo de lançamentos já importados, quando a origem passa
+     * a dizer outra coisa sobre eles. Não toca em categoria, descrição nem
+     * conta: essas a pessoa pode ter ajustado à mão, e sobrescrevê-las
+     * apagaria trabalho dela para consertar um erro que não era dela.
+     */
+    correctImported: (correcoes) =>
+      mutate((data) => {
+        const now = Date.now()
+        const porId = new Map(correcoes.map((item) => [item.id, item]))
+
+        return {
+          ...data,
+          transactions: data.transactions.map((transaction) => {
+            const correcao = porId.get(transaction.id)
+            if (!correcao) return transaction
+
+            return normalizeTransaction({
+              ...transaction,
+              kind: correcao.kind,
+              amountCents: correcao.amountCents,
+              updatedAt: now,
+            })
+          }),
         }
       }),
 

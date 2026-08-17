@@ -271,3 +271,54 @@ describe('lote com mais de uma conta', () => {
     expect(doCartao[0].accountKey).toBe('222')
   })
 })
+
+/**
+ * A saída do beco sem saída. Um lançamento importado com o sinal errado não
+ * tinha conserto: reimportar esbarrava na deduplicação, e corrigir centenas de
+ * linhas à mão não é uma opção real. Quando a origem passa a dizer outra coisa
+ * sobre o mesmo lançamento, o histórico guarda um número que a fonte já não
+ * sustenta.
+ */
+describe('lançamento que corrige o que está gravado', () => {
+  const doBanco = () =>
+    batchFromOfx({
+      account: { id: '1234', bankId: '077', kind: 'credit_card' },
+      transactions: [
+        { fitId: 'abc', date: '2026-08-15', amountCents: -41650, description: 'MAGAZINE', type: 'DEBIT' },
+      ],
+      start: null,
+      end: null,
+    })
+
+  it('aponta o lançamento quando o tipo diverge', () => {
+    // Gravado como receita por causa do sinal invertido do cartão.
+    const invertido = existente({
+      externalId: '1234:abc',
+      kind: 'income',
+      amountCents: 41650,
+    })
+
+    const [candidato] = buildImportCandidates(doBanco(), [invertido], DEFAULT_CATEGORIES)
+
+    expect(candidato.corrects).toBe(invertido.id)
+    expect(candidato.kind).toBe('expense')
+  })
+
+  it('aponta o lançamento quando o valor diverge', () => {
+    const outroValor = existente({ externalId: '1234:abc', kind: 'expense', amountCents: 100 })
+
+    const [candidato] = buildImportCandidates(doBanco(), [outroValor], DEFAULT_CATEGORIES)
+
+    expect(candidato.corrects).toBe(outroValor.id)
+  })
+
+  it('não aponta nada quando valor e tipo já batem', () => {
+    // Sem divergência, a duplicata não tem o que acrescentar e continua sendo
+    // uma cópia a recusar.
+    const igual = existente({ externalId: '1234:abc', kind: 'expense', amountCents: 41650 })
+
+    const [candidato] = buildImportCandidates(doBanco(), [igual], DEFAULT_CATEGORIES)
+
+    expect(candidato.corrects).toBeNull()
+  })
+})
