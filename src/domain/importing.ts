@@ -137,6 +137,17 @@ export interface ImportCandidate {
    * importado: as duas telas partem de série, e o banco entrega linhas soltas.
    */
   series?: SeriesHint
+  /**
+   * Id do lançamento já gravado que esta linha vem **completar**.
+   *
+   * Existe por causa de um beco sem saída real: um lançamento já importado é
+   * reconhecido como duplicata e descartado, o que está certo enquanto a origem
+   * não tem nada de novo a dizer. Mas quando ela passa a declarar o
+   * parcelamento que antes não vinha, a duplicata carrega informação que falta
+   * no histórico, e recusá-la deixaria a pessoa sem nenhum caminho: reimportar
+   * não traz, e o texto da descrição não tem o dado.
+   */
+  enriches?: string | null
 }
 
 /**
@@ -240,6 +251,7 @@ export function buildImportCandidates(
     const kind: TransactionKind = lancamento.amountCents < 0 ? 'expense' : 'income'
     const amountCents = Math.abs(lancamento.amountCents)
 
+    const serie = series.get(lancamento.key)
     const exato = porExternalId.get(externalId)
     const parecido = exato
       ? null
@@ -259,7 +271,11 @@ export function buildImportCandidates(
       categoryId: suggestCategory(lancamento.description, kind, categories),
       duplicate: exato ? 'exact' : parecido ? 'possible' : null,
       duplicateOf: exato?.id ?? parecido?.id ?? null,
-      series: series.get(lancamento.key),
+      series: serie,
+      // Só completa quem já existe **sem** série e agora chega com uma. Mexer
+      // num lançamento que já tem série trocaria uma classificação existente
+      // por outra sem que ninguém tenha pedido.
+      enriches: exato && serie && !exato.seriesId ? exato.id : null,
     }
   })
 }

@@ -63,6 +63,7 @@ export function ImportPage() {
   const transactions = useTransactions()
   const categories = useCategories()
   const importTransactions = useFinanceStore((state) => state.importTransactions)
+  const applySeriesPlans = useFinanceStore((state) => state.applySeriesPlans)
 
   const entrada = useRef<HTMLInputElement>(null)
   const [etapa, setEtapa] = useState<Etapa>('escolher')
@@ -96,9 +97,15 @@ export function ImportPage() {
     setFonte(origem)
     setCandidatos(todos)
     // Duplicata exata começa desmarcada: é o único caso em que a resposta
-    // certa é conhecida, e marcá-la faria a pessoa desmarcar uma a uma.
+    // certa é conhecida, e marcá-la faria a pessoa desmarcar uma a uma. A
+    // exceção é a que traz informação nova para um lançamento já gravado, que
+    // não é uma cópia a recusar e sim um dado que faltava.
     setSelecionados(
-      new Set(todos.filter((item) => item.duplicate !== 'exact').map((item) => item.externalId)),
+      new Set(
+        todos
+          .filter((item) => item.duplicate !== 'exact' || item.enriches)
+          .map((item) => item.externalId),
+      ),
     )
     setEtapa('conferir')
   }
@@ -137,8 +144,47 @@ export function ImportPage() {
     const escolhidos = candidatos.filter((item) => selecionados.has(item.externalId))
     if (escolhidos.length === 0) return
 
+    /*
+     * Quem completa um lançamento existente é atualizado, não inserido. Inserir
+     * criaria a cópia que a deduplicação existe para impedir, e o dado novo
+     * ficaria na cópia enquanto o original seguiria incompleto no histórico.
+     */
+    const completam = escolhidos.filter((item) => item.enriches && item.series)
+    const novos = escolhidos.filter((item) => !item.enriches)
+
+    if (completam.length > 0) {
+      const porGrupo = new Map<string, ImportCandidate[]>()
+      for (const item of completam) {
+        const chave = item.series!.groupKey
+        const atual = porGrupo.get(chave)
+        if (atual) atual.push(item)
+        else porGrupo.set(chave, [item])
+      }
+
+      applySeriesPlans(
+        [...porGrupo.values()].map((itens) => ({
+          kind: itens[0].series!.kind,
+          label: itens[0].series!.label,
+          transactionIds: itens.map((item) => item.enriches!),
+          indexById: Object.fromEntries(
+            itens
+              .filter((item) => item.series!.index && item.series!.total)
+              .map((item) => [
+                item.enriches!,
+                { index: item.series!.index!, total: item.series!.total! },
+              ]),
+          ),
+        })),
+      )
+    }
+
+    if (novos.length === 0) {
+      navegar('/parcelamentos')
+      return
+    }
+
     importTransactions(
-      escolhidos.map((item) => ({
+      novos.map((item) => ({
         kind: item.kind,
         // O nome da compra vem sem o "(3/10)" quando há série: a posição já
         // está no campo próprio, e repeti-la no texto faria a tela de
@@ -423,7 +469,17 @@ function LinhaDeCandidato({
   onAlternar: () => void
   onCategoria: (id: string) => void
 }) {
-  const motivo = candidato.duplicate ? MOTIVO[candidato.duplicate] : null
+  /*
+   * Completar um lançamento existente é uma terceira coisa, e precisa de nome
+   * próprio: não é uma cópia a recusar nem um lançamento novo. Chamá-la de "Já
+   * importado" faria a pessoa desmarcar justamente a linha que traz o dado que
+   * faltava.
+   */
+  const motivo = candidato.enriches
+    ? { rotulo: 'Completa o que já existe', dica: 'Traz o parcelamento para um lançamento já importado.' }
+    : candidato.duplicate
+      ? MOTIVO[candidato.duplicate]
+      : null
 
   return (
     <li

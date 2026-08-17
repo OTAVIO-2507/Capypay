@@ -198,3 +198,60 @@ describe('summarizeCandidates', () => {
     })
   })
 })
+
+/**
+ * O beco sem saída que este grupo resolve: um lançamento já importado é
+ * reconhecido como duplicata e descartado, o que está certo enquanto a origem
+ * não tem nada de novo a dizer. Quando ela passa a declarar o parcelamento que
+ * antes não vinha, recusar a duplicata deixaria a pessoa sem nenhum caminho.
+ */
+describe('lançamento que completa o que já existe', () => {
+  const comParcela = (accountId = '1234') =>
+    batchFromOfx({
+      account: { id: accountId, bankId: '077', kind: 'credit_card' },
+      transactions: [
+        { fitId: 'abc', date: '2026-08-15', amountCents: -41650, description: 'MAGAZINE (3/10)', type: 'DEBIT' },
+      ],
+      start: null,
+      end: null,
+    })
+
+  it('aponta o lançamento a completar quando ele não tem série', () => {
+    const jaImportado = existente({ externalId: '1234:abc', amountCents: 41650, seriesId: null })
+
+    const [candidato] = buildImportCandidates(comParcela(), [jaImportado], DEFAULT_CATEGORIES)
+
+    expect(candidato.duplicate).toBe('exact')
+    expect(candidato.enriches).toBe(jaImportado.id)
+  })
+
+  it('não mexe no que já faz parte de uma série', () => {
+    // Trocaria uma classificação existente por outra sem ninguém ter pedido.
+    const jaEmSerie = existente({
+      externalId: '1234:abc',
+      amountCents: 41650,
+      seriesId: 's1',
+      seriesKind: 'installment',
+    })
+
+    const [candidato] = buildImportCandidates(comParcela(), [jaEmSerie], DEFAULT_CATEGORIES)
+
+    expect(candidato.enriches).toBeNull()
+  })
+
+  it('não aponta nada quando a origem não traz série', () => {
+    const semSerie = batchFromOfx({
+      account: { id: '1234', bankId: '077', kind: 'checking' },
+      transactions: [
+        { fitId: 'abc', date: '2026-08-15', amountCents: -1000, description: 'PADARIA', type: 'DEBIT' },
+      ],
+      start: null,
+      end: null,
+    })
+    const jaImportado = existente({ externalId: '1234:abc', amountCents: 1000 })
+
+    const [candidato] = buildImportCandidates(semSerie, [jaImportado], DEFAULT_CATEGORIES)
+
+    expect(candidato.enriches).toBeNull()
+  })
+})
