@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectSeries, parseInstallmentTag } from './detectSeries'
+import { detectSeries, parseInstallmentTag, planSeriesForHistory } from './detectSeries'
 import type { ImportEntry } from './importing'
 
 function entrada(key: string, description: string, date: string, amountCents = -10000): ImportEntry {
@@ -194,5 +194,79 @@ describe('detectSeries com assinaturas', () => {
 
     expect(achados.get('a')?.kind).toBe('subscription')
     expect(achados.get('c')?.groupKey).toBe(achados.get('a')?.groupKey)
+  })
+})
+
+/**
+ * A reclassificação do que já está gravado. Existe porque a detecção normal só
+ * alcança o que passa pela importação: quem importou antes dela existir ficou
+ * sem caminho de volta, já que reimportar esbarra na deduplicação — que está
+ * certa em reconhecer os lançamentos como já existentes.
+ */
+describe('planSeriesForHistory', () => {
+  const gravada = (id: string, description: string, date: string, amountCents = 3990) => ({
+    id,
+    kind: 'expense' as const,
+    description,
+    amountCents,
+    date,
+    categoryId: 'outros',
+    goalId: null,
+    accountId: null,
+    source: 'imported' as const,
+    externalId: `e${id}`,
+    seriesId: null,
+    seriesKind: null,
+    installment: null,
+    notes: null,
+    createdAt: 0,
+    updatedAt: 0,
+  })
+
+  it('agrupa as cobranças repetidas num plano de assinatura', () => {
+    const planos = planSeriesForHistory([
+      gravada('1', 'NETFLIX.COM', '2026-06-10'),
+      gravada('2', 'NETFLIX.COM', '2026-07-10'),
+      gravada('3', 'NETFLIX.COM', '2026-08-10'),
+    ])
+
+    expect(planos).toHaveLength(1)
+    expect(planos[0].kind).toBe('subscription')
+    expect(planos[0].transactionIds).toEqual(['1', '2', '3'])
+  })
+
+  it('guarda a posição declarada de cada parcela', () => {
+    const planos = planSeriesForHistory([
+      gravada('1', 'NOTEBOOK (1/10)', '2026-07-15', 41650),
+      gravada('2', 'NOTEBOOK (2/10)', '2026-08-15', 41650),
+    ])
+
+    expect(planos[0].kind).toBe('installment')
+    expect(planos[0].label).toBe('NOTEBOOK')
+    expect(planos[0].indexById['2']).toEqual({ index: 2, total: 10 })
+  })
+
+  /*
+   * Uma série cadastrada à mão já respondeu essa pergunta pela vontade de quem
+   * cadastrou. Reclassificar por cima trocaria uma decisão explícita por um
+   * palpite, e o palpite não tem como estar mais certo que a decisão.
+   */
+  it('não mexe no que já faz parte de uma série', () => {
+    const jaEmSerie = [
+      { ...gravada('1', 'NETFLIX.COM', '2026-06-10'), seriesId: 's1', seriesKind: 'subscription' as const },
+      { ...gravada('2', 'NETFLIX.COM', '2026-07-10'), seriesId: 's1', seriesKind: 'subscription' as const },
+      { ...gravada('3', 'NETFLIX.COM', '2026-08-10'), seriesId: 's1', seriesKind: 'subscription' as const },
+    ]
+
+    expect(planSeriesForHistory(jaEmSerie)).toEqual([])
+  })
+
+  it('ignora receita, que nunca é assinatura', () => {
+    const salarios = ['1', '2', '3'].map((id, i) => ({
+      ...gravada(id, 'SALARIO', `2026-0${6 + i}-05`, 400000),
+      kind: 'income' as const,
+    }))
+
+    expect(planSeriesForHistory(salarios)).toEqual([])
   })
 })

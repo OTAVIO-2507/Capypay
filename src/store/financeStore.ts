@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { createEmptyData } from '@/data/defaults'
 import { createSupabaseRepository } from '@/data/supabaseRepository'
 import { CONTRIBUTION_CATEGORY_ID } from '@/domain/categories'
+import type { SeriesPlan } from '@/domain/detectSeries'
 import type {
   Account,
   CategoryId,
@@ -62,6 +63,8 @@ interface FinanceState {
   addTransaction: (draft: TransactionDraft, recurrence?: RecurrenceDraft | null) => void
   /** Grava um extrato conferido de uma vez. Ver a nota na implementação. */
   importTransactions: (drafts: readonly TransactionDraft[], account?: ImportedAccount) => void
+  /** Aplica séries reconhecidas em lançamentos que já estavam no histórico. */
+  applySeriesPlans: (plans: readonly SeriesPlan[]) => void
   updateTransaction: (id: TransactionId, patch: Partial<Transaction>) => void
   deleteTransaction: (id: TransactionId) => void
   deleteSeries: (seriesId: string) => void
@@ -261,6 +264,47 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
               }),
             ),
           ],
+        }
+      }),
+
+    applySeriesPlans: (plans) =>
+      mutate((data) => {
+        const now = Date.now()
+        const porTransacao = new Map<
+          string,
+          { seriesId: string; kind: 'installment' | 'subscription'; label: string; index?: { index: number; total: number } }
+        >()
+
+        for (const plano of plans) {
+          const seriesId = createId('series')
+          for (const transactionId of plano.transactionIds) {
+            porTransacao.set(transactionId, {
+              seriesId,
+              kind: plano.kind,
+              label: plano.label,
+              index: plano.indexById[transactionId],
+            })
+          }
+        }
+
+        return {
+          ...data,
+          transactions: data.transactions.map((transaction) => {
+            const plano = porTransacao.get(transaction.id)
+            if (!plano) return transaction
+
+            return {
+              ...transaction,
+              // A descrição perde o "(3/10)", que passa a viver no campo
+              // próprio: repetido nos dois, a tela de Parcelamentos escreveria
+              // a mesma coisa duas vezes na mesma linha.
+              description: plano.index ? plano.label : transaction.description,
+              seriesId: plano.seriesId,
+              seriesKind: plano.kind,
+              installment: plano.index ?? null,
+              updatedAt: now,
+            }
+          }),
         }
       }),
 

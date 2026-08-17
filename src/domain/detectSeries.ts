@@ -1,4 +1,5 @@
 import type { ImportEntry } from './importing'
+import type { Transaction } from './types'
 
 /**
  * Reconhece parcelamentos e assinaturas dentro de um extrato.
@@ -226,4 +227,62 @@ export function detectSeries(entries: readonly ImportEntry[]): Map<string, Serie
   }
 
   return achados
+}
+
+/** Uma série reconhecida em lançamentos que já estão no histórico. */
+export interface SeriesPlan {
+  kind: 'installment' | 'subscription'
+  label: string
+  /** Ids dos lançamentos que passam a formar esta série. */
+  transactionIds: string[]
+  /** Posição declarada de cada lançamento, só em parcelamento. */
+  indexById: Record<string, { index: number; total: number }>
+}
+
+/**
+ * Reconhece séries no que **já foi gravado**.
+ *
+ * A detecção normal acontece durante a importação, e só alcança o que passa por
+ * ela. Quem importou antes de a detecção existir ficou com o histórico correto
+ * e as duas telas vazias, sem caminho de volta: reimportar não resolve, porque
+ * a deduplicação reconhece tudo como já existente — e ela está certa.
+ *
+ * Só mexe em lançamento **sem série**. Uma compra parcelada cadastrada à mão já
+ * respondeu essa pergunta pela vontade de quem cadastrou, e reclassificar por
+ * cima trocaria uma decisão explícita por um palpite.
+ */
+export function planSeriesForHistory(transactions: readonly Transaction[]): SeriesPlan[] {
+  const elegiveis = transactions.filter((item) => !item.seriesId && item.kind === 'expense')
+
+  const achados = detectSeries(
+    elegiveis.map((item) => ({
+      key: item.id,
+      date: item.date,
+      // O sinal precisa voltar: o histórico guarda valor absoluto com o tipo
+      // ao lado, e a detecção lê despesa pelo negativo.
+      amountCents: -item.amountCents,
+      description: item.description,
+    })),
+  )
+
+  const porGrupo = new Map<string, SeriesPlan>()
+
+  for (const [transactionId, hint] of achados) {
+    const existente = porGrupo.get(hint.groupKey)
+    const plano = existente ?? {
+      kind: hint.kind,
+      label: hint.label,
+      transactionIds: [],
+      indexById: {},
+    }
+
+    plano.transactionIds.push(transactionId)
+    if (hint.kind === 'installment' && hint.index && hint.total) {
+      plano.indexById[transactionId] = { index: hint.index, total: hint.total }
+    }
+
+    if (!existente) porGrupo.set(hint.groupKey, plano)
+  }
+
+  return [...porGrupo.values()]
 }
