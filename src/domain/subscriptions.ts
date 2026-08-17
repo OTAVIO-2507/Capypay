@@ -1,6 +1,6 @@
 import { categoryIcon } from './categories'
 import type { Category, CategoryId, Transaction } from './types'
-import { fromIsoDate, todayIso, type IsoDate } from '@/lib/date'
+import { fromIsoDate, shiftDate, todayIso, type IsoDate } from '@/lib/date'
 import type { Cents } from '@/lib/money'
 
 /**
@@ -42,6 +42,13 @@ const SUFIXO_DE_PARCELA = /\s*\(\d+\/\d+\)\s*$/
 
 const DIA_EM_MS = 86_400_000
 
+/** A unidade de deslocamento de cada cadência, para projetar a próxima. */
+const UNIDADE_DA_CADENCIA: Record<SubscriptionCadence, 'week' | 'month' | 'year'> = {
+  weekly: 'week',
+  monthly: 'month',
+  yearly: 'year',
+}
+
 export function activeSubscriptions(
   transactions: readonly Transaction[],
   categories: readonly Category[],
@@ -66,11 +73,36 @@ export function activeSubscriptions(
 
     ocorrencias.sort((a, b) => (a.date < b.date ? -1 : 1))
     const futuras = ocorrencias.filter((item) => item.date >= today)
-    // Série que já terminou não é assinatura ativa, é histórico.
-    if (futuras.length === 0) continue
-
-    const proxima = futuras[0]
     const cadence = inferirCadencia(ocorrencias)
+
+    /*
+     * A próxima cobrança é **projetada** quando a série só tem passado.
+     *
+     * Quem cadastra uma assinatura pela tela ganha as cobranças seguintes
+     * materializadas, e a próxima já existe como lançamento. Um extrato
+     * importado é o contrário: é inteiramente passado, por definição. Exigir
+     * uma ocorrência futura descartava toda assinatura vinda de importação —
+     * a tela ficava vazia justamente para quem trouxe o banco inteiro para
+     * dentro do produto.
+     *
+     * Projetar é honesto porque assinatura é, por definição, o que vai cobrar
+     * de novo: se a última cobrança foi em 10 de agosto e a cadência é mensal,
+     * a próxima cai em 10 de setembro, tenha ela sido lançada ou não.
+     */
+    const ultima = ocorrencias[ocorrencias.length - 1]
+    const proxima = futuras[0] ?? {
+      ...ultima,
+      date: shiftDate(ultima.date, 1, UNIDADE_DA_CADENCIA[cadence]),
+    }
+
+    /*
+     * Uma projeção que já venceu quer dizer que a cobrança esperada não veio, e
+     * a explicação mais provável é cancelamento. Continuar somando o serviço na
+     * projeção anual seria cobrar da pessoa, no relatório, algo que ela já
+     * deixou de pagar. A tolerância de uma cadência cobre atraso de lançamento
+     * e importação feita dias depois.
+     */
+    if (proxima.date < shiftDate(today, -1, UNIDADE_DA_CADENCIA[cadence])) continue
 
     assinaturas.push({
       seriesId,

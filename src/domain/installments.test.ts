@@ -182,3 +182,74 @@ describe('as parcelas de uma compra', () => {
     expect(viagem.parcels.map((p) => p.amountCents)).toEqual([50000, 10000, 10000])
   })
 })
+
+/**
+ * O grupo que existe por causa do outro lado do mesmo defeito: uma compra
+ * parcelada importada chega com só as parcelas que caíram no período. Exigir
+ * duas descartava a compra inteira, e contar as presentes dizia "1 de 1" sobre
+ * uma dívida de dez vezes.
+ */
+describe('compra parcelada vinda de importação, com parcelas ausentes', () => {
+  const parcela = (mes: string, index: number) =>
+    tx({
+      kind: 'expense',
+      amountCents: 41650,
+      date: `${mes}-15`,
+      description: 'NOTEBOOK DELL',
+      seriesId: 'imp1',
+      seriesKind: 'installment',
+      installment: { index, total: 10 },
+      source: 'imported',
+    })
+
+  it('reconhece a compra mesmo com uma parcela só', () => {
+    const [notebook] = installmentPurchases([parcela('2026-08', 3)], DEFAULT_CATEGORIES, HOJE)
+
+    expect(notebook).toBeDefined()
+    expect(notebook.totalCount).toBe(10)
+  })
+
+  it('usa o total declarado pelo banco para dizer quanto falta', () => {
+    // Três parcelas em mãos, dez na vida real. Somar só o que temos responderia
+    // um terço da dívida como se fosse a dívida inteira.
+    const compras = installmentPurchases(
+      [parcela('2026-06', 1), parcela('2026-07', 2), parcela('2026-08', 3)],
+      DEFAULT_CATEGORIES,
+      HOJE,
+    )
+
+    const [notebook] = compras
+    expect(notebook.totalCount).toBe(10)
+    expect(notebook.totalCents).toBe(416500)
+    // HOJE é 14 de agosto, e a terceira parcela cai no dia 15: ainda não venceu.
+    expect(notebook.paidCount).toBe(2)
+    expect(notebook.paidCents).toBe(83300)
+    expect(notebook.remainingCents).toBe(333200)
+    expect(notebook.done).toBe(false)
+  })
+
+  it('preserva a posição declarada de cada parcela', () => {
+    // Renumerar densamente aqui renomearia a parcela 5 de alguém para 1.
+    const [notebook] = installmentPurchases(
+      [parcela('2026-07', 5), parcela('2026-08', 6)],
+      DEFAULT_CATEGORIES,
+      HOJE,
+    )
+
+    expect(notebook.parcels.map((p) => p.index)).toEqual([5, 6])
+  })
+
+  it('continua fechando o buraco quando a compra é do próprio app', () => {
+    // Numa compra cadastrada aqui todas as parcelas nasceram juntas, então uma
+    // ausência é exclusão deliberada e a lista deve fechar. É `source` que
+    // separa os dois casos.
+    const transactions = compra('c1', 'Sofá', 32000, ['2026-07', '2026-08', '2026-09']).filter(
+      (item) => item.installment?.index !== 2,
+    )
+
+    const [sofa] = installmentPurchases(transactions, DEFAULT_CATEGORIES, HOJE)
+
+    expect(sofa.parcels.map((p) => p.index)).toEqual([1, 2])
+    expect(sofa.totalCents).toBe(64000)
+  })
+})

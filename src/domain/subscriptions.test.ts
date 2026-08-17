@@ -143,3 +143,45 @@ describe('activeSubscriptions', () => {
     expect(total).toBe(12990)
   })
 })
+
+/**
+ * O grupo que existe por causa de um defeito real: a assinatura só era
+ * considerada ativa se houvesse uma cobrança **já lançada** com data futura.
+ * Isso vale para quem cadastra pela tela, onde as cobranças seguintes nascem
+ * materializadas, mas um extrato importado é inteiramente passado por
+ * definição. Toda assinatura vinda de importação era descartada, e a tela
+ * ficava vazia justamente para quem tinha trazido o banco inteiro para dentro.
+ */
+describe('assinatura vinda de importação, sem cobrança futura lançada', () => {
+  const importada = (mes: string) =>
+    tx({
+      kind: 'expense',
+      amountCents: 3990,
+      date: `${mes}-10`,
+      description: 'NETFLIX.COM',
+      seriesId: 'imp1',
+      seriesKind: 'subscription',
+      source: 'imported',
+    })
+
+  it('projeta a próxima cobrança a partir da última', () => {
+    const [netflix] = activeSubscriptions(
+      [importada('2026-06'), importada('2026-07'), importada('2026-08')],
+      DEFAULT_CATEGORIES,
+      '2026-08-20',
+    )
+
+    expect(netflix).toBeDefined()
+    expect(netflix.next).toBe('2026-09-10')
+    expect(netflix.monthlyCents).toBe(3990)
+  })
+
+  it('não ressuscita assinatura cuja cobrança esperada não veio', () => {
+    // Última cobrança em março, e já estamos em agosto: a projeção venceu há
+    // muito. Somar isso na projeção anual cobraria da pessoa um serviço que ela
+    // já cancelou.
+    const antigas = [importada('2026-01'), importada('2026-02'), importada('2026-03')]
+
+    expect(activeSubscriptions(antigas, DEFAULT_CATEGORIES, '2026-08-20')).toHaveLength(0)
+  })
+})
