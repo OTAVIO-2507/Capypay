@@ -140,12 +140,31 @@ export function ImportPage() {
     importTransactions(
       escolhidos.map((item) => ({
         kind: item.kind,
-        description: item.description,
+        // O nome da compra vem sem o "(3/10)" quando há série: a posição já
+        // está no campo próprio, e repeti-la no texto faria a tela de
+        // Parcelamentos escrever a mesma coisa duas vezes na mesma linha.
+        description: item.series?.label ?? item.description,
         amountCents: item.amountCents,
         date: item.date,
         categoryId: item.categoryId,
         externalId: item.externalId,
+        seriesId: item.series?.groupKey ?? null,
+        seriesKind: item.series?.kind ?? null,
+        installment:
+          item.series?.kind === 'installment' && item.series.index && item.series.total
+            ? { index: item.series.index, total: item.series.total }
+            : null,
       })),
+      lote?.account
+        ? {
+            externalKey: lote.accountKey,
+            name: lote.accountLabel,
+            kind: lote.account.kind,
+            provider: fonte === 'pluggy' ? 'pluggy' : 'ofx',
+            number: lote.account.number,
+            balanceCents: lote.account.balanceCents,
+          }
+        : undefined,
     )
 
     navegar('/transacoes')
@@ -194,6 +213,11 @@ export function ImportPage() {
                   accountKey: extrato.accountKey,
                   accountLabel: extrato.accountLabel,
                   entries: extrato.entries,
+                  account: {
+                    kind: extrato.kind,
+                    number: extrato.number,
+                    balanceCents: extrato.balanceCents,
+                  },
                 })),
                 'pluggy',
               )
@@ -421,9 +445,33 @@ function LinhaDeCandidato({
           className="size-4 shrink-0 accent-[var(--ink)]"
         />
         <span className="min-w-0">
-          <span className="block truncate text-sm text-ink">{candidato.description}</span>
+          {/*
+            Mostra o nome já sem o "(3/10)", que é o que vai ser gravado: a
+            posição aparece logo abaixo, no selo da série. Exibir o texto cru do
+            banco aqui e gravar outro faria a conferência conferir uma coisa e
+            aprovar outra.
+          */}
+          <span className="block truncate text-sm text-ink">
+            {candidato.series?.label ?? candidato.description}
+          </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
             <span className="tnum">{formatDayMonthYear(candidato.date)}</span>
+            {/*
+              O que foi reconhecido aparece na linha, e não só no resumo, porque
+              é a única chance de corrigir: depois de gravado, virou série no
+              histórico. Ver "Parcela 3/10" aqui é o que permite notar que uma
+              data virou parcela por engano.
+            */}
+            {candidato.series ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="text-ink">
+                  {candidato.series.kind === 'installment'
+                    ? `Parcela ${candidato.series.index}/${candidato.series.total}`
+                    : 'Assinatura'}
+                </span>
+              </>
+            ) : null}
             {motivo ? (
               <>
                 <span aria-hidden="true">·</span>

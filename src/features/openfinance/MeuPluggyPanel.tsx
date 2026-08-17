@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Icon } from '@/components/Icon'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Segmented, type SegmentOption } from '@/components/ui/Controls'
 import { Field, TextInput } from '@/components/ui/Field'
 import { listarConexoes, type Conexao } from './connectionsApi'
 import { registrarItemDoMeuPluggy, sincronizarComPluggy, type ExtratoSincronizado } from './pluggyApi'
@@ -30,9 +31,32 @@ interface Props {
   onExtratos: (extratos: ExtratoSincronizado[]) => void
 }
 
+/**
+ * Quanto histórico buscar.
+ *
+ * Não é preferência de gosto: o aplicativo calcula saldo somando lançamentos,
+ * então o período escolhido é o que decide se o número do painel faz sentido.
+ * Noventa dias abre a tela porque é rápido e cobre a conferência do mês; quem
+ * está começando a usar quer o ano inteiro, e paga por isso em tempo de espera.
+ */
+const PERIODOS: readonly SegmentOption<string>[] = [
+  { value: '3', label: '3 meses' },
+  { value: '6', label: '6 meses' },
+  { value: '12', label: '1 ano' },
+  { value: '24', label: '2 anos' },
+]
+
+function inicioDe(mesesAtras: number): string {
+  const hoje = new Date()
+  return new Date(hoje.getFullYear(), hoje.getMonth() - mesesAtras, hoje.getDate())
+    .toISOString()
+    .slice(0, 10)
+}
+
 export function MeuPluggyPanel({ onExtratos }: Props) {
   const [conexoes, setConexoes] = useState<Conexao[] | null>(null)
   const [itemId, setItemId] = useState('')
+  const [periodo, setPeriodo] = useState('3')
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
 
@@ -72,11 +96,13 @@ export function MeuPluggyPanel({ onExtratos }: Props) {
     setOcupado(item)
     setErro(null)
     try {
-      const extratos = await sincronizarComPluggy(item)
+      const extratos = await sincronizarComPluggy(item, inicioDe(Number(periodo)))
       const comLancamentos = extratos.filter((extrato) => extrato.entries.length > 0)
 
       if (comLancamentos.length === 0) {
-        setErro('A conexão respondeu, mas não há lançamentos nos últimos 90 dias.')
+        setErro(
+          'A conexão respondeu, mas não veio nenhum lançamento no período. Tente um período maior.',
+        )
         return
       }
 
@@ -105,10 +131,23 @@ export function MeuPluggyPanel({ onExtratos }: Props) {
           </div>
         </div>
 
+        {conexoes !== null && conexoes.length > 0 ? (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-5">
+            <span className="text-xs text-muted">Quanto histórico buscar</span>
+            <Segmented
+              value={periodo}
+              onChange={setPeriodo}
+              options={PERIODOS}
+              label="Período a buscar"
+              size="sm"
+            />
+          </div>
+        ) : null}
+
         {conexoes === null ? (
           <p className="mt-5 text-xs text-muted">Carregando suas conexões...</p>
         ) : conexoes.length > 0 ? (
-          <ul className="mt-5 flex flex-col divide-y divide-hairline border-t border-hairline">
+          <ul className="mt-4 flex flex-col divide-y divide-hairline border-t border-hairline">
             {conexoes.map((conexao) => (
               <li key={conexao.itemId} className="flex items-center justify-between gap-3 py-3">
                 <span className="min-w-0">

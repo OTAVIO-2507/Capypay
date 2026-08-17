@@ -114,10 +114,29 @@ export function AccountsPage() {
 
                       <span className="flex shrink-0 items-center gap-3">
                         <span className="text-right">
-                          <span className="block text-[0.8125rem]">
-                            <Money cents={spent} className="font-medium" />
-                          </span>
-                          <span className="block text-xs text-muted">no mês</span>
+                          {/*
+                            O saldo informado pelo banco tem precedência sobre o
+                            gasto do mês, quando existe: é o número que a pessoa
+                            foi conferir. Ele não entra no saldo do painel, que
+                            soma lançamentos — são duas perguntas diferentes, e
+                            juntá-las faria o histórico importado parecer a
+                            conta inteira.
+                          */}
+                          {account.balanceCents == null ? (
+                            <>
+                              <span className="block text-[0.8125rem]">
+                                <Money cents={spent} className="font-medium" />
+                              </span>
+                              <span className="block text-xs text-muted">no mês</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="block text-[0.8125rem]">
+                                <Money cents={account.balanceCents} className="font-medium" />
+                              </span>
+                              <span className="block text-xs text-muted">no banco</span>
+                            </>
+                          )}
                         </span>
                         <IconButton
                           icon="trash-2"
