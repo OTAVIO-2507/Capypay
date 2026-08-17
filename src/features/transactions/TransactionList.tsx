@@ -38,21 +38,32 @@ export function TransactionList({
 
   return (
     <>
-      {/* Tabela no desktop: cabeçalho de coluna e valores alinhados por casa decimal. */}
-      <table className="hidden w-full border-collapse sm:table">
+      {/*
+        Tabela no desktop: cabeçalho de coluna e valores alinhados por casa
+        decimal.
+
+        `table-fixed` não é detalhe de estilo, é o que faz o `truncate` da
+        descrição funcionar. No layout automático a coluna cresce até caber o
+        texto inteiro, então uma descrição longa — que é a regra em extrato
+        importado, cheio de "Compra no débito - Estabelecimento Cidade" — empurra
+        a tabela para além do cartão e o valor sai pela borda. Com largura fixa,
+        quem cede é a descrição, que é a única coluna que pode ser cortada sem
+        perder informação: o nome continua inteiro no título e na tela estreita.
+      */}
+      <table className="hidden w-full table-fixed border-collapse sm:table">
         <thead>
           <tr className="border-b border-hairline text-left">
             <th scope="col" className="pb-3 text-xs font-medium text-muted">
               Descrição
             </th>
-            <th scope="col" className="pb-3 text-xs font-medium text-muted">
+            <th scope="col" className="w-24 pb-3 text-xs font-medium text-muted">
               Data
             </th>
-            <th scope="col" className="pb-3 text-right text-xs font-medium text-muted">
+            <th scope="col" className="w-36 pb-3 text-right text-xs font-medium text-muted">
               Valor
             </th>
             {!readOnly ? (
-              <th scope="col" className="pb-3">
+              <th scope="col" className="w-16 pb-3">
                 <span className="sr-only">Ações</span>
               </th>
             ) : null}
@@ -64,7 +75,10 @@ export function TransactionList({
               key={transaction.id}
               className="group border-b border-hairline last:border-0 hover:bg-sunken/70"
             >
-              <td className="py-3 pr-3">
+              {/* `max-w-0` obriga a célula a respeitar a largura da coluna em
+                  vez da largura natural do texto, que é o que destrava o
+                  `truncate` lá dentro. */}
+              <td className="max-w-0 py-3 pr-3">
                 <Identity transaction={transaction} view={view} />
               </td>
               <td className="py-3 pr-3">
@@ -158,7 +172,13 @@ function Identity({
       </span>
       <span className="min-w-0">
         <span className="flex items-center gap-2">
-          <span className="truncate text-[0.8125rem] font-medium text-ink">
+          {/* O `title` devolve o que o corte tira: descrição de extrato passa
+              fácil dos quarenta caracteres, e sem isto o fim do nome do
+              estabelecimento ficaria inalcançável no desktop. */}
+          <span
+            title={transaction.description}
+            className="truncate text-[0.8125rem] font-medium text-ink"
+          >
             {transaction.description}
           </span>
           {transaction.installment ? (
