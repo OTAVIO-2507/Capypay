@@ -4,28 +4,36 @@ import { Icon } from '@/components/Icon'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Controls'
+import { Badge, Segmented, type SegmentOption } from '@/components/ui/Controls'
 import { SelectInput } from '@/components/ui/Field'
 import { Money } from '@/components/ui/Money'
 import { categoriesFor } from '@/domain/categories'
 import {
+  batchFromOfx,
   buildImportCandidates,
   summarizeCandidates,
+  type ImportBatch,
   type ImportCandidate,
 } from '@/domain/importing'
 import { cn } from '@/lib/cn'
 import { formatDayMonthYear } from '@/lib/date'
-import { OfxError, decodeOfxBytes, parseOfx, type OfxStatement } from '@/lib/ofx'
+import { MeuPluggyPanel } from '@/features/openfinance/MeuPluggyPanel'
+import { OfxError, decodeOfxBytes, parseOfx } from '@/lib/ofx'
 import { useFinanceStore } from '@/store/financeStore'
 import { useCategories, useTransactions } from '@/store/hooks'
 
 /**
- * Importação de extrato bancário por arquivo OFX.
+ * Importação de extrato bancário, por arquivo ou pelo Meu Pluggy.
  *
- * É a única forma de trazer o banco para dentro do produto sem pedir senha a
- * ninguém: o arquivo sai do internet banking e é lido aqui, no dispositivo.
- * Nenhum intermediário, nenhuma credencial guardada, nada que possa vazar de
- * um servidor que não existe.
+ * As duas origens existem porque resolvem problemas diferentes. O arquivo OFX
+ * funciona em qualquer banco, não depende de nada publicado e não pede senha a
+ * ninguém: o arquivo sai do internet banking e é lido no dispositivo. O Meu
+ * Pluggy é automático, mas depende da Edge Function no ar e de uma conexão
+ * vinculada. Por isso o arquivo abre a tela.
+ *
+ * As duas convergem em `ImportBatch` antes de chegar à conferência, então
+ * deduplicação, sugestão de categoria e revisão são as mesmas nos dois
+ * caminhos.
  *
  * **Nada entra sem conferência.** A tela é uma lista de candidatos com a
  * categoria já sugerida e as duplicatas já marcadas, e o botão de confirmar só
@@ -36,6 +44,20 @@ import { useCategories, useTransactions } from '@/store/hooks'
 
 type Etapa = 'escolher' | 'conferir'
 
+/**
+ * As duas origens.
+ *
+ * O arquivo funciona em qualquer banco e não depende de nada publicado. O Meu
+ * Pluggy é automático, mas exige a Edge Function no ar e uma conexão vinculada.
+ * Por isso o arquivo abre a tela: é o caminho que sempre funciona.
+ */
+type Origem = 'arquivo' | 'pluggy'
+
+const ORIGENS: readonly SegmentOption<Origem>[] = [
+  { value: 'arquivo', label: 'Arquivo OFX' },
+  { value: 'pluggy', label: 'Meu Pluggy' },
+]
+
 export function ImportPage() {
   const navegar = useNavigate()
   const transactions = useTransactions()
@@ -44,38 +66,49 @@ export function ImportPage() {
 
   const entrada = useRef<HTMLInputElement>(null)
   const [etapa, setEtapa] = useState<Etapa>('escolher')
+  const [origem, setOrigem] = useState<Origem>('arquivo')
   const [erro, setErro] = useState<string | null>(null)
-  const [extrato, setExtrato] = useState<OfxStatement | null>(null)
+  const [lote, setLote] = useState<ImportBatch | null>(null)
+  const [fonte, setFonte] = useState<string>('arquivo')
   const [candidatos, setCandidatos] = useState<ImportCandidate[]>([])
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
 
   const resumo = useMemo(() => summarizeCandidates(candidatos), [candidatos])
+
+  /**
+   * O ponto onde as duas origens viram a mesma coisa.
+   *
+   * Arquivo e Meu Pluggy chegam aqui já convertidos em `ImportBatch`, então a
+   * deduplicação, a sugestão de categoria e a conferência são as mesmas nos
+   * dois caminhos. Foi para isso que o domínio deixou de conhecer OFX.
+   */
+  function receberLotes(lotes: ImportBatch[], origem: string) {
+    /*
+     * Uma origem pode trazer conta e cartão juntos. Concatenar os lançamentos
+     * mantém a conferência numa tela só; o `externalId` de cada candidato já
+     * carrega a conta, então nada se mistura onde importa, que é a deduplicação.
+     */
+    const todos = lotes.flatMap((lote) =>
+      buildImportCandidates(lote, transactions, categories),
+    )
+
+    setLote(lotes[0] ?? null)
+    setFonte(origem)
+    setCandidatos(todos)
+    // Duplicata exata começa desmarcada: é o único caso em que a resposta
+    // certa é conhecida, e marcá-la faria a pessoa desmarcar uma a uma.
+    setSelecionados(
+      new Set(todos.filter((item) => item.duplicate !== 'exact').map((item) => item.externalId)),
+    )
+    setEtapa('conferir')
+  }
 
   async function receberArquivo(arquivo: File) {
     setErro(null)
 
     try {
       const lidos = parseOfx(decodeOfxBytes(await arquivo.arrayBuffer()))
-
-      /*
-       * Um arquivo pode trazer conta e cartão juntos. Concatenar os lançamentos
-       * de todos os extratos mantém a conferência numa tela só; o `externalId`
-       * de cada candidato já carrega a conta de origem, então nada se mistura
-       * onde importa, que é na deduplicação.
-       */
-      const primeiro = lidos[0]
-      const todos = lidos.flatMap((item) =>
-        buildImportCandidates(item, transactions, categories),
-      )
-
-      setExtrato(primeiro)
-      setCandidatos(todos)
-      // Duplicata exata começa desmarcada: é o único caso em que a resposta
-      // certa é conhecida, e marcá-la faria a pessoa desmarcar uma a uma.
-      setSelecionados(
-        new Set(todos.filter((item) => item.duplicate !== 'exact').map((item) => item.externalId)),
-      )
-      setEtapa('conferir')
+      receberLotes(lidos.map(batchFromOfx), 'arquivo')
     } catch (falha) {
       setErro(
         falha instanceof OfxError
@@ -122,7 +155,7 @@ export function ImportPage() {
     <>
       <PageHeader
         title="Importar extrato"
-        description="Traga os lançamentos do banco por arquivo, sem informar sua senha a ninguém."
+        description="Traga os lançamentos do banco sem informar sua senha a ninguém."
         actions={
           etapa === 'conferir' ? (
             <Button
@@ -130,36 +163,57 @@ export function ImportPage() {
               onClick={() => {
                 setEtapa('escolher')
                 setCandidatos([])
-                setExtrato(null)
+                setLote(null)
               }}
             >
-              Escolher outro arquivo
+              Voltar
             </Button>
-          ) : null
+          ) : (
+            <Segmented
+              value={origem}
+              onChange={setOrigem}
+              options={ORIGENS}
+              label="Origem dos lançamentos"
+            />
+          )
         }
       />
 
       {etapa === 'escolher' ? (
-        <EscolherArquivo
-          erro={erro}
-          inputRef={entrada}
-          onArquivo={(arquivo) => void receberArquivo(arquivo)}
-        />
+        origem === 'arquivo' ? (
+          <EscolherArquivo
+            erro={erro}
+            inputRef={entrada}
+            onArquivo={(arquivo) => void receberArquivo(arquivo)}
+          />
+        ) : (
+          <MeuPluggyPanel
+            onExtratos={(extratos) =>
+              receberLotes(
+                extratos.map((extrato) => ({
+                  accountKey: extrato.accountKey,
+                  accountLabel: extrato.accountLabel,
+                  entries: extrato.entries,
+                })),
+                'pluggy',
+              )
+            }
+          />
+        )
       ) : (
         <div className="flex flex-col gap-5">
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-xs text-muted">
-                  {extrato?.account
-                    ? `${extrato.account.kind === 'credit_card' ? 'Cartão' : 'Conta'} ${extrato.account.id}`
-                    : 'Extrato'}
-                  {extrato?.start && extrato.end
-                    ? ` · ${formatDayMonthYear(extrato.start)} a ${formatDayMonthYear(extrato.end)}`
+                  {lote?.accountLabel ?? 'Extrato'}
+                  {lote?.start && lote.end
+                    ? ` · ${formatDayMonthYear(lote.start)} a ${formatDayMonthYear(lote.end)}`
                     : ''}
                 </p>
                 <p className="mt-1 text-sm text-ink">
-                  <span className="font-medium">{resumo.total}</span> lançamentos no arquivo,{' '}
+                  <span className="font-medium">{resumo.total}</span> lançamentos{' '}
+                  {fonte === 'pluggy' ? 'no banco' : 'no arquivo'},{' '}
                   <span className="font-medium">{selecionados.size}</span> selecionados
                 </p>
               </div>

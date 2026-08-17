@@ -124,6 +124,38 @@ bancária carimbada como de outra, e as contas conectadas chegariam vinculadas
 Como as duas variáveis são lidas na chamada, **trocar um secret exige
 `supabase functions deploy pluggy-connect-token` de novo.**
 
+### Importar do Meu Pluggy (o caminho gratuito)
+
+O widget de conexão exige plano pago: no gratuito ele responde
+`TRIAL_CLIENT_ITEM_CREATE_NOT_ALLOWED`, porque **criar** conexão é o que custa.
+Ler uma conexão que já existe não custa, e é isso que o
+[Meu Pluggy](https://meu.pluggy.ai) permite: você conecta seus bancos no portal
+dele, gratuitamente e sem prazo, e o aplicativo lê de lá com as credenciais do
+mesmo Dashboard.
+
+```bash
+npx supabase functions deploy pluggy-sync --project-ref mkxjmrmkgsetnclfkxcj
+```
+
+Depois, no aplicativo: **Ajustes → Importar extrato → Meu Pluggy**. Cole o
+identificador (Item ID) que o portal mostra para cada conexão e clique em
+Vincular. A partir daí o botão "Buscar lançamentos" traz os últimos 90 dias
+para a mesma tela de conferência do arquivo OFX.
+
+O identificador é digitado à mão porque a API da Pluggy **não tem endpoint para
+listar conexões** — não existe "quais items são meus". O webhook da seção
+seguinte preenche sozinho as conexões criadas depois que ele estiver no ar; o
+campo existe para as anteriores, e para quando o webhook não está configurado.
+
+A função valida o identificador contra a Pluggy antes de gravar, e toda leitura
+exige que a conexão já esteja vinculada à sua conta na tabela `bank_connections`.
+Sem essa checagem, conhecer o identificador de outra pessoa bastaria para ler o
+extrato dela: as credenciais são da aplicação, não de quem chamou, e a Pluggy
+responderia normalmente.
+
+Vale nomear o limite do plano gratuito: ele é **para uso pessoal**, com contas
+nominalmente suas. Uso comercial exige plano pago.
+
 ### Aviso automático de novidades (webhook)
 
 Opcional dentro da etapa opcional. Sem ele, conectar o banco funciona; o que
