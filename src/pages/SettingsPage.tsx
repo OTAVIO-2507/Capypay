@@ -10,6 +10,7 @@ import { createDemoData } from '@/data/demoData'
 import { TwoFactorCard } from '@/features/security/TwoFactorCard'
 import { DetectSeriesCard } from '@/features/settings/DetectSeriesCard'
 import { ImportDiagnosticsCard } from '@/features/settings/ImportDiagnosticsCard'
+import { RecategorizeCard } from '@/features/settings/RecategorizeCard'
 import { exportTransactionsCsv } from '@/features/settings/exportCsv'
 import { EditProfileDialog } from '@/features/shell/EditProfileDialog'
 import type { ThemePreference } from '@/domain/types'
@@ -142,6 +143,8 @@ export function SettingsPage() {
             {/* Depois de importar: é a ação que conserta o que a importação
                 não alcançou, e não faz sentido antes de haver o que reconhecer. */}
             <DetectSeriesCard />
+
+            <RecategorizeCard />
 
             <ImportDiagnosticsCard />
 

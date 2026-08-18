@@ -69,6 +69,8 @@ interface FinanceState {
     drafts: readonly ImportedDraft[],
     account?: readonly ImportedAccount[],
   ) => void
+  /** Troca a categoria de vários lançamentos de uma vez. */
+  recategorize: (mudancas: readonly { id: TransactionId; categoryId: CategoryId }[]) => void
   /** Aplica séries reconhecidas em lançamentos que já estavam no histórico. */
   applySeriesPlans: (plans: readonly SeriesPlan[]) => void
   /** Corrige valor e tipo do que já foi importado. Ver a nota na implementação. */
@@ -299,6 +301,27 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
               amountCents: correcao.amountCents,
               updatedAt: now,
             })
+          }),
+        }
+      }),
+
+    /*
+     * Troca a categoria de vários lançamentos de uma vez. Não valida se cabe:
+     * quem monta a lista já resolveu isso, e repetir a regra aqui criaria uma
+     * segunda cópia dela para divergir depois.
+     */
+    recategorize: (mudancas) =>
+      mutate((data) => {
+        const now = Date.now()
+        const porId = new Map(mudancas.map((item) => [item.id, item.categoryId]))
+
+        return {
+          ...data,
+          transactions: data.transactions.map((transaction) => {
+            const categoryId = porId.get(transaction.id)
+            if (!categoryId) return transaction
+
+            return normalizeTransaction({ ...transaction, categoryId, updatedAt: now })
           }),
         }
       }),
