@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom'
 import { Icon } from '@/components/Icon'
 import type { Account } from '@/domain/types'
+import { cn } from '@/lib/cn'
 import { usePrivacy } from '@/store/hooks'
+import { findBankBrand } from './bankBrand'
 
 interface PaymentCardProps {
   account: Account | undefined
@@ -28,8 +30,25 @@ export function PaymentCard({ account, holder }: PaymentCardProps) {
   // quatro dígitos são reais; o resto nunca foi guardado.
   const digits = account.last4 ? `•••• •••• •••• ${account.last4}` : '•••• •••• •••• ••••'
 
+  /*
+   * A cor do banco, quando ele é reconhecido pelo nome.
+   *
+   * Um cartão em tinta neutra é o mesmo desenho para todo mundo. Quem conectou
+   * o Inter espera laranja, e a cor é o que faz saber de qual conta o painel
+   * está falando antes de ler qualquer texto — do mesmo jeito que se reconhece
+   * o cartão dentro da carteira. Sem reconhecimento, volta ao bloco de tinta do
+   * sistema, que continua correto.
+   */
+  const banco = findBankBrand(account.name, account.institution)
+
   return (
-    <div className="relative flex aspect-[1.586] w-full flex-col justify-between overflow-hidden rounded-md bg-block p-6 text-block-ink shadow-[var(--shadow-block)]">
+    <div
+      style={banco ? { backgroundColor: banco.cor, color: banco.tinta } : undefined}
+      className={cn(
+        'relative flex aspect-[1.586] w-full flex-col justify-between overflow-hidden rounded-md p-6 shadow-[var(--shadow-block)]',
+        !banco && 'bg-block text-block-ink',
+      )}
+    >
       {/*
         Brilho diagonal levíssimo: é o reflexo do plástico, e a única textura
         do sistema. Feito com opacidade sobre a própria tinta, nunca com matiz.
@@ -43,9 +62,13 @@ export function PaymentCard({ account, holder }: PaymentCardProps) {
         <div className="flex items-center gap-3.5">
           <ChipGlyph />
           <span className="min-w-0">
-            <span className="block truncate text-[0.8125rem] font-semibold">{account.name}</span>
-            {account.institution ? (
-              <span className="block truncate text-xs text-block-muted">{account.institution}</span>
+            <span className="block truncate text-[0.8125rem] font-semibold">
+              {banco?.nome ?? account.name}
+            </span>
+            {banco ? (
+              <span className="block truncate text-xs opacity-70">{account.name}</span>
+            ) : account.institution ? (
+              <span className="block truncate text-xs opacity-70">{account.institution}</span>
             ) : null}
           </span>
         </div>
@@ -65,7 +88,7 @@ export function PaymentCard({ account, holder }: PaymentCardProps) {
           */}
           {holder ? (
             <div className="min-w-0">
-              <p className="text-[0.625rem] tracking-[0.08em] text-block-muted uppercase">
+              <p className="text-[0.625rem] tracking-[0.08em] opacity-70 uppercase">
                 Titular
               </p>
               <p className="mt-1 truncate text-[0.8125rem] font-medium">{holder}</p>
@@ -74,7 +97,7 @@ export function PaymentCard({ account, holder }: PaymentCardProps) {
             <span />
           )}
           <div className="shrink-0 text-right">
-            <p className="text-[0.625rem] tracking-[0.08em] text-block-muted uppercase">
+            <p className="text-[0.625rem] tracking-[0.08em] opacity-70 uppercase">
               {account.creditCard ? 'Fecha' : 'Tipo'}
             </p>
             <p className="tnum mt-1 font-mono text-[0.8125rem] font-medium">
