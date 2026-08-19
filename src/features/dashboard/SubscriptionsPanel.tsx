@@ -44,7 +44,7 @@ export function SubscriptionsPanel({ subscriptions }: SubscriptionsPanelProps) {
       <CardHeader
         title="Assinaturas"
         action={
-          subscriptions.length > 0 ? <QuietLink to="/transacoes">Ver todas</QuietLink> : undefined
+          subscriptions.length > 0 ? <QuietLink to="/assinaturas">Ver todas</QuietLink> : undefined
         }
       />
 

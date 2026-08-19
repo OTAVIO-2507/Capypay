@@ -153,9 +153,15 @@ export function DashboardPage() {
           <GoalSpotlight goal={leadGoal} />
 
           <Card className="flex flex-1 flex-col">
+            {/*
+              A saída leva a Orçamento, e não a Transações: o painel mostra onde
+              o dinheiro foi, e a pergunta seguinte de quem olha isso é quanto
+              devia ter ido. Categoria é a unidade das duas telas.
+            */}
             <CardHeader
               title="Principais categorias"
               description={`Onde você mais gastou em ${formatMonthLong(month).toLowerCase()}`}
+              action={<QuietLink to="/orcamento">Ver todas</QuietLink>}
             />
             <CategoryBreakdown data={categorySpend} limit={5} className="flex-1" />
           </Card>
