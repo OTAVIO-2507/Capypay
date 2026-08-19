@@ -1,25 +1,25 @@
-import { useMemo } from 'react'
-import { Icon } from '@/components/Icon'
-import { PageHeader } from '@/components/PageHeader'
-import { Card } from '@/components/ui/Card'
-import { EmptyState } from '@/components/ui/EmptyState'
-import { Money } from '@/components/ui/Money'
-import { categoryColor } from '@/domain/categories'
+import { useMemo } from "react";
+import { Icon } from "@/components/Icon";
+import { PageHeader } from "@/components/PageHeader";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Money } from "@/components/ui/Money";
+import { categoryColor } from "@/domain/categories";
 import {
   activeSubscriptions,
   monthlySubscriptionCost,
   type Subscription,
-} from '@/domain/subscriptions'
-import { BrandMark } from '@/features/series/BrandMark'
-import { SeriesSummary } from '@/features/series/SeriesSummary'
-import { formatDayMonth } from '@/lib/date'
-import { useCategories, useTransactions } from '@/store/hooks'
+} from "@/domain/subscriptions";
+import { BrandMark, findBrand } from "@/features/series/BrandMark";
+import { SeriesSummary } from "@/features/series/SeriesSummary";
+import { formatDayMonth } from "@/lib/date";
+import { useCategories, useTransactions } from "@/store/hooks";
 
-const CADENCIA: Record<Subscription['cadence'], string> = {
-  weekly: 'toda semana',
-  monthly: 'todo mês',
-  yearly: 'todo ano',
-}
+const CADENCIA: Record<Subscription["cadence"], string> = {
+  weekly: "toda semana",
+  monthly: "todo mês",
+  yearly: "todo ano",
+};
 
 /**
  * As assinaturas ativas, e o que elas custam.
@@ -34,14 +34,17 @@ const CADENCIA: Record<Subscription['cadence'], string> = {
  * decisões opostas.
  */
 export function SubscriptionsPage() {
-  const transactions = useTransactions()
-  const categories = useCategories()
+  const transactions = useTransactions();
+  const categories = useCategories();
 
   const assinaturas = useMemo(
     () => activeSubscriptions(transactions, categories),
     [transactions, categories],
-  )
-  const mensal = useMemo(() => monthlySubscriptionCost(assinaturas), [assinaturas])
+  );
+  const mensal = useMemo(
+    () => monthlySubscriptionCost(assinaturas),
+    [assinaturas],
+  );
 
   return (
     <>
@@ -67,15 +70,19 @@ export function SubscriptionsPage() {
               <SeriesSummary
                 stats={[
                   {
-                    label: 'Assinaturas',
-                    icon: 'repeat',
+                    label: "Assinaturas",
+                    icon: "repeat",
                     count: assinaturas.length,
-                    countUnit: assinaturas.length === 1 ? 'ativa' : 'ativas',
+                    countUnit: assinaturas.length === 1 ? "ativa" : "ativas",
                   },
-                  { label: 'Gasto mensal', cents: mensal },
-                  { label: 'Projeção anual', cents: mensal * 12, highlight: true },
+                  { label: "Gasto mensal", cents: mensal },
                   {
-                    label: 'Média por serviço',
+                    label: "Projeção anual",
+                    cents: mensal * 12,
+                    highlight: true,
+                  },
+                  {
+                    label: "Média por serviço",
                     cents: Math.round(mensal / assinaturas.length),
                   },
                 ]}
@@ -84,51 +91,77 @@ export function SubscriptionsPage() {
           </div>
 
           <ul className="flex flex-col gap-3 lg:col-span-8">
-            {assinaturas.map((assinatura) => (
-              <li key={assinatura.seriesId}>
-                <Card className="flex items-center justify-between gap-4">
-                  <span className="flex min-w-0 items-center gap-3">
-                    {/*
+            {assinaturas.map((assinatura) => {
+              const marca = findBrand(assinatura.label);
+
+              return (
+                <li key={assinatura.seriesId}>
+                  <Card className="flex items-center justify-between gap-4">
+                    <span className="flex min-w-0 items-center gap-3">
+                      {/*
                       A mesma pastilha de Orçamento e do extrato. Estas duas
                       páginas nasceram antes da cor de categoria existir e
                       ficaram no cinza antigo — a categoria era a mesma coisa
                       em três telas e se apresentava de dois jeitos.
                     */}
-                    <BrandMark
-                      label={assinatura.label}
-                      fallbackIcon={assinatura.icon}
-                      fallbackColor={categoryColor(assinatura.categoryId)}
-                    />
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-ink">
-                        {assinatura.label}
-                      </span>
-                      <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
-                        <span className="flex items-center gap-1.5">
-                          <Icon name="calendar" size={11} className="shrink-0" />
-                          Próxima: {formatDayMonth(assinatura.next)}
+                      <BrandMark
+                        label={assinatura.label}
+                        fallbackIcon={assinatura.icon}
+                        fallbackColor={categoryColor(assinatura.categoryId)}
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-ink">
+                          {marca?.nome ?? assinatura.label}
                         </span>
-                        <span aria-hidden="true">·</span>
-                        <span>
-                          {assinatura.remaining}{' '}
-                          {assinatura.remaining === 1 ? 'cobrança lançada' : 'cobranças lançadas'}
+                        {/*
+                        A descrição crua fica embaixo do nome da marca, e não
+                        no lugar dele. "GOOGLE PRIME VIDEO SAO PAULO BRA" é o
+                        que o banco escreveu, não o que a pessoa assinou — mas
+                        é por essa linha que ela confere se a cobrança é mesmo
+                        aquela, então apagá-la trocaria clareza por confiança.
+                      */}
+                        {marca ? (
+                          <span className="mt-0.5 block truncate text-xs text-faint">
+                            {assinatura.label}
+                          </span>
+                        ) : null}
+                        <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
+                          <span className="flex items-center gap-1.5">
+                            <Icon
+                              name="calendar"
+                              size={11}
+                              className="shrink-0"
+                            />
+                            Próxima: {formatDayMonth(assinatura.next)}
+                          </span>
+                          <span aria-hidden="true">·</span>
+                          <span>
+                            {assinatura.remaining}{" "}
+                            {assinatura.remaining === 1
+                              ? "cobrança lançada"
+                              : "cobranças lançadas"}
+                          </span>
                         </span>
                       </span>
                     </span>
-                  </span>
 
-                  <span className="shrink-0 text-right">
-                    <Money cents={assinatura.amountCents} emphasis="strong" className="block text-sm" />
-                    <span className="mt-0.5 block text-xs text-muted">
-                      {CADENCIA[assinatura.cadence]}
+                    <span className="shrink-0 text-right">
+                      <Money
+                        cents={assinatura.amountCents}
+                        emphasis="strong"
+                        className="block text-sm"
+                      />
+                      <span className="mt-0.5 block text-xs text-muted">
+                        {CADENCIA[assinatura.cadence]}
+                      </span>
                     </span>
-                  </span>
-                </Card>
-              </li>
-            ))}
+                  </Card>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
     </>
-  )
+  );
 }
