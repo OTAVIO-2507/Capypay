@@ -195,7 +195,32 @@ export function SettingsPage() {
             </div>
           </Card>
 
-          <ImportDiagnosticsCard />
+          {/* Fecha a coluna da esquerda, embaixo do que se usa todo dia. Fora
+              do caminho de quem veio exportar um CSV, que é onde uma ação sem
+              volta precisa estar. */}
+          <Card>
+            <CardHeader title="Zona de risco" />
+            <div className="flex items-center justify-between gap-4 rounded-md bg-sunken p-3.5">
+              <div className="min-w-0">
+                <p className="text-[0.8125rem] font-medium text-ink">Apagar tudo</p>
+                <p className="text-xs text-muted">
+                  Remove lançamentos, metas, contas e limites deste navegador. Não há como desfazer.
+                </p>
+              </div>
+              <Button
+                variant="quiet"
+                size="sm"
+                icon="trash-2"
+                onClick={() => setClearing(true)}
+                className="shrink-0"
+              >
+                Apagar
+              </Button>
+            </div>
+            <p className="mt-3 text-xs text-muted">
+              Vale exportar o CSV antes: é a única cópia que sobra fora deste navegador.
+            </p>
+          </Card>
         </div>
 
         {/*
@@ -218,33 +243,13 @@ export function SettingsPage() {
               <RecategorizeCard />
             </div>
           </Card>
+
+          {/* Junto da manutenção: os dois respondem sobre a mesma importação, e
+              quem abre o diagnóstico costuma agir no cartão de cima logo em
+              seguida. */}
+          <ImportDiagnosticsCard />
         </div>
 
-        {/* Linha inteira: um cartão de uma ação só ao lado de outro alto
-            deixaria de novo o vão que esta reorganização veio resolver. */}
-        <Card className="lg:col-span-2">
-          <CardHeader title="Zona de risco" />
-          <div className="flex items-center justify-between gap-4 rounded-md bg-sunken p-3.5">
-            <div className="min-w-0">
-              <p className="text-[0.8125rem] font-medium text-ink">Apagar tudo</p>
-              <p className="text-xs text-muted">
-                Remove lançamentos, metas, contas e limites deste navegador. Não há como desfazer.
-              </p>
-            </div>
-            <Button
-              variant="quiet"
-              size="sm"
-              icon="trash-2"
-              onClick={() => setClearing(true)}
-              className="shrink-0"
-            >
-              Apagar
-            </Button>
-          </div>
-          <p className="mt-3 text-xs text-muted">
-            Vale exportar o CSV antes: é a única cópia que sobra fora deste navegador.
-          </p>
-        </Card>
       </div>
 
       <ConfirmDialog
