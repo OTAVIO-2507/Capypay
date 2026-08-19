@@ -51,7 +51,12 @@ export function SettingsPage() {
     <>
       <PageHeader title="Ajustes" description="Preferências de exibição e gestão dos seus dados." />
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      {/*
+        `items-start` para nenhum cartão esticar até a altura do vizinho. Sem
+        isso, o mais curto da linha ganha um vão branco no rodapé — sobra dentro
+        de uma folha lê como conteúdo que faltou carregar, e não como respiro.
+      */}
+      <div className="grid items-start gap-5 lg:grid-cols-2">
         {/*
           O perfil abre o mesmo diálogo do menu de topo, em vez de repetir os
           campos. Duas telas editando o mesmo dado divergem na primeira vez que
@@ -113,11 +118,22 @@ export function SettingsPage() {
             cartões terminaria com um vão vazio ao lado do último. */}
         <TwoFactorCard />
 
-        <Card>
-          <CardHeader
-            title="Seus dados"
-            description={`${transactions.length} ${transactions.length === 1 ? 'lançamento guardado' : 'lançamentos guardados'} neste navegador.`}
-          />
+        {/*
+          As duas colunas empilham por conta própria, em vez de virarem linhas
+          da grade.
+          
+          Em linha, os cartões vizinhos esticam até a altura do mais alto, e a
+          sobra aparece **dentro** da folha branca — um vão do tamanho de meia
+          tela em Ajustes. Empilhando por coluna, a que termina antes
+          simplesmente termina, e o respiro fica na mesa, onde ele lê como
+          espaço e não como falha.
+        */}
+        <div className="flex flex-col gap-5">
+          <Card>
+            <CardHeader
+              title="Seus dados"
+              description={`${transactions.length} ${transactions.length === 1 ? 'lançamento guardado' : 'lançamentos guardados'} neste navegador.`}
+            />
           <div className="flex flex-col gap-3">
             {/* Antes de exportar: é a única entrada de dados que não passa pelo
                 formulário, e quem procura "meus dados" está atrás dela. */}
@@ -139,14 +155,6 @@ export function SettingsPage() {
                 Importar
               </Button>
             </div>
-
-            {/* Depois de importar: é a ação que conserta o que a importação
-                não alcançou, e não faz sentido antes de haver o que reconhecer. */}
-            <DetectSeriesCard />
-
-            <RecategorizeCard />
-
-            <ImportDiagnosticsCard />
 
             <div className="flex items-center justify-between gap-4 rounded-md bg-sunken p-3.5">
               <div className="min-w-0">
@@ -184,10 +192,37 @@ export function SettingsPage() {
                 Carregar
               </Button>
             </div>
-          </div>
-        </Card>
+            </div>
+          </Card>
 
-        <Card>
+          <ImportDiagnosticsCard />
+        </div>
+
+        {/*
+          Entrada e saída de dados de um lado, conserto do outro.
+          
+          Os dois assuntos moravam no mesmo cartão, e ele cresceu até o dobro da
+          altura do vizinho — a coluna ao lado ficava com um vão do tamanho de
+          meia tela. Separar equilibra as alturas e, mais que isso, separa o que
+          se faz sempre (importar, exportar) do que se faz uma vez, quando algo
+          ficou para trás.
+        */}
+        <div className="flex flex-col gap-5">
+          <Card>
+            <CardHeader
+              title="Manutenção do histórico"
+              description="Para o que a importação não alcançou de primeira."
+            />
+            <div className="flex flex-col gap-3">
+              <DetectSeriesCard />
+              <RecategorizeCard />
+            </div>
+          </Card>
+        </div>
+
+        {/* Linha inteira: um cartão de uma ação só ao lado de outro alto
+            deixaria de novo o vão que esta reorganização veio resolver. */}
+        <Card className="lg:col-span-2">
           <CardHeader title="Zona de risco" />
           <div className="flex items-center justify-between gap-4 rounded-md bg-sunken p-3.5">
             <div className="min-w-0">

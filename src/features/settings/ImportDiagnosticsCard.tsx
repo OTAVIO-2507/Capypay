@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Icon } from '@/components/Icon'
 import { Button } from '@/components/ui/Button'
+import { Card, CardHeader } from '@/components/ui/Card'
 import { planSeriesForHistory } from '@/domain/detectSeries'
 import { installmentPurchases } from '@/domain/installments'
 import { activeSubscriptions } from '@/domain/subscriptions'
@@ -101,30 +102,27 @@ export function ImportDiagnosticsCard() {
   ]
 
   return (
-    <div className="rounded-md bg-sunken p-3.5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-[0.8125rem] font-medium text-ink">Diagnóstico da importação</p>
-          <p className="text-xs text-muted">
-            Onde os lançamentos param antes de chegar em Parcelamentos e Assinaturas. Só contagens,
-            nenhuma descrição ou valor.
-          </p>
-        </div>
-        <Button
-          variant="quiet"
-          size="sm"
-          icon="download"
-          className="shrink-0 bg-sheet"
-          onClick={() => {
-            void navigator.clipboard?.writeText(texto)
-            setCopiado(true)
-          }}
-        >
-          {copiado ? 'Copiado' : 'Copiar'}
-        </Button>
-      </div>
+    <Card>
+      <CardHeader
+        title="Diagnóstico da importação"
+        description="Onde os lançamentos param antes de chegar em Parcelamentos e Assinaturas. Só contagens, nenhuma descrição ou valor."
+        action={
+          <Button
+            variant="quiet"
+            size="sm"
+            icon="download"
+            className="shrink-0"
+            onClick={() => {
+              void navigator.clipboard?.writeText(texto)
+              setCopiado(true)
+            }}
+          >
+            {copiado ? 'Copiado' : 'Copiar'}
+          </Button>
+        }
+      />
 
-      <dl className="mt-3 flex flex-col divide-y divide-hairline border-t border-hairline">
+      <dl className="flex flex-col divide-y divide-hairline border-t border-hairline">
         {linhas.map(([rotulo, valor]) => (
           <div key={rotulo} className="flex items-baseline justify-between gap-3 py-2 text-xs">
             <dt className="text-muted">{rotulo}</dt>
@@ -137,6 +135,6 @@ export function ImportDiagnosticsCard() {
         <Icon name="circle-alert" size={13} className="mt-px shrink-0" />
         {suspeita}
       </p>
-    </div>
+    </Card>
   )
 }
