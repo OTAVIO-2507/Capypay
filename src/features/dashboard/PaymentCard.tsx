@@ -1,13 +1,21 @@
 import { Link } from 'react-router-dom'
 import { Icon } from '@/components/Icon'
 import type { Account } from '@/domain/types'
-import { cn } from '@/lib/cn'
 import { usePrivacy } from '@/store/hooks'
-import { findBankBrand } from './bankBrand'
+import { findBankBrand, type BankBrand } from './bankBrand'
 
 interface PaymentCardProps {
   account: Account | undefined
   holder: string
+  /**
+   * Banco reconhecido em outra conta da mesma conexão.
+   *
+   * Um cartão chega chamado de "GOLD", e pelo Meu Pluggy a instituição vem como
+   * "MeuPluggy" — o proxy, não o banco. Quem costuma carregar o nome é a conta
+   * corrente, e como as contas de uma conexão são todas do mesmo banco, o que
+   * uma sabe vale para as outras.
+   */
+  fallbackBank?: BankBrand | null
 }
 
 /**
@@ -19,7 +27,7 @@ interface PaymentCardProps {
  * painel financeiro que exibe número inventado sem avisar ensina a desconfiar
  * de tudo que ele mostra, e é essa a linha que a etiqueta não deixa cruzar.
  */
-export function PaymentCard({ account, holder }: PaymentCardProps) {
+export function PaymentCard({ account, holder, fallbackBank }: PaymentCardProps) {
   const masked = usePrivacy()
 
   if (!account) {
@@ -31,24 +39,18 @@ export function PaymentCard({ account, holder }: PaymentCardProps) {
   const digits = account.last4 ? `•••• •••• •••• ${account.last4}` : '•••• •••• •••• ••••'
 
   /*
-   * A cor do banco, quando ele é reconhecido pelo nome.
+   * O banco reconhecido serve para **nomear**, não para colorir.
    *
-   * Um cartão em tinta neutra é o mesmo desenho para todo mundo. Quem conectou
-   * o Inter espera laranja, e a cor é o que faz saber de qual conta o painel
-   * está falando antes de ler qualquer texto — do mesmo jeito que se reconhece
-   * o cartão dentro da carteira. Sem reconhecimento, volta ao bloco de tinta do
-   * sistema, que continua correto.
+   * O cartão continua em bloco de tinta, como todo o resto do sistema: vesti-lo
+   * com a cor da instituição foi tentado e desfeito a pedido, e a Regra da
+   * Tinta Escassa volta a valer aqui. O que o reconhecimento ainda entrega é o
+   * nome certo — pelo Meu Pluggy a instituição chega como "MeuPluggy", que é o
+   * proxy da conexão e não diz de que banco a conta é.
    */
-  const banco = findBankBrand(account.name, account.institution)
+  const banco = findBankBrand(account.name, account.institution) ?? fallbackBank ?? null
 
   return (
-    <div
-      style={banco ? { backgroundColor: banco.cor, color: banco.tinta } : undefined}
-      className={cn(
-        'relative flex aspect-[1.586] w-full flex-col justify-between overflow-hidden rounded-md p-6 shadow-[var(--shadow-block)]',
-        !banco && 'bg-block text-block-ink',
-      )}
-    >
+    <div className="relative flex aspect-[1.586] w-full flex-col justify-between overflow-hidden rounded-md bg-block p-6 text-block-ink shadow-[var(--shadow-block)]">
       {/*
         Brilho diagonal levíssimo: é o reflexo do plástico, e a única textura
         do sistema. Feito com opacidade sobre a própria tinta, nunca com matiz.
@@ -66,9 +68,9 @@ export function PaymentCard({ account, holder }: PaymentCardProps) {
               {banco?.nome ?? account.name}
             </span>
             {banco ? (
-              <span className="block truncate text-xs opacity-70">{account.name}</span>
+              <span className="block truncate text-xs text-block-muted">{account.name}</span>
             ) : account.institution ? (
-              <span className="block truncate text-xs opacity-70">{account.institution}</span>
+              <span className="block truncate text-xs text-block-muted">{account.institution}</span>
             ) : null}
           </span>
         </div>
@@ -88,7 +90,7 @@ export function PaymentCard({ account, holder }: PaymentCardProps) {
           */}
           {holder ? (
             <div className="min-w-0">
-              <p className="text-[0.625rem] tracking-[0.08em] opacity-70 uppercase">
+              <p className="text-[0.625rem] tracking-[0.08em] text-block-muted uppercase">
                 Titular
               </p>
               <p className="mt-1 truncate text-[0.8125rem] font-medium">{holder}</p>
@@ -106,7 +108,7 @@ export function PaymentCard({ account, holder }: PaymentCardProps) {
             <BrandFlag brand={account.brand} />
           ) : (
             <div className="shrink-0 text-right">
-              <p className="text-[0.625rem] tracking-[0.08em] opacity-70 uppercase">
+              <p className="text-[0.625rem] tracking-[0.08em] text-block-muted uppercase">
                 {account.creditCard ? 'Fecha' : 'Tipo'}
               </p>
               <p className="tnum mt-1 font-mono text-[0.8125rem] font-medium">

@@ -17,6 +17,7 @@ import {
 } from '@/domain/importing'
 import { cn } from '@/lib/cn'
 import { formatDayMonthYear } from '@/lib/date'
+import { findBankBrand } from '@/features/dashboard/bankBrand'
 import { MeuPluggyPanel } from '@/features/openfinance/MeuPluggyPanel'
 import { OfxError, decodeOfxBytes, parseOfx } from '@/lib/ofx'
 import { useFinanceStore } from '@/store/financeStore'
@@ -167,6 +168,21 @@ export function ImportPage() {
     if (escolhidos.length === 0) return
 
     /*
+     * O banco é o mesmo para todas as contas de uma conexão, e nem toda conta
+     * carrega o nome dele.
+     *
+     * Pelo Meu Pluggy o conector se chama "MeuPluggy", que é o proxy e não a
+     * instituição, e o cartão chega chamado de "GOLD". Quem sabe o nome do
+     * banco costuma ser a conta corrente, que vem como "BANCO INTER" — então
+     * basta uma das contas ser reconhecida para as outras herdarem, que é o que
+     * faz o cartão do painel vestir a cor certa.
+     */
+    const bancoDaConexao =
+      lotes
+        .map((item) => findBankBrand(item.accountLabel, item.account?.institution)?.nome)
+        .find((nome): nome is string => Boolean(nome)) ?? null
+
+    /*
      * Quem completa um lançamento existente é atualizado, não inserido. Inserir
      * criaria a cópia que a deduplicação existe para impedir, e o dado novo
      * ficaria na cópia enquanto o original seguiria incompleto no histórico.
@@ -248,7 +264,7 @@ export function ImportPage() {
           number: item.account!.number,
           balanceCents: item.account!.balanceCents,
           brand: item.account!.brand,
-          institution: item.account!.institution,
+          institution: bancoDaConexao ?? item.account!.institution,
         })),
     )
 

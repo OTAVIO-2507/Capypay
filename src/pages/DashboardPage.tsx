@@ -13,7 +13,6 @@ import { Delta, Figure, FlowIndicator, Money } from '@/components/ui/Money'
 import {
   budgetStatuses,
   compareWithPreviousMonth,
-  cumulativeBalanceThrough,
   goalProgress,
   monthlyFlow,
   sortByDateDesc,
@@ -30,6 +29,7 @@ import { CategoryBreakdown } from '@/features/charts/CategoryBreakdown'
 import { dueTodayText, greetingTextFor } from '@/features/dashboard/Greeting'
 import { TodayLeaf } from '@/features/dashboard/TodayLeaf'
 import { SubscriptionsPanel } from '@/features/dashboard/SubscriptionsPanel'
+import { findBankBrand } from '@/features/dashboard/bankBrand'
 import { PaymentCard } from '@/features/dashboard/PaymentCard'
 import { WelcomePanel } from '@/features/dashboard/WelcomePanel'
 import { TransactionForm } from '@/features/transactions/TransactionForm'
@@ -65,10 +65,6 @@ export function DashboardPage() {
     () => compareWithPreviousMonth(transactions, month),
     [transactions, month],
   )
-  const cumulative = useMemo(
-    () => cumulativeBalanceThrough(transactions, month),
-    [transactions, month],
-  )
   const categorySpend = useMemo(
     () => spendingByCategory(transactions, categories, month),
     [transactions, categories, month],
@@ -101,6 +97,16 @@ export function DashboardPage() {
   const ativas = accounts.filter((account) => !account.archived)
   const primaryCard =
     ativas.find((account) => account.kind === 'credit_card') ?? ativas[0]
+  /*
+   * O banco reconhecido em qualquer conta serve para todas.
+   *
+   * O cartão importado se chama "GOLD" e a instituição chega como "MeuPluggy",
+   * que é o proxy da conexão e não o banco. A conta corrente da mesma conexão
+   * vem como "BANCO INTER", e é dela que sai a cor — sem isso o cartão fica
+   * genérico mesmo com o banco inteiro sincronizado.
+   */
+  const bancoDasContas =
+    ativas.map((account) => findBankBrand(account.name, account.institution)).find(Boolean) ?? null
   const leadGoal = goalRows.find((row) => !row.reached) ?? goalRows[0]
   // A saudação toma o lugar do título. Desligada, o painel volta a se chamar
   // "Painel" — o cabeçalho nunca fica sem nome.
@@ -139,7 +145,11 @@ export function DashboardPage() {
       */}
       <div className="grid gap-5 lg:grid-cols-12">
         <div className="flex flex-col gap-5 lg:col-span-4">
-          <PaymentCard account={primaryCard} holder={profile.name} />
+          <PaymentCard
+            account={primaryCard}
+            holder={profile.name}
+            fallbackBank={bancoDasContas}
+          />
           <GoalSpotlight goal={leadGoal} />
 
           <Card className="flex flex-1 flex-col">
@@ -160,10 +170,17 @@ export function DashboardPage() {
                 <Delta cents={comparison.netDelta} since="que o mês anterior" className="mt-3" />
               </div>
 
+              {/*
+                Sem "Acumulado". Ele somava o histórico inteiro até o mês, e com
+                extrato importado esse número não é o saldo de lugar nenhum: só
+                o que foi trazido entra na conta, então ele responde "quanto
+                sobrou no pedaço que você importou" — uma pergunta que ninguém
+                fez. O saldo de verdade vive em Contas, com o valor que o banco
+                informa.
+              */}
               <dl className="flex gap-7">
                 <SummaryStat label="Receitas" cents={comparison.current.income} tone="income" />
                 <SummaryStat label="Despesas" cents={comparison.current.expense} tone="expense" />
-                <SummaryStat label="Acumulado" cents={cumulative} tone="auto" />
               </dl>
             </div>
 
