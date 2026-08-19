@@ -18,14 +18,14 @@ import {
   monthlyFlow,
   sortByDateDesc,
   spendingByCategory,
+  spendingPace,
   transactionsInMonth,
-  yearlyNet,
   type BudgetStatus,
   type GoalProgress,
 } from '@/domain/selectors'
 import { activeSubscriptions } from '@/domain/subscriptions'
 import type { TransactionKind } from '@/domain/types'
-import { BalanceTrend, FlowChart } from '@/features/charts/LazyCharts'
+import { FlowChart, SpendingPaceChart } from '@/features/charts/LazyCharts'
 import { CategoryBreakdown } from '@/features/charts/CategoryBreakdown'
 import { dueTodayText, greetingTextFor } from '@/features/dashboard/Greeting'
 import { TodayLeaf } from '@/features/dashboard/TodayLeaf'
@@ -34,7 +34,7 @@ import { PaymentCard } from '@/features/dashboard/PaymentCard'
 import { WelcomePanel } from '@/features/dashboard/WelcomePanel'
 import { TransactionForm } from '@/features/transactions/TransactionForm'
 import { TransactionList } from '@/features/transactions/TransactionList'
-import { formatMonthLong, todayIso, yearOf } from '@/lib/date'
+import { formatMonthLong, todayIso } from '@/lib/date'
 import type { Cents } from '@/lib/money'
 import { useFinanceStore } from '@/store/financeStore'
 import {
@@ -50,7 +50,6 @@ import {
 
 export function DashboardPage() {
   const month = useSelectedMonth()
-  const setMonth = useFinanceStore((state) => state.setSelectedMonth)
   const transactions = useTransactions()
   const categories = useCategories()
   const goals = useGoals()
@@ -61,7 +60,6 @@ export function DashboardPage() {
   const addTransaction = useFinanceStore((state) => state.addTransaction)
 
   const [composing, setComposing] = useState(false)
-  const [trendYear, setTrendYear] = useState(() => yearOf(month))
 
   const comparison = useMemo(
     () => compareWithPreviousMonth(transactions, month),
@@ -82,7 +80,7 @@ export function DashboardPage() {
     [transactions, categories],
   )
   const flow = useMemo(() => monthlyFlow(transactions, month, 6), [transactions, month])
-  const yearData = useMemo(() => yearlyNet(transactions, trendYear), [transactions, trendYear])
+  const pace = useMemo(() => spendingPace(transactions, month), [transactions, month])
   const budgetRows = useMemo(
     () => budgetStatuses(budgets, transactions, categories, month),
     [budgets, transactions, categories, month],
@@ -169,13 +167,54 @@ export function DashboardPage() {
               </dl>
             </div>
 
-            <BalanceTrend
-              year={trendYear}
-              data={yearData}
-              selectedMonth={month}
-              onSelectMonth={setMonth}
-              onChangeYear={setTrendYear}
-            />
+            {/*
+              O ritmo do mês no lugar da curva do ano.
+              
+              A curva anual respondia "como foram os últimos doze meses", uma
+              pergunta de retrospectiva: cada ponto dela só fica pronto quando o
+              mês fecha, e aí não há mais decisão a tomar sobre ele. O ritmo
+              mostra no dia 10 que este mês está mais caro que o passado, que é
+              quando ainda dá para fazer alguma coisa a respeito.
+            */}
+            <div className="border-t border-hairline pt-5">
+              <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+                <div>
+                  <p className="text-xs text-muted">Ritmo de gastos</p>
+                  <p className="mt-1.5 flex flex-wrap items-baseline gap-2">
+                    <Money
+                      cents={Math.abs(pace.deltaCents)}
+                      emphasis="strong"
+                      className="text-xl tracking-[-0.02em]"
+                    />
+                    <span className="text-xs text-muted">
+                      {pace.deltaCents === 0
+                        ? 'no mesmo ritmo do mês passado'
+                        : pace.deltaCents > 0
+                          ? 'acima do mês passado, no mesmo dia'
+                          : 'abaixo do mês passado, no mesmo dia'}
+                    </span>
+                  </p>
+                </div>
+
+                {/*
+                  A legenda fica no cabeçalho e não sob o gráfico: com duas
+                  linhas de pesos diferentes, saber qual é qual é pré-requisito
+                  para ler a curva, não nota de rodapé.
+                */}
+                <dl className="flex items-center gap-4 text-xs text-muted">
+                  <div className="flex items-center gap-2">
+                    <span className="h-0.5 w-5 rounded-full bg-ink" />
+                    <dt>Este mês</dt>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="h-0.5 w-5 rounded-full border-t border-dashed border-faint" />
+                    <dt>Mês passado</dt>
+                  </div>
+                </dl>
+              </div>
+
+              <SpendingPaceChart pace={pace} />
+            </div>
           </Card>
 
           <Card>

@@ -7,6 +7,7 @@ import {
   goalProgress,
   spendingByCategory,
   totalsFor,
+  spendingPace,
 } from './selectors'
 import type { Goal, Transaction } from './types'
 
@@ -148,5 +149,81 @@ describe('budgetStatuses', () => {
 
   it('ordena do mais crítico para o mais folgado', () => {
     expect(result[0].percent).toBeGreaterThan(result[1].percent)
+  })
+})
+
+/**
+ * O ritmo de gastos. Responde uma pergunta que o total do mês não responde:
+ * estou gastando mais rápido que da última vez? O total fechado só chega no
+ * fim, quando não há mais o que decidir.
+ */
+describe('spendingPace', () => {
+  const gasto = (date: string, amountCents: number) =>
+    tx({ kind: 'expense', amountCents, date })
+
+  it('acumula dia a dia e para no dia de hoje', () => {
+    const pace = spendingPace(
+      [gasto('2026-08-02', 1000), gasto('2026-08-05', 2000), gasto('2026-08-09', 500)],
+      '2026-08',
+      '2026-08-06',
+    )
+
+    expect(pace.points[1].current).toBe(1000)
+    expect(pace.points[4].current).toBe(3000)
+    // O dia 9 ainda não aconteceu: a linha para, e não segue reta fingindo
+    // que houve gasto zero num dia que não chegou.
+    expect(pace.points[8].current).toBeNull()
+    expect(pace.currentCents).toBe(3000)
+  })
+
+  /*
+   * A comparação é dia contra dia, e não contra o mês fechado. No dia 10,
+   * comparar dez dias contra trinta diria que se está gastando muito menos todo
+   * início de mês, e a conclusão viraria elogio automático em vez de informação.
+   */
+  it('compara com o mesmo dia do mês anterior, não com o mês inteiro', () => {
+    const pace = spendingPace(
+      [
+        gasto('2026-07-03', 5000),
+        gasto('2026-07-20', 90000),
+        gasto('2026-08-03', 4000),
+      ],
+      '2026-08',
+      '2026-08-05',
+    )
+
+    expect(pace.previousCents).toBe(5000)
+    expect(pace.currentCents).toBe(4000)
+    expect(pace.deltaCents).toBe(-1000)
+  })
+
+  it('mostra o mês anterior inteiro, porque ele já aconteceu', () => {
+    const pace = spendingPace([gasto('2026-07-28', 3000)], '2026-08', '2026-08-05')
+
+    expect(pace.points[27].previous).toBe(3000)
+    expect(pace.points[30].previous).toBe(3000)
+  })
+
+  it('ignora receita, que não é ritmo de gasto', () => {
+    const pace = spendingPace(
+      [gasto('2026-08-02', 1000), tx({ kind: 'income', amountCents: 500000, date: '2026-08-03' })],
+      '2026-08',
+      '2026-08-05',
+    )
+
+    expect(pace.currentCents).toBe(1000)
+  })
+
+  it('percorre o mês inteiro quando ele já passou', () => {
+    const pace = spendingPace([gasto('2026-07-31', 1000)], '2026-07', '2026-08-05')
+
+    expect(pace.dayCursor).toBe(31)
+    expect(pace.points[30].current).toBe(1000)
+  })
+
+  it('devolve razão nula quando não há mês anterior com o que comparar', () => {
+    const pace = spendingPace([gasto('2026-08-02', 1000)], '2026-08', '2026-08-05')
+
+    expect(pace.ratio).toBeNull()
   })
 })

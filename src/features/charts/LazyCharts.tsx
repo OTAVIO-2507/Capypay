@@ -15,6 +15,9 @@ const BalanceTrendImpl = lazy(() =>
 const FlowChartImpl = lazy(() =>
   import('./FlowChart').then((module) => ({ default: module.FlowChart })),
 )
+const SpendingPaceImpl = lazy(() =>
+  import('./SpendingPaceChart').then((module) => ({ default: module.SpendingPaceChart })),
+)
 
 /** Ocupa a mesma altura do gráfico, para a folha não saltar quando ele chega. */
 function ChartSkeleton({ height }: { height: number }) {
@@ -39,6 +42,14 @@ export function FlowChart(props: ComponentProps<typeof FlowChartImpl>) {
   return (
     <Suspense fallback={<ChartSkeleton height={246} />}>
       <FlowChartImpl {...props} />
+    </Suspense>
+  )
+}
+
+export function SpendingPaceChart(props: ComponentProps<typeof SpendingPaceImpl>) {
+  return (
+    <Suspense fallback={<ChartSkeleton height={224} />}>
+      <SpendingPaceImpl {...props} />
     </Suspense>
   )
 }

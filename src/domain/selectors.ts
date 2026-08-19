@@ -1,4 +1,4 @@
-import { monthOf, monthsOfYear, shiftMonth, type IsoDate, type MonthKey } from '@/lib/date'
+import { monthOf, monthsOfYear, shiftMonth, todayIso, type IsoDate, type MonthKey } from '@/lib/date'
 import { percentOf, type Cents } from '@/lib/money'
 import type {
   BudgetsByMonth,
@@ -329,3 +329,114 @@ export function groupByDate(
 }
 
 export { EMPTY_TOTALS }
+
+/** Um dia do mês, com o gasto acumulado até ele nos dois meses comparados. */
+export interface SpendingPacePoint {
+  day: number
+  /**
+   * Acumulado do mês em foco. `null` depois de hoje, e isso é deliberado: uma
+   * linha que continua reta até o fim do mês parece gasto zero nos dias que
+   * ainda não aconteceram, quando na verdade eles não têm resposta ainda.
+   */
+  current: Cents | null
+  /** Acumulado do mês anterior no mesmo dia. Vai até o fim, porque já aconteceu. */
+  previous: Cents | null
+}
+
+export interface SpendingPace {
+  points: SpendingPacePoint[]
+  /** Gasto do mês em foco até hoje. */
+  currentCents: Cents
+  /**
+   * Gasto do mês anterior **até o mesmo dia**, e não o mês fechado.
+   *
+   * É o que torna a comparação honesta: no dia 10, comparar dez dias contra
+   * trinta diria que se está gastando muito menos todo início de mês, e a
+   * conclusão viraria elogio automático em vez de informação.
+   */
+  previousCents: Cents
+  /** Positivo quando se gastou mais que no mês anterior no mesmo ponto. */
+  deltaCents: Cents
+  /** Variação relativa. `null` quando não há com o que comparar. */
+  ratio: number | null
+  /** O último dia com resposta: hoje, ou o fim do mês se ele já passou. */
+  dayCursor: number
+}
+
+/**
+ * O ritmo de gastos do mês, dia a dia, contra o mês anterior.
+ *
+ * Responde uma pergunta que o total do mês não responde: **estou gastando mais
+ * rápido que da última vez?**. O total fechado só chega no fim, quando não há
+ * mais o que decidir; a curva acumulada mostra a diferença no dia 10, que é
+ * quando ainda dá para mudar alguma coisa.
+ *
+ * Só despesa entra. Misturar receita produziria uma linha que desce quando o
+ * salário cai, e "gastei menos" e "recebi mais" são coisas diferentes.
+ */
+export function spendingPace(
+  transactions: readonly Transaction[],
+  month: MonthKey,
+  today: IsoDate = todayIso(),
+): SpendingPace {
+  const anterior = shiftMonth(month, -1)
+
+  const porDia = (alvo: MonthKey) => {
+    const dias = new Map<number, Cents>()
+    for (const transaction of transactions) {
+      if (transaction.kind !== 'expense') continue
+      if (monthOf(transaction.date) !== alvo) continue
+      const dia = Number(transaction.date.slice(8, 10))
+      dias.set(dia, (dias.get(dia) ?? 0) + transaction.amountCents)
+    }
+    return dias
+  }
+
+  const gastosAtuais = porDia(month)
+  const gastosAnteriores = porDia(anterior)
+
+  const diasNoMes = new Date(
+    Number(month.slice(0, 4)),
+    Number(month.slice(5, 7)),
+    0,
+  ).getDate()
+
+  // O mês em foco pode ser passado, presente ou futuro. Em mês passado a linha
+  // vai até o fim; no mês corrente ela para hoje; num mês futuro não há nada.
+  const mesDeHoje = monthOf(today)
+  const dayCursor =
+    month < mesDeHoje ? diasNoMes : month === mesDeHoje ? Number(today.slice(8, 10)) : 0
+
+  const points: SpendingPacePoint[] = []
+  let somaAtual = 0
+  let somaAnterior = 0
+  let currentCents = 0
+  let previousCents = 0
+
+  for (let dia = 1; dia <= diasNoMes; dia += 1) {
+    somaAtual += gastosAtuais.get(dia) ?? 0
+    somaAnterior += gastosAnteriores.get(dia) ?? 0
+
+    if (dia <= dayCursor) {
+      currentCents = somaAtual
+      previousCents = somaAnterior
+    }
+
+    points.push({
+      day: dia,
+      current: dia <= dayCursor ? somaAtual : null,
+      previous: somaAnterior,
+    })
+  }
+
+  const deltaCents = currentCents - previousCents
+
+  return {
+    points,
+    currentCents,
+    previousCents,
+    deltaCents,
+    ratio: previousCents === 0 ? null : deltaCents / previousCents,
+    dayCursor,
+  }
+}
