@@ -96,14 +96,32 @@ interface SelectInputProps extends SelectHTMLAttributes<HTMLSelectElement> {
   invalid?: boolean
 }
 
+/**
+ * Seletor sobre o `<select>` nativo.
+ *
+ * Continua nativo de propósito: a lista aberta é a do sistema, que no celular
+ * vira a roda de rolagem que a pessoa já sabe usar, e no teclado responde a
+ * busca por letra sem que ninguém precise reimplementar isso. O que se estiliza
+ * é o gatilho.
+ *
+ * O gatilho **responde ao mouse**, e não só ao foco. Um controle que abre uma
+ * lista inteira ao ser clicado e não reage à passagem do cursor parece
+ * decoração desligada — a resposta é o que diz que ali se clica, antes de
+ * qualquer clique acontecer.
+ */
 export function SelectInput({ invalid, className, children, ...props }: SelectInputProps) {
   return (
-    <div className="relative">
+    <div className="group relative">
       <select
         aria-invalid={invalid || undefined}
         className={cn(
           CONTROL_BASE,
           'h-11 cursor-pointer appearance-none pr-10',
+          // Só a borda muda no hover, e não o fundo: no tema escuro o
+          // Erguido é mais **escuro** que o Rebaixado, então clarear no claro e
+          // escurecer no escuro faria o campo sumir contra a folha justamente
+          // quando o cursor chega. A borda cresce igual nos dois temas.
+          'hover:border-hairline-strong',
           invalid && 'border-ink',
           className,
         )}
@@ -111,10 +129,17 @@ export function SelectInput({ invalid, className, children, ...props }: SelectIn
       >
         {children}
       </select>
+
+      {/*
+        A seta acompanha o estado do gatilho: apagada em repouso, tinta cheia
+        quando o cursor chega. Ela é o único aviso visual de que existe uma
+        lista atrás, então deixá-la sempre no mesmo cinza gasta a única deixa
+        que o controle tem.
+      */}
       <Icon
         name="chevron-down"
-        size={15}
-        className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-faint"
+        size={14}
+        className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-faint transition-colors duration-150 group-hover:text-ink group-focus-within:text-ink"
       />
     </div>
   )
