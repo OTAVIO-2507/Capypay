@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Dialog } from '@/components/ui/Dialog'
-import { Field, SelectInput, TextInput } from '@/components/ui/Field'
+import { Field, TextInput } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Select'
 import { createUser, type AdminUserSummary } from './adminApi'
 
 interface CreateUserDialogProps {
@@ -90,10 +91,15 @@ export function CreateUserDialog({ open, onClose, onCreated }: CreateUserDialogP
 
         <Field label="Papel">
           {({ id }) => (
-            <SelectInput id={id} value={role} onChange={(event) => setRole(event.target.value as 'user' | 'admin')}>
-              <option value="user">Usuário (usa o app financeiro)</option>
-              <option value="admin">Admin (gerencia contas)</option>
-            </SelectInput>
+            <Select
+              id={id}
+              value={role}
+              onChange={(value) => setRole(value as 'user' | 'admin')}
+                options={[
+                  { value: 'user', label: 'Usuário (usa o app financeiro)' },
+                  { value: 'admin', label: 'Admin (gerencia contas)' },
+                ]}
+            />
           )}
         </Field>
 

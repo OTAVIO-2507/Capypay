@@ -3,7 +3,8 @@ import { Icon } from '@/components/Icon'
 import { Button } from '@/components/ui/Button'
 import { CardWell } from '@/components/ui/Card'
 import { Dialog } from '@/components/ui/Dialog'
-import { Field, SelectInput, TextInput } from '@/components/ui/Field'
+import { Field, TextInput } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Select'
 import { inviteUser } from './adminApi'
 import type { Role } from '@/store/authStore'
 
@@ -128,14 +129,15 @@ export function InviteUserDialog({
 
           <Field label="Papel">
             {({ id }) => (
-              <SelectInput
+              <Select
                 id={id}
                 value={role}
-                onChange={(event) => setRole(event.target.value as Role)}
-              >
-                <option value="user">Usuário (usa o app financeiro)</option>
-                <option value="admin">Admin (gerencia contas)</option>
-              </SelectInput>
+                onChange={(value) => setRole(value as Role)}
+                  options={[
+                  { value: 'user', label: 'Usuário (usa o app financeiro)' },
+                  { value: 'admin', label: 'Admin (gerencia contas)' },
+                ]}
+              />
             )}
           </Field>
 

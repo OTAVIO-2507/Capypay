@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/Controls'
 import { ConfirmDialog } from '@/components/ui/Dialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ConnectBankButton } from '@/features/openfinance/ConnectBankButton'
-import { Field, MoneyInput, SelectInput, TextInput } from '@/components/ui/Field'
+import { Field, MoneyInput, TextInput } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Select'
 import { Money } from '@/components/ui/Money'
 import { transactionsInMonth } from '@/domain/selectors'
 import type { Account, AccountKind, BankConnection } from '@/domain/types'
@@ -282,17 +283,15 @@ function AccountForm({
 
       <Field label="Tipo">
         {({ id }) => (
-          <SelectInput
+          <Select
             id={id}
             value={kind}
-            onChange={(event) => setKind(event.target.value as AccountKind)}
-          >
-            {Object.entries(KIND_META).map(([value, meta]) => (
-              <option key={value} value={value}>
-                {meta.label}
-              </option>
-            ))}
-          </SelectInput>
+            onChange={(value) => setKind(value as AccountKind)}
+            options={Object.entries(KIND_META).map(([value, meta]) => ({
+              value,
+              label: meta.label,
+            }))}
+          />
         )}
       </Field>
 

@@ -5,7 +5,8 @@ import { Card, CardHeader } from '@/components/ui/Card'
 import { Segmented, type SegmentOption } from '@/components/ui/Controls'
 import { ConfirmDialog, Dialog } from '@/components/ui/Dialog'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { SearchInput, SelectInput } from '@/components/ui/Field'
+import { SearchInput } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Select'
 import { Figure, FlowIndicator, Money } from '@/components/ui/Money'
 import { exportTransactionsCsv } from '@/features/settings/exportCsv'
 import { TransactionForm } from '@/features/transactions/TransactionForm'
@@ -163,38 +164,33 @@ export function TransactionsPage() {
                 className="sm:flex-1"
               />
               <div className="flex gap-2.5">
-                <SelectInput
+                <Select
                   aria-label="Filtrar por tipo"
                   value={filters.kind}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     setFilters((current) => ({
                       ...current,
-                      kind: event.target.value as TransactionKind | 'all',
+                      kind: value as TransactionKind | 'all',
                     }))
                   }
+                  options={Object.entries(KIND_LABEL).map(([value, label]) => ({ value, label }))}
                   className="flex-1 sm:w-40"
-                >
-                  {Object.entries(KIND_LABEL).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </SelectInput>
-                <SelectInput
+                />
+                <Select
                   aria-label="Filtrar por categoria"
                   value={filters.categoryId}
-                  onChange={(event) =>
-                    setFilters((current) => ({ ...current, categoryId: event.target.value }))
+                  onChange={(value) =>
+                    setFilters((current) => ({ ...current, categoryId: value }))
                   }
+                  options={[
+                    { value: 'all', label: 'Todas as categorias' },
+                    ...categories.map((category) => ({
+                      value: category.id,
+                      label: category.label,
+                    })),
+                  ]}
                   className="flex-1 sm:w-44"
-                >
-                  <option value="all">Todas as categorias</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.label}
-                    </option>
-                  ))}
-                </SelectInput>
+                />
               </div>
             </div>
 

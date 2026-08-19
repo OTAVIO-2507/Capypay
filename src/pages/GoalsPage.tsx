@@ -7,7 +7,8 @@ import { Badge, Progress } from '@/components/ui/Controls'
 import { Donut } from '@/components/ui/Donut'
 import { ConfirmDialog, Dialog } from '@/components/ui/Dialog'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Field, MoneyInput, SelectInput, TextInput } from '@/components/ui/Field'
+import { Field, MoneyInput, TextInput } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Select'
 import { Money } from '@/components/ui/Money'
 import { goalProgress } from '@/domain/selectors'
 import type { Goal } from '@/domain/types'
@@ -300,18 +301,16 @@ function GoalForm({
             <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-sunken text-faint">
               <Icon name={icon} size={17} />
             </span>
-            <SelectInput
+            <Select
               id={id}
               value={icon}
-              onChange={(event) => setIcon(event.target.value)}
+              onChange={setIcon}
+              options={GOAL_ICON_OPTIONS.map((option) => ({
+                value: option.name,
+                label: option.label,
+              }))}
               className="flex-1"
-            >
-              {GOAL_ICON_OPTIONS.map((option) => (
-                <option key={option.name} value={option.name}>
-                  {option.label}
-                </option>
-              ))}
-            </SelectInput>
+            />
           </div>
         )}
       </Field>

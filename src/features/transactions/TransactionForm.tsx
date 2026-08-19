@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Icon, type IconName } from '@/components/Icon'
 import { Button } from '@/components/ui/Button'
 import { Segmented, Toggle, type SegmentOption } from '@/components/ui/Controls'
-import { Field, MoneyInput, SelectInput, TextInput } from '@/components/ui/Field'
+import { Field, MoneyInput, TextInput } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Select'
 import { categoriesFor, CONTRIBUTION_CATEGORY_ID } from '@/domain/categories'
 import type {
   Account,
@@ -201,20 +202,15 @@ export function TransactionForm({
       {isContribution ? (
         <Field label="Meta de destino" error={errors.goal}>
           {({ id, describedBy, invalid }) => (
-            <SelectInput
+            <Select
               id={id}
               aria-describedby={describedBy}
               invalid={invalid}
               value={goalId}
               disabled={noGoals}
-              onChange={(event) => setGoalId(event.target.value)}
-            >
-              {activeGoals.map((goal) => (
-                <option key={goal.id} value={goal.id}>
-                  {goal.name}
-                </option>
-              ))}
-            </SelectInput>
+              onChange={setGoalId}
+              options={activeGoals.map((goal) => ({ value: goal.id, label: goal.name }))}
+            />
           )}
         </Field>
       ) : (
@@ -263,17 +259,15 @@ export function TransactionForm({
       {!isContribution ? (
         <Field label="Categoria">
           {({ id }) => (
-            <SelectInput
+            <Select
               id={id}
               value={categoryId}
-              onChange={(event) => setCategoryId(event.target.value)}
-            >
-              {availableCategories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.label}
-                </option>
-              ))}
-            </SelectInput>
+              onChange={setCategoryId}
+              options={availableCategories.map((category) => ({
+                value: category.id,
+                label: category.label,
+              }))}
+            />
           )}
         </Field>
       ) : null}
@@ -281,21 +275,18 @@ export function TransactionForm({
       {accounts.length > 0 ? (
         <Field label="Conta ou cartão" hint="Opcional. Ajuda a separar o que saiu de onde.">
           {({ id, describedBy }) => (
-            <SelectInput
+            <Select
               id={id}
               aria-describedby={describedBy}
               value={accountId}
-              onChange={(event) => setAccountId(event.target.value)}
-            >
-              <option value="">Não informar</option>
-              {accounts
-                .filter((account) => !account.archived)
-                .map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
-            </SelectInput>
+              onChange={setAccountId}
+              options={[
+                { value: '', label: 'Não informar' },
+                ...accounts
+                  .filter((account) => !account.archived)
+                  .map((account) => ({ value: account.id, label: account.name })),
+              ]}
+            />
           )}
         </Field>
       ) : null}
@@ -377,18 +368,16 @@ export function TransactionForm({
               </Field>
               <Field label="Frequência">
                 {({ id }) => (
-                  <SelectInput
+                  <Select
                     id={id}
                     value={frequency}
-                    onChange={(event) => setFrequency(event.target.value as RecurrenceFrequency)}
+                    onChange={(value) => setFrequency(value as RecurrenceFrequency)}
+                    options={Object.entries(FREQUENCY_LABEL).map(([value, label]) => ({
+                      value,
+                      label,
+                    }))}
                     className="bg-sheet"
-                  >
-                    {Object.entries(FREQUENCY_LABEL).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </SelectInput>
+                  />
                 )}
               </Field>
               </div>

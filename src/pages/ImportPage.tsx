@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Badge, Segmented, type SegmentOption } from '@/components/ui/Controls'
-import { SelectInput } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Select'
 import { Money } from '@/components/ui/Money'
 import { categoriesFor } from '@/domain/categories'
 import {
@@ -592,18 +592,16 @@ function LinhaDeCandidato({
         </span>
       </label>
 
-      <SelectInput
+      <Select
         aria-label={`Categoria de ${candidato.description}`}
         value={candidato.categoryId}
-        onChange={(evento) => onCategoria(evento.target.value)}
-        className="w-40 shrink-0 text-xs"
-      >
-        {categorias.map((categoria) => (
-          <option key={categoria.id} value={categoria.id}>
-            {categoria.label}
-          </option>
-        ))}
-      </SelectInput>
+        onChange={onCategoria}
+        options={categorias.map((categoria) => ({
+          value: categoria.id,
+          label: categoria.label,
+        }))}
+        className="h-9 w-40 shrink-0 px-3 text-xs"
+      />
 
       <Money
         cents={candidato.amountCents}
