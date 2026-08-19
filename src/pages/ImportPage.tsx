@@ -247,6 +247,8 @@ export function ImportPage() {
           provider: fonte === 'pluggy' ? 'pluggy' : 'ofx',
           number: item.account!.number,
           balanceCents: item.account!.balanceCents,
+          brand: item.account!.brand,
+          institution: item.account!.institution,
         })),
     )
 
@@ -300,6 +302,8 @@ export function ImportPage() {
                     kind: extrato.kind,
                     number: extrato.number,
                     balanceCents: extrato.balanceCents,
+                    brand: extrato.brand,
+                    institution: extrato.institution,
                   },
                 })),
                 'pluggy',

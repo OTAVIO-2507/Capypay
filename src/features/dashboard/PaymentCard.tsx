@@ -96,14 +96,24 @@ export function PaymentCard({ account, holder }: PaymentCardProps) {
           ) : (
             <span />
           )}
-          <div className="shrink-0 text-right">
-            <p className="text-[0.625rem] tracking-[0.08em] opacity-70 uppercase">
-              {account.creditCard ? 'Fecha' : 'Tipo'}
-            </p>
-            <p className="tnum mt-1 font-mono text-[0.8125rem] font-medium">
-              {account.creditCard ? `dia ${account.creditCard.closingDay}` : 'Conta'}
-            </p>
-          </div>
+          {/*
+            A bandeira toma o lugar do rótulo quando a instituição informa qual
+            é. É o canto que o cartão físico reserva para ela, e reconhecê-la
+            ali é imediato; "Tipo: Conta" no mesmo espaço não diz nada que o
+            resto do cartão já não tenha dito.
+          */}
+          {account.brand ? (
+            <BrandFlag brand={account.brand} />
+          ) : (
+            <div className="shrink-0 text-right">
+              <p className="text-[0.625rem] tracking-[0.08em] opacity-70 uppercase">
+                {account.creditCard ? 'Fecha' : 'Tipo'}
+              </p>
+              <p className="tnum mt-1 font-mono text-[0.8125rem] font-medium">
+                {account.creditCard ? `dia ${account.creditCard.closingDay}` : 'Conta'}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -168,5 +178,51 @@ function ExampleCard() {
         </p>
       </div>
     </Link>
+  )
+}
+
+/**
+ * A bandeira do cartão, desenhada e não baixada.
+ *
+ * Mesma escolha da marca das assinaturas: buscar a imagem de fora entregaria a
+ * um terceiro a informação de que esta pessoa tem este cartão. As duas formas
+ * que valem a pena desenhar são as que se reconhecem por geometria pura, e a
+ * Mastercard é o caso perfeito — dois círculos que se cruzam, legíveis a
+ * qualquer tamanho. As demais aparecem pelo nome, na tipografia do produto.
+ */
+function BrandFlag({ brand }: { brand: string }) {
+  const nome = brand.trim()
+  const chave = nome
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+
+  if (chave.includes('master')) {
+    return (
+      <span className="shrink-0" title={nome}>
+        <svg width="46" height="30" viewBox="0 0 46 30" aria-label={nome} role="img">
+          <circle cx="18" cy="15" r="9.5" fill="#EB001B" />
+          <circle cx="28" cy="15" r="9.5" fill="#F79E1B" />
+          {/*
+            A faixa de interseção é o que faz a marca ser reconhecida: sem ela,
+            os dois círculos parecem apenas sobrepostos, e um deles some por
+            baixo do outro.
+          */}
+          <path
+            d="M23 7.9a9.5 9.5 0 0 0 0 14.2 9.5 9.5 0 0 0 0-14.2z"
+            fill="#FF5F00"
+          />
+        </svg>
+      </span>
+    )
+  }
+
+  return (
+    <span
+      title={nome}
+      className="shrink-0 text-[0.8125rem] font-semibold tracking-[0.06em] uppercase opacity-90"
+    >
+      {nome}
+    </span>
   )
 }

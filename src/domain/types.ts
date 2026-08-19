@@ -144,6 +144,14 @@ export interface Account {
    */
   balanceCents?: Cents | null
   balanceUpdatedAt?: number | null
+  /**
+   * Bandeira do cartão, como a instituição informa ("Mastercard", "Visa").
+   *
+   * Só existe em cartão, e nem todo banco informa. Guardada como veio: quem
+   * desenha decide o que reconhece, e uma bandeira desconhecida some do cartão
+   * em vez de virar um rótulo torto.
+   */
+  brand?: string | null
   archived: boolean
   createdAt: number
 }

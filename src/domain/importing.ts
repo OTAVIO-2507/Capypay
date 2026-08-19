@@ -78,6 +78,8 @@ export interface ImportBatch {
     kind: AccountKind
     number?: string | null
     balanceCents?: Cents | null
+    brand?: string | null
+    institution?: string | null
   }
 }
 

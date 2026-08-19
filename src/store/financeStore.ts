@@ -40,6 +40,8 @@ export interface ImportedAccount {
   number?: string | null
   /** Saldo informado pela instituição. `null` quando ela não diz. */
   balanceCents?: Cents | null
+  brand?: string | null
+  institution?: string | null
 }
 
 interface FinanceState {
@@ -203,6 +205,8 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
                     ...item,
                     balanceCents: conta.balanceCents ?? item.balanceCents ?? null,
                     balanceUpdatedAt: conta.balanceCents == null ? item.balanceUpdatedAt : now,
+                    brand: conta.brand ?? item.brand ?? null,
+                    institution: conta.institution ?? item.institution ?? null,
                     sync: { ...item.sync!, lastSyncedAt: now },
                   }
                 : item,
@@ -216,9 +220,10 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
                 id: novo,
                 name: conta.name,
                 kind: conta.kind,
-                institution: null,
+                institution: conta.institution ?? null,
                 last4: conta.number?.slice(-4) ?? null,
                 creditCard: null,
+                brand: conta.brand ?? null,
                 balanceCents: conta.balanceCents ?? null,
                 balanceUpdatedAt: conta.balanceCents == null ? null : now,
                 sync: { provider: conta.provider, itemId: conta.externalKey, lastSyncedAt: now },

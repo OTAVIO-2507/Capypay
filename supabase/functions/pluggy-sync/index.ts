@@ -111,6 +111,8 @@ interface ContaPluggy {
   marketingName?: string
   number?: string
   balance?: number
+  /** Só em conta de cartão. Traz a bandeira, entre outras coisas. */
+  creditData?: { brand?: string; level?: string } | null
 }
 
 interface LancamentoPluggy {
@@ -270,6 +272,24 @@ Deno.serve(async (req) => {
       ? corpo.dateFrom
       : diasAtras(JANELA_PADRAO_EM_DIAS)
 
+    /*
+     * O nome da instituição vem do item, e não da conta.
+     *
+     * A conta chega chamada de "GOLD" ou "Conta Corrente" — nomes que não dizem
+     * de que banco são. Sem isto o produto não tem como reconhecer a instituição
+     * para vestir o cartão com a cor dela, e o cartão do Inter fica genérico
+     * mesmo com a conexão funcionando.
+     */
+    let instituicao: string | null = null
+    try {
+      const item = await pluggyGet(`/items/${encodeURIComponent(itemId)}`)
+      const conector = item.connector as { name?: string } | undefined
+      instituicao = conector?.name ?? null
+    } catch {
+      // Nome de banco é enfeite ao lado dos lançamentos: se a consulta falhar,
+      // a importação continua sem ele.
+    }
+
     const contasResposta = await pluggyGet(`/accounts?itemId=${encodeURIComponent(itemId)}`)
     const contas = (contasResposta.results ?? []) as ContaPluggy[]
 
@@ -305,6 +325,10 @@ Deno.serve(async (req) => {
          */
         balanceCents: typeof conta.balance === 'number' ? paraCentavos(conta.balance) : null,
         number: conta.number ?? null,
+        // A bandeira só existe em cartão, e nem toda instituição informa. Vai
+        // como veio: quem desenha decide o que reconhece.
+        brand: conta.creditData?.brand ?? null,
+        institution: instituicao,
         entries: lancamentos
           .filter((item) => typeof item.amount === 'number' && item.date)
           .map((item) => {
