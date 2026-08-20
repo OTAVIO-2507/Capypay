@@ -8,7 +8,9 @@ on:
   # Permite disparar manualmente pela aba Actions.
   workflow_dispatch:
 
-# Só leitura: esta esteira confere o código, não publica nada.
+# Só leitura: esta esteira confere o código. Quem publica é `deploy.yml`, que
+# roda em paralelo no mesmo push — separados porque falham por motivos
+# diferentes e a leitura da aba Actions fica dizendo qual dos dois quebrou.
 permissions:
   contents: read
 

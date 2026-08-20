@@ -1,0 +1,55 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  # Permite republicar sem um commit novo, pela aba Actions.
+  workflow_dispatch:
+
+# O Pages precisa de escrita e do token de identidade; o código, só de leitura.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Um deploy não cancela o outro. Diferente da verificação, aqui o meio do
+# caminho importa: cancelar uma publicação em andamento pode deixar o site
+# servindo metade de uma versão e metade de outra.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # As chaves do Supabase entram no build, que é onde fazem falta: o Vite
+      # as congela no pacote. Faltando, o site sobe e não consegue autenticar.
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - uses: actions/configure-pages@v5
+
+      # `dist` inteiro, incluindo o `404.html` que o plugin do Vite gera: é ele
+      # que faz um refresh em /transacoes devolver a aplicação em vez de um 404
+      # do servidor.
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
