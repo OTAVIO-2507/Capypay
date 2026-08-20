@@ -112,12 +112,24 @@ function chaveDeAgrupamento(texto: string): string {
     .trim()
 }
 
-/** Distância em meses entre duas datas de calendário. */
-function mesesEntre(a: string, b: string): number {
-  const [anoA, mesA] = [Number(a.slice(0, 4)), Number(a.slice(5, 7))]
-  const [anoB, mesB] = [Number(b.slice(0, 4)), Number(b.slice(5, 7))]
-  return Math.abs((anoB - anoA) * 12 + (mesB - mesA))
+const DIA_EM_MS = 86_400_000
+
+/** Distância em dias entre duas datas ISO. */
+function diasEntre(a: string, b: string): number {
+  return Math.abs(Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DIA_EM_MS
 }
+
+/**
+ * A janela em dias que conta como "um mês depois".
+ *
+ * Medir em meses de calendário parecia mais simples e errava no fim do mês:
+ * um serviço cobrado dia 31 cai dia 1 do mês seguinte quando o mês é curto, e
+ * a conta de calendário lia isso como dois meses de distância seguidos de
+ * zero — a série inteira era descartada por causa da aritmética, não do
+ * comportamento. Em dias, os mesmos lançamentos ficam a 31 e 30 dias, que é o
+ * que eles de fato são.
+ */
+const JANELA_MENSAL = { minimo: 26, maximo: 36 }
 
 /** Quantas cobranças mensais sustentam a inferência de assinatura. */
 const MINIMO_DE_COBRANCAS = 3
@@ -126,12 +138,112 @@ const MINIMO_DE_COBRANCAS = 3
  * Quanto o valor pode variar entre cobranças e ainda ser a mesma assinatura.
  *
  * Medida contra a mediana do grupo, e não entre extremos. Serviço reajusta, e
- * câmbio move o preço de quem cobra em dólar: em dois anos a diferença entre a
- * primeira e a última cobrança passa de dez por cento com facilidade. A folga
- * é segura porque a regularidade mensal já foi exigida antes, e o que sobra
- * para recusar é a compra de valor aleatório no mesmo estabelecimento.
+ * câmbio move o preço de quem cobra em dólar, então a mediana é quem absorve a
+ * subida gradual: ela continua no meio da faixa enquanto o preço sobe.
+ *
+ * A folga já foi de vinte e cinco por cento, e era larga demais. Com ela, três
+ * compras de mercado entre dez e quinze reais passavam como assinatura, e a
+ * projeção anual multiplicava por doze um gasto que ninguém assinou. Doze por
+ * cento contra a mediana ainda cobre dois anos de reajuste e deixa de fora o
+ * valor que muda a cada visita.
  */
-const TOLERANCIA_DE_VALOR = 0.25
+const TOLERANCIA_DE_VALOR = 0.12
+
+/**
+ * Quantos dias a cobrança pode andar dentro do mês.
+ *
+ * **É esta regra que separa assinatura de lugar frequentado todo mês.** Quem
+ * cobra por assinatura cobra em dia fixo: o dia da adesão, todo mês, e o que o
+ * move é fim de semana ou feriado. Já mercado, padaria e restaurante caem em
+ * dia aleatório — e três visitas em meses seguidos passavam por todos os
+ * outros testes justamente porque valor parecido e um mês de distância é o que
+ * uma rotina também produz.
+ *
+ * A distância é circular: dia 31 e dia 1 estão a um dia de distância, não a
+ * trinta, porque um serviço cobrado no fim do mês escorrega para o começo do
+ * seguinte.
+ */
+const TOLERANCIA_DE_DIA = 3
+
+/** Quanto do grupo precisa cair no dia combinado. */
+const PROPORCAO_NO_DIA = 2 / 3
+
+/** Se um intervalo em dias equivale a uma cobrança mensal. */
+function ehMensal(dias: number): boolean {
+  return dias >= JANELA_MENSAL.minimo && dias <= JANELA_MENSAL.maximo
+}
+
+/** O dia do mês, lido do ISO sem construir data. */
+function diaDoMes(iso: string): number {
+  return Number(iso.slice(8, 10))
+}
+
+/** Distância entre dois dias do mês, dando a volta no fim do mês. */
+function distanciaDeDia(a: number, b: number): number {
+  const direta = Math.abs(a - b)
+  return Math.min(direta, 31 - direta)
+}
+
+/** A mediana de uma lista já ordenada de números. */
+function mediana(ordenados: readonly number[]): number {
+  return ordenados[Math.floor(ordenados.length / 2)]
+}
+
+/**
+ * Se um grupo de cobranças do mesmo lugar se sustenta como assinatura.
+ *
+ * Recebe as ocorrências já ordenadas por data. Três evidências precisam estar
+ * presentes ao mesmo tempo — um mês entre cobranças, mesmo dia do mês, mesmo
+ * valor — porque cada uma delas sozinha também descreve uma rotina de compras.
+ */
+function pareceAssinatura(ordenado: readonly ImportEntry[]): boolean {
+  const valores = ordenado.map((item) => Math.abs(item.amountCents))
+  const dias = ordenado.map((item) => diaDoMes(item.date))
+  const intervalos = ordenado
+    .slice(1)
+    .map((item, indice) => diasEntre(ordenado[indice].date, item.date))
+
+  if (intervalos.length === 0) return false
+
+  /*
+   * Duas cobranças bastam quando não sobra nenhuma dúvida.
+   *
+   * Três é o mínimo de praxe, e ele custava caro para quem assinou há pouco: um
+   * serviço contratado no mês passado nunca aparecia, e essa é justamente a
+   * assinatura que a pessoa ainda está decidindo se mantém. Duas cobranças
+   * idênticas ao centavo, a um mês exato e no mesmo dia, é evidência tão boa
+   * quanto três aproximadas — compra de rotina não se repete ao centavo.
+   */
+  if (ordenado.length === 2) {
+    return (
+      ehMensal(intervalos[0]) && valores[0] === valores[1] && distanciaDeDia(dias[0], dias[1]) <= 2
+    )
+  }
+
+  if (ordenado.length < MINIMO_DE_COBRANCAS) return false
+
+  /*
+   * A maioria dos intervalos precisa ser de um mês, e não todos.
+   *
+   * Exigir a régua perfeita quebrava em histórico longo, que é justamente onde
+   * a evidência é mais forte: em dois anos de assinatura, basta um mês de falha
+   * na cobrança, uma cobrança dobrada ou um estorno para aparecer um intervalo
+   * diferente, e a série inteira era descartada por causa dele.
+   */
+  const mensais = intervalos.filter(ehMensal).length
+  if (mensais < Math.ceil(intervalos.length / 2)) return false
+
+  const diaCombinado = mediana([...dias].sort((a, b) => a - b))
+  const noDia = dias.filter((dia) => distanciaDeDia(dia, diaCombinado) <= TOLERANCIA_DE_DIA).length
+  if (noDia < Math.ceil(ordenado.length * PROPORCAO_NO_DIA)) return false
+
+  const valorCombinado = mediana([...valores].sort((a, b) => a - b))
+  if (valorCombinado <= 0) return false
+
+  return valores.every(
+    (valor) => Math.abs(valor - valorCombinado) / valorCombinado <= TOLERANCIA_DE_VALOR,
+  )
+}
 
 export function detectSeries(entries: readonly ImportEntry[]): Map<string, SeriesHint> {
   const achados = new Map<string, SeriesHint>()
@@ -228,47 +340,8 @@ export function detectSeries(entries: readonly ImportEntry[]): Map<string, Serie
   }
 
   for (const [chave, grupo] of porChave) {
-    if (grupo.length < MINIMO_DE_COBRANCAS) continue
-
     const ordenado = [...grupo].sort((a, b) => (a.date < b.date ? -1 : 1))
-
-    /*
-     * A maioria dos intervalos precisa ser de um mês, e não todos.
-     *
-     * Exigir a régua perfeita quebrava em histórico longo, que é justamente
-     * onde a evidência é mais forte: em dois anos de assinatura, basta um mês
-     * de falha na cobrança, uma cobrança dobrada ou um estorno para aparecer um
-     * intervalo diferente, e a série inteira era descartada por causa dele.
-     *
-     * Três idas ao mesmo restaurante continuam de fora, porque ali quase nenhum
-     * intervalo é de um mês.
-     */
-    const intervalos = ordenado
-      .slice(1)
-      .map((item, indice) => mesesEntre(ordenado[indice].date, item.date))
-    const mensais = intervalos.filter((meses) => meses === 1).length
-    if (intervalos.length === 0 || mensais < Math.ceil(intervalos.length / 2)) continue
-
-    /*
-     * O valor de cada cobrança é medido contra a **mediana** do grupo.
-     *
-     * Comparar o extremo mais barato com o mais caro descartava assinatura
-     * antiga: dois anos de reajuste passam de dez por cento com facilidade, e
-     * eram justamente as séries mais bem documentadas que caíam. Comparar só
-     * vizinhas tinha o defeito oposto, recusando o mês exato do reajuste.
-     *
-     * A mediana resolve os dois: ela absorve a subida gradual, porque continua
-     * no meio da faixa, e continua longe do valor avulso que aparece uma vez.
-     * Uma tolerância folgada é segura aqui porque a regularidade mensal já foi
-     * exigida antes — o que sobra para recusar é a compra de valor aleatório.
-     */
-    const valores = ordenado.map((item) => Math.abs(item.amountCents)).sort((a, b) => a - b)
-    const mediana = valores[Math.floor(valores.length / 2)]
-
-    const foraDaFaixa = valores.some(
-      (valor) => mediana > 0 && Math.abs(valor - mediana) / mediana > TOLERANCIA_DE_VALOR,
-    )
-    if (foraDaFaixa) continue
+    if (!pareceAssinatura(ordenado)) continue
 
     for (const item of ordenado) {
       achados.set(item.key, {

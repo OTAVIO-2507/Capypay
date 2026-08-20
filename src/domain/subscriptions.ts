@@ -33,8 +33,16 @@ export interface Subscription {
   monthlyCents: Cents
   next: IsoDate
   cadence: SubscriptionCadence
-  /** Cobranças que ainda faltam, contando a próxima. */
-  remaining: number
+  /**
+   * Cobranças que já aconteceram.
+   *
+   * O campo antes contava as **futuras**, e a tela dizia "cobranças lançadas"
+   * sobre ele. Num extrato importado o futuro é sempre zero, por definição —
+   * então toda assinatura vinda do banco anunciava "0 cobranças lançadas"
+   * embaixo de um valor mensal, que é uma frase que não descreve nada. O que
+   * responde "há quanto tempo eu pago isto" é o passado.
+   */
+  charged: number
 }
 
 /** O "(3/12)" que a expansão anexa à descrição. */
@@ -113,7 +121,7 @@ export function activeSubscriptions(
       monthlyCents: POR_MES[cadence](proxima.amountCents),
       next: proxima.date,
       cadence,
-      remaining: futuras.length,
+      charged: ocorrencias.length - futuras.length,
     })
   }
 

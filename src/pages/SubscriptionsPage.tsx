@@ -11,6 +11,7 @@ import {
   type Subscription,
 } from '@/domain/subscriptions'
 import { BrandMark, findBrand } from '@/features/series/BrandMark'
+import { SeriesRowMenu } from '@/features/series/SeriesRowMenu'
 import { SeriesSummary } from '@/features/series/SeriesSummary'
 import { formatDayMonth } from '@/lib/date'
 import { useCategories, useTransactions } from '@/store/hooks'
@@ -125,22 +126,29 @@ export function SubscriptionsPage() {
                           </span>
                           <span aria-hidden="true">·</span>
                           <span>
-                            {assinatura.remaining}{' '}
-                            {assinatura.remaining === 1 ? 'cobrança lançada' : 'cobranças lançadas'}
+                            {assinatura.charged}{' '}
+                            {assinatura.charged === 1 ? 'cobrança' : 'cobranças'}
                           </span>
                         </span>
                       </span>
                     </span>
 
-                    <span className="shrink-0 text-right">
-                      <Money
-                        cents={assinatura.amountCents}
-                        emphasis="strong"
-                        className="block text-sm"
-                      />
-                      <span className="mt-0.5 block text-xs text-muted">
-                        {CADENCIA[assinatura.cadence]}
+                    <span className="flex shrink-0 items-center gap-1">
+                      <span className="text-right">
+                        <Money
+                          cents={assinatura.amountCents}
+                          emphasis="strong"
+                          className="block text-sm"
+                        />
+                        <span className="mt-0.5 block text-xs text-muted">
+                          {CADENCIA[assinatura.cadence]}
+                        </span>
                       </span>
+                      <SeriesRowMenu
+                        seriesId={assinatura.seriesId}
+                        label={marca?.nome ?? assinatura.label}
+                        kind="subscription"
+                      />
                     </span>
                   </Card>
                 </li>

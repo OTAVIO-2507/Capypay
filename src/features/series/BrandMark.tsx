@@ -1,8 +1,16 @@
 import type { ReactElement } from 'react'
-import anthropicArte from '@/assets/brands/anthropic.jpg'
-import googleArte from '@/assets/brands/google.jpg'
+import aluraArte from '@/assets/brands/alura.png'
+import amazonArte from '@/assets/brands/amazon.png'
+import anthropicArte from '@/assets/brands/anthropic.png'
+import boticarioArte from '@/assets/brands/boticario.png'
+import dorinhosArte from '@/assets/brands/dorinhos.png'
+import eniacArte from '@/assets/brands/eniac.png'
+import googleArte from '@/assets/brands/google.png'
+import hostingerArte from '@/assets/brands/hostinger.png'
+import ironLegacyArte from '@/assets/brands/ironlegacy-training-center.png'
+import localizaArte from '@/assets/brands/localiza.png'
 import primeVideoArte from '@/assets/brands/prime-video.png'
-import vivoArte from '@/assets/brands/vivo.jpg'
+import vivoArte from '@/assets/brands/vivo.png'
 import { Icon } from '@/components/Icon'
 import { cn } from '@/lib/cn'
 import {
@@ -11,7 +19,6 @@ import {
   CourseLogo,
   GymLogo,
   NetflixLogo,
-  SmileLogo,
   SpotifyLogo,
   StreamLogo,
   YoutubeLogo,
@@ -64,18 +71,12 @@ const MARCAS: readonly {
   { chave: 'youtube', nome: 'YouTube', cor: '#FF0000', logo: YoutubeLogo },
   { chave: 'disney', nome: 'Disney+', cor: '#113CCF', logo: StreamLogo },
   { chave: 'hbo', nome: 'Max', cor: '#0046FF', logo: StreamLogo },
-  {
-    chave: 'prime video',
-    nome: 'Prime Video',
-    cor: '#1399DA',
-    logo: SmileLogo,
-    imagem: primeVideoArte,
-  },
+  { chave: 'prime video', nome: 'Prime Video', cor: '#1399DA', imagem: primeVideoArte },
   { chave: 'globoplay', nome: 'Globoplay', cor: '#FF4C00', logo: StreamLogo },
   { chave: 'paramount', nome: 'Paramount+', cor: '#0064FF', logo: StreamLogo },
   { chave: 'crunchyroll', nome: 'Crunchyroll', cor: '#F47521', logo: StreamLogo },
   { chave: 'deezer', nome: 'Deezer', cor: '#A238FF', logo: SpotifyLogo },
-  { chave: 'amazon', nome: 'Amazon', cor: '#FF9900', logo: SmileLogo },
+  { chave: 'amazon', nome: 'Amazon', cor: '#FF9900', imagem: amazonArte },
   { chave: 'apple', nome: 'Apple', cor: '#555555' },
   { chave: 'icloud', nome: 'iCloud', cor: '#3B82F6', logo: CloudLogo },
   { chave: 'google one', nome: 'Google One', cor: '#4285F4', imagem: googleArte },
@@ -88,14 +89,19 @@ const MARCAS: readonly {
   { chave: 'anthropic', nome: 'Claude', cor: '#D97757', imagem: anthropicArte },
   { chave: 'openai', nome: 'OpenAI', cor: '#10A37F', logo: ChatLogo },
   { chave: 'chatgpt', nome: 'ChatGPT', cor: '#10A37F', logo: ChatLogo },
-  { chave: 'hostinger', nome: 'Hostinger', cor: '#673DE6', logo: CloudLogo },
-  { chave: 'alura', nome: 'Alura', cor: '#00C86F', logo: CourseLogo },
+  { chave: 'hostinger', nome: 'Hostinger', cor: '#673DE6', imagem: hostingerArte },
+  { chave: 'alura', nome: 'Alura', cor: '#0E1116', imagem: aluraArte },
   { chave: 'udemy', nome: 'Udemy', cor: '#A435F0', logo: CourseLogo },
   { chave: 'coursera', nome: 'Coursera', cor: '#0056D2', logo: CourseLogo },
   { chave: 'smartfit', nome: 'Smart Fit', cor: '#FFE000', logo: GymLogo },
   { chave: 'bluefit', nome: 'Bluefit', cor: '#0B5FFF', logo: GymLogo },
+  { chave: 'iron legacy', nome: 'Iron Legacy', cor: '#111111', imagem: ironLegacyArte },
   { chave: 'academia', nome: 'Academia', cor: '#3F3F46', logo: GymLogo },
   { chave: 'vivo', nome: 'Vivo', cor: '#660099', imagem: vivoArte },
+  { chave: 'boticario', nome: 'O Boticário', cor: '#00706A', imagem: boticarioArte },
+  { chave: 'dorinho', nome: "Dorinho's", cor: '#1A2456', imagem: dorinhosArte },
+  { chave: 'eniac', nome: 'Eniac', cor: '#0E3A55', imagem: eniacArte },
+  { chave: 'localiza', nome: 'Localiza', cor: '#009640', imagem: localizaArte },
   { chave: 'uber', nome: 'Uber', cor: '#000000' },
   { chave: 'ifood', nome: 'iFood', cor: '#EA1D2C' },
 ]

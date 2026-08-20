@@ -50,10 +50,14 @@ export function SeriesSummary({
   return (
     <Card>
       {/*
-        Duas colunas no celular e quatro no desktop. Quatro números destes numa
-        tela de 360px sairiam com dois algarismos por linha e o resto cortado.
+        Duas colunas até o desktop largo, quatro depois.
+
+        O corte não é o do celular, é o do valor: "R$ 6.692,40" em corpo 24
+        ocupa perto de 180 pixels, e quatro colunas só cabem quando a folha
+        passa de mil. Entre 640 e 1024 a grade de quatro encostava um número no
+        outro — e número encostado em número vira um algarismo só.
       */}
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-6 lg:grid-cols-4">
         {stats.map((stat) => (
           <div key={stat.label} className="min-w-0">
             <dt className="flex items-center gap-1.5 text-xs text-muted">
@@ -73,14 +77,14 @@ export function SeriesSummary({
                   cents={stat.cents ?? 0}
                   emphasis={stat.highlight ? 'strong' : 'plain'}
                   className={cn(
-                    'mt-1.5 block text-2xl tracking-[-0.03em]',
+                    'mt-1.5 block text-xl tracking-[-0.03em] sm:text-2xl',
                     !stat.highlight && 'font-normal',
                   )}
                 />
               </dd>
             ) : (
               <dd className="mt-1.5">
-                <span className="tnum block text-2xl font-semibold tracking-[-0.03em] text-ink">
+                <span className="tnum block text-xl font-semibold tracking-[-0.03em] text-ink sm:text-2xl">
                   {stat.count}
                 </span>
                 {stat.countUnit ? (

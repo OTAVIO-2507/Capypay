@@ -121,13 +121,64 @@ describe('detectSeries com assinaturas', () => {
     expect(achados.get('a')?.kind).toBe('subscription')
   })
 
-  it('não aceita duas ocorrências como prova de recorrência', () => {
+  /*
+   * Duas cobranças passaram a bastar quando não sobra dúvida nenhuma. Três era
+   * o mínimo de praxe, e escondia justamente a assinatura recém-contratada, que
+   * é aquela sobre a qual a pessoa ainda tem decisão a tomar.
+   */
+  it('aceita duas cobranças idênticas ao centavo, no mesmo dia do mês', () => {
     const achados = detectSeries([
-      entrada('a', 'ACADEMIA', '2026-07-10', -9900),
-      entrada('b', 'ACADEMIA', '2026-08-10', -9900),
+      entrada('a', 'GOOGLE DRIVE', '2026-07-10', -990),
+      entrada('b', 'GOOGLE DRIVE', '2026-08-10', -990),
+    ])
+
+    expect(achados.get('a')?.kind).toBe('subscription')
+  })
+
+  it('recusa duas cobranças que não batem ao centavo', () => {
+    const achados = detectSeries([
+      entrada('a', 'PADARIA', '2026-07-10', -990),
+      entrada('b', 'PADARIA', '2026-08-10', -1090),
     ])
 
     expect(achados.size).toBe(0)
+  })
+
+  it('recusa duas cobranças em dias distantes do mês', () => {
+    const achados = detectSeries([
+      entrada('a', 'MERCADO', '2026-07-03', -990),
+      entrada('b', 'MERCADO', '2026-08-27', -990),
+    ])
+
+    expect(achados.size).toBe(0)
+  })
+
+  /*
+   * O caso que motivou a regra do dia do mês: um mercado visitado uma vez por
+   * mês, por valor parecido, passava por todos os outros testes. Um mês entre
+   * compras e valor parecido é o que uma rotina produz, não o que prova
+   * assinatura — quem cobra por assinatura cobra em dia fixo.
+   */
+  it('não confunde compra mensal de rotina com assinatura', () => {
+    const achados = detectSeries([
+      entrada('a', 'MERCADO HAPPY F LTDA SAO PAULO BRA', '2026-06-04', -1199),
+      entrada('b', 'MERCADO HAPPY F LTDA SAO PAULO BRA', '2026-07-19', -1250),
+      entrada('c', 'MERCADO HAPPY F LTDA SAO PAULO BRA', '2026-08-28', -1150),
+    ])
+
+    expect(achados.size).toBe(0)
+  })
+
+  it('aceita a cobrança que escorrega do fim de um mês para o começo do outro', () => {
+    // Dia 31 e dia 1 estão a um dia de distância, e não a trinta: serviço
+    // cobrado no fim do mês cai no começo do seguinte quando o mês é curto.
+    const achados = detectSeries([
+      entrada('a', 'HOSTINGER', '2026-05-31', -3990),
+      entrada('b', 'HOSTINGER', '2026-07-01', -3990),
+      entrada('c', 'HOSTINGER', '2026-07-31', -3990),
+    ])
+
+    expect(achados.get('a')?.kind).toBe('subscription')
   })
 
   /*
@@ -150,6 +201,18 @@ describe('detectSeries com assinaturas', () => {
       entrada('a', 'PADARIA', '2026-06-10', -1000),
       entrada('b', 'PADARIA', '2026-07-10', -8000),
       entrada('c', 'PADARIA', '2026-08-10', -3000),
+    ])
+
+    expect(achados.size).toBe(0)
+  })
+
+  it('recusa a variação que a folga antiga deixava passar', () => {
+    // Dez, quinze e doze reais no mesmo lugar, em dia fixo: cabia na folga de
+    // vinte e cinco por cento e virava assinatura de mercado.
+    const achados = detectSeries([
+      entrada('a', 'MERCADINHO', '2026-06-10', -1000),
+      entrada('b', 'MERCADINHO', '2026-07-10', -1500),
+      entrada('c', 'MERCADINHO', '2026-08-10', -1200),
     ])
 
     expect(achados.size).toBe(0)

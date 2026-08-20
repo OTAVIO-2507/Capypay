@@ -56,7 +56,21 @@ describe('activeSubscriptions', () => {
     expect(assinatura.next).toBe('2026-08-20')
     expect(assinatura.amountCents).toBe(11000)
     expect(assinatura.cadence).toBe('monthly')
-    expect(assinatura.remaining).toBe(2)
+    // Junho e julho já passaram; agosto e setembro ainda não.
+    expect(assinatura.charged).toBe(2)
+  })
+
+  /*
+   * O caso do extrato importado, que é inteiramente passado. A contagem antes
+   * era das cobranças **futuras**, e aqui dava zero — toda assinatura vinda do
+   * banco anunciava "0 cobranças" embaixo do valor mensal.
+   */
+  it('conta as cobranças de uma série que só tem passado', () => {
+    const transactions = serie('s1', 'Vivo', 3800, ['2026-06', '2026-07', '2026-08'], '11')
+
+    const [assinatura] = activeSubscriptions(transactions, DEFAULT_CATEGORIES, HOJE)
+
+    expect(assinatura.charged).toBe(3)
   })
 
   it('descarta a série que já terminou', () => {

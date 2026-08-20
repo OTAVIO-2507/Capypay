@@ -82,6 +82,8 @@ interface FinanceState {
   updateTransaction: (id: TransactionId, patch: Partial<Transaction>) => void
   deleteTransaction: (id: TransactionId) => void
   deleteSeries: (seriesId: string) => void
+  /** Desfaz a série sem apagar os lançamentos. Ver a nota na implementação. */
+  ungroupSeries: (seriesId: string) => void
 
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'archived'>) => void
   updateGoal: (id: string, patch: Partial<Goal>) => void
@@ -392,6 +394,29 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
       mutate((data) => ({
         ...data,
         transactions: data.transactions.filter((transaction) => transaction.seriesId !== seriesId),
+      })),
+
+    /*
+     * Desfaz a série e mantém os lançamentos.
+     *
+     * É o que existe para quando o reconhecimento erra. Nenhuma regra separa
+     * com certeza uma academia cobrada todo dia 10 de uma assinatura: as duas
+     * têm dia fixo, valor fixo e um mês de distância. Quando a máquina não
+     * consegue decidir, quem decide é quem gastou — e a correção precisa ser
+     * possível sem custar o histórico.
+     *
+     * Apagar seria a saída errada. As compras aconteceram, entraram no
+     * orçamento e no total do mês; o que estava errado era o parentesco entre
+     * elas, e é só isso que sai.
+     */
+    ungroupSeries: (seriesId) =>
+      mutate((data) => ({
+        ...data,
+        transactions: data.transactions.map((transaction) =>
+          transaction.seriesId === seriesId
+            ? { ...transaction, seriesId: null, seriesKind: null, installment: null }
+            : transaction,
+        ),
       })),
 
     addGoal: (goal) =>

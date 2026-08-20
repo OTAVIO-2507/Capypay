@@ -108,25 +108,3 @@ export function StreamLogo() {
     </svg>
   )
 }
-
-/**
- * O sorriso da Amazon, com a flecha subindo à direita.
- *
- * É o que distingue Prime Video de qualquer outro serviço de vídeo: um
- * triângulo de play serviria para os dez concorrentes, e este arco só serve
- * para um.
- */
-export function SmileLogo() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[76%]">
-      <path
-        d="M4.5 12.2c2.5 4.4 8.9 5.8 13.7 2.4"
-        stroke="currentColor"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        fill="none"
-      />
-      <path d="M21 12.6 18.8 16.9 16.3 13.3z" fill="currentColor" />
-    </svg>
-  )
-}

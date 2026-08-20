@@ -8,6 +8,7 @@ import { Money } from '@/components/ui/Money'
 import { categoryColor } from '@/domain/categories'
 import { installmentPurchases, installmentSummary, type Installment } from '@/domain/installments'
 import { BrandMark } from '@/features/series/BrandMark'
+import { SeriesRowMenu } from '@/features/series/SeriesRowMenu'
 import { SeriesSummary } from '@/features/series/SeriesSummary'
 import { cn } from '@/lib/cn'
 import { formatDayMonthYear, formatMonthLong, monthOf } from '@/lib/date'
@@ -244,20 +245,23 @@ function LinhaDeCompra({ compra }: { compra: Installment }) {
           Quitada, o que sobra é zero e o total volta a ser a informação: aí ele
           sobe.
         */}
-        <span className="shrink-0 text-right">
-          {compra.done ? (
-            <>
-              <Money cents={compra.totalCents} emphasis="strong" className="block text-sm" />
-              <span className="mt-0.5 block text-xs text-muted">total pago</span>
-            </>
-          ) : (
-            <>
-              <Money cents={compra.remainingCents} emphasis="strong" className="block text-sm" />
-              <span className="mt-0.5 block text-xs text-muted">
-                de <Money cents={compra.totalCents} className="text-xs text-muted" />
-              </span>
-            </>
-          )}
+        <span className="flex shrink-0 items-center gap-1">
+          <span className="text-right">
+            {compra.done ? (
+              <>
+                <Money cents={compra.totalCents} emphasis="strong" className="block text-sm" />
+                <span className="mt-0.5 block text-xs text-muted">total pago</span>
+              </>
+            ) : (
+              <>
+                <Money cents={compra.remainingCents} emphasis="strong" className="block text-sm" />
+                <span className="mt-0.5 block text-xs text-muted">
+                  de <Money cents={compra.totalCents} className="text-xs text-muted" />
+                </span>
+              </>
+            )}
+          </span>
+          <SeriesRowMenu seriesId={compra.seriesId} label={compra.label} kind="installment" />
         </span>
       </div>
 
