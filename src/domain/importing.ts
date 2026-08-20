@@ -337,6 +337,7 @@ export function buildImportCandidates(
     const amountCents = Math.abs(lancamento.amountCents)
 
     const serie = series.get(lancamento.key)
+    const declaradaPeloBanco = (lancamento.declaredInstallment?.total ?? 0) > 1
     const exato = porExternalId.get(externalId)
     const parecido = exato
       ? null
@@ -358,10 +359,24 @@ export function buildImportCandidates(
       duplicate: exato ? 'exact' : parecido ? 'possible' : null,
       duplicateOf: exato?.id ?? parecido?.id ?? null,
       series: serie,
-      // Só completa quem já existe **sem** série e agora chega com uma. Mexer
-      // num lançamento que já tem série trocaria uma classificação existente
-      // por outra sem que ninguém tenha pedido.
-      enriches: exato && serie && !exato.seriesId ? exato.id : null,
+      /*
+       * Completa quem já existe **sem** série e agora chega com uma. Mexer num
+       * lançamento que já tem série trocaria uma classificação existente por
+       * outra sem que ninguém tenha pedido.
+       *
+       * A exceção é a parcela declarada pela instituição. "3 de 8" vindo em
+       * campo próprio não é palpite nosso, e quando o histórico diz assinatura
+       * sobre o mesmo lançamento, quem está errado é o histórico. É também o
+       * único caminho de volta para quem perdeu esse campo: sem a exceção,
+       * reimportar esbarra na série que a inferência criou por cima.
+       */
+      enriches:
+        exato &&
+        serie &&
+        (!exato.seriesId ||
+          (declaradaPeloBanco && exato.seriesKind !== 'installment'))
+          ? exato.id
+          : null,
       corrects:
         exato && (exato.kind !== kind || exato.amountCents !== amountCents) ? exato.id : null,
     }

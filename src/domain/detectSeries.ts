@@ -198,7 +198,7 @@ function mediana(ordenados: readonly number[]): number {
 export type MotivoDeRecusa = 'poucas' | 'intervalo' | 'dia' | 'valor'
 
 export const MOTIVO_DE_RECUSA: Record<MotivoDeRecusa, string> = {
-  poucas: 'só uma cobrança',
+  poucas: 'menos de três cobranças',
   intervalo: 'não cai de mês em mês',
   dia: 'dias do mês espalhados',
   valor: 'valor muda demais',
@@ -219,23 +219,20 @@ export function julgarAssinatura(ordenado: readonly ImportEntry[]): MotivoDeRecu
     .slice(1)
     .map((item, indice) => diasEntre(ordenado[indice].date, item.date))
 
-  if (intervalos.length === 0) return 'poucas'
-
   /*
-   * Duas cobranças bastam quando não sobra nenhuma dúvida.
+   * Três cobranças, no mínimo.
    *
-   * Três é o mínimo de praxe, e ele custava caro para quem assinou há pouco: um
-   * serviço contratado no mês passado nunca aparecia, e essa é justamente a
-   * assinatura que a pessoa ainda está decidindo se mantém. Duas cobranças
-   * idênticas ao centavo, a um mês exato e no mesmo dia, é evidência tão boa
-   * quanto três aproximadas — compra de rotina não se repete ao centavo.
+   * Duas já foram aceitas aqui, quando batiam ao centavo e no mesmo dia, para
+   * alcançar quem tinha acabado de assinar. O preço apareceu no extrato real:
+   * a segunda parcela de uma compra em três vezes bate ao centavo e no mesmo
+   * dia, e o IOF de duas compras internacionais também. Com duas ocorrências
+   * não existe evidência que separe recorrência de coincidência — só a
+   * terceira mostra um padrão.
+   *
+   * O caso legítimo que isto deixa de fora, a assinatura recém-contratada,
+   * tem saída: o botão "É assinatura" na revisão das séries, em Ajustes.
    */
-  if (ordenado.length === 2) {
-    if (!ehMensal(intervalos[0])) return 'intervalo'
-    if (distanciaDeDia(dias[0], dias[1]) > 2) return 'dia'
-    if (valores[0] !== valores[1]) return 'valor'
-    return null
-  }
+  if (ordenado.length < 3) return 'poucas'
 
   /*
    * A maioria dos intervalos precisa ser de um mês, e não todos.
@@ -405,6 +402,16 @@ export function planSeriesForHistory(transactions: readonly Transaction[]): Seri
       // ao lado, e a detecção lê despesa pelo negativo.
       amountCents: -item.amountCents,
       description: item.description,
+      /*
+       * A posição declarada volta para a detecção.
+       *
+       * Sem isto, reconhecer de novo perdia o que o banco tinha dito: o "3 de
+       * 8" mora no lançamento, não na série, e a leitura por texto não alcança
+       * porque vários bancos não repetem a parcela na descrição. O resultado
+       * era uma compra em oito vezes voltando classificada como assinatura,
+       * com a mesma cara de uma — mesmo valor, mesmo dia, todo mês.
+       */
+      declaredInstallment: item.installment ?? undefined,
     })),
   )
 

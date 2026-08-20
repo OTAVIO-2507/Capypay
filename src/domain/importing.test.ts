@@ -6,6 +6,7 @@ import {
   learnCategories,
   suggestCategory,
   summarizeCandidates,
+  type ImportBatch,
 } from './importing'
 import type { Transaction } from './types'
 import type { OfxStatement } from '@/lib/ofx'
@@ -238,6 +239,42 @@ describe('lançamento que completa o que já existe', () => {
     const [candidato] = buildImportCandidates(comParcela(), [jaEmSerie], DEFAULT_CATEGORIES)
 
     expect(candidato.enriches).toBeNull()
+  })
+
+  /*
+   * O caso que faltava, e que deixou parcelamento preso como assinatura: a
+   * inferência classificou errado, o campo declarado foi perdido, e a
+   * reimportação — o único lugar onde esse campo existe — esbarrava na série
+   * que a própria inferência tinha criado.
+   */
+  it('corrige a série quando o banco declara parcela e o histórico diz assinatura', () => {
+    const doBanco: ImportBatch = {
+      accountKey: '1234',
+      accountLabel: 'Cartão',
+      entries: [
+        {
+          key: 'abc',
+          date: '2026-08-22',
+          amountCents: -9935,
+          description: 'DORINHOS - LOJA 42 - D GUARULHOS BRA',
+          declaredInstallment: { index: 3, total: 8 },
+        },
+      ],
+    }
+
+    const comoAssinatura = existente({
+      externalId: '1234:abc',
+      amountCents: 9935,
+      date: '2026-08-22',
+      description: 'DORINHOS - LOJA 42 - D GUARULHOS BRA',
+      seriesId: 's1',
+      seriesKind: 'subscription',
+    })
+
+    const [candidato] = buildImportCandidates(doBanco, [comoAssinatura], DEFAULT_CATEGORIES)
+
+    expect(candidato.series?.kind).toBe('installment')
+    expect(candidato.enriches).toBe(comoAssinatura.id)
   })
 
   it('não aponta nada quando a origem não traz série', () => {

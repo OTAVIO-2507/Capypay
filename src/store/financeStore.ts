@@ -369,7 +369,14 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
               description: plano.index ? plano.label : transaction.description,
               seriesId: plano.seriesId,
               seriesKind: plano.kind,
-              installment: plano.index ?? null,
+              /*
+               * Um plano de assinatura não traz posição, e isso não é motivo
+               * para apagar a que já existe: o "3 de 8" é o que o banco
+               * declarou sobre o lançamento, e nenhuma classificação nossa por
+               * cima o torna falso. Apagá-lo destruía a única evidência que
+               * permite reconhecer o parcelamento de novo depois.
+               */
+              installment: plano.index ?? transaction.installment ?? null,
               updatedAt: now,
             }
           }),
@@ -410,13 +417,18 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
      * Apagar seria a saída errada. As compras aconteceram, entraram no
      * orçamento e no total do mês; o que estava errado era o parentesco entre
      * elas, e é só isso que sai.
+     *
+     * **`installment` fica.** O "3 de 8" não é parentesco, é o que o banco
+     * declarou sobre aquele lançamento — apagá-lo destrói um dado que não tem
+     * como ser recalculado, só reimportado. Foi o que aconteceu na primeira
+     * versão disto, e o efeito foi parcelamento voltando como assinatura.
      */
     ungroupSeries: (seriesId) =>
       mutate((data) => ({
         ...data,
         transactions: data.transactions.map((transaction) =>
           transaction.seriesId === seriesId
-            ? { ...transaction, seriesId: null, seriesKind: null, installment: null }
+            ? { ...transaction, seriesId: null, seriesKind: null }
             : transaction,
         ),
       })),
@@ -452,7 +464,7 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
             transaction.seriesId &&
             daImportacao.has(transaction.seriesId) &&
             !daMao.has(transaction.seriesId)
-              ? { ...transaction, seriesId: null, seriesKind: null, installment: null }
+              ? { ...transaction, seriesId: null, seriesKind: null }
               : transaction,
           ),
         }

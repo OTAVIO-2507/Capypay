@@ -106,6 +106,16 @@ describe('detectSeries com parcelamentos', () => {
 })
 
 describe('detectSeries com assinaturas', () => {
+  it('reconhece a assinatura de três cobranças em dia fixo', () => {
+    const achados = detectSeries([
+      entrada('a', 'GOOGLE ONE SAO PAULO BRA', '2026-06-13', -999),
+      entrada('b', 'GOOGLE ONE SAO PAULO BRA', '2026-07-13', -999),
+      entrada('c', 'GOOGLE ONE SAO PAULO BRA', '2026-08-13', -999),
+    ])
+
+    expect(achados.get('a')?.kind).toBe('subscription')
+  })
+
   it('reconhece cobrança mensal de mesmo valor', () => {
     const achados = detectSeries([
       entrada('a', 'NETFLIX.COM', '2026-06-10', -3990),
@@ -128,32 +138,15 @@ describe('detectSeries com assinaturas', () => {
   })
 
   /*
-   * Duas cobranças passaram a bastar quando não sobra dúvida nenhuma. Três era
-   * o mínimo de praxe, e escondia justamente a assinatura recém-contratada, que
-   * é aquela sobre a qual a pessoa ainda tem decisão a tomar.
+   * Duas cobranças chegaram a bastar, quando batiam ao centavo e no mesmo dia.
+   * O extrato real mostrou o preço: a segunda parcela de uma compra em três
+   * vezes bate ao centavo e no mesmo dia, e o IOF de duas compras
+   * internacionais também. Só a terceira ocorrência mostra padrão.
    */
-  it('aceita duas cobranças idênticas ao centavo, no mesmo dia do mês', () => {
+  it('não aceita duas ocorrências como prova de recorrência', () => {
     const achados = detectSeries([
-      entrada('a', 'GOOGLE DRIVE', '2026-07-10', -990),
-      entrada('b', 'GOOGLE DRIVE', '2026-08-10', -990),
-    ])
-
-    expect(achados.get('a')?.kind).toBe('subscription')
-  })
-
-  it('recusa duas cobranças que não batem ao centavo', () => {
-    const achados = detectSeries([
-      entrada('a', 'PADARIA', '2026-07-10', -990),
-      entrada('b', 'PADARIA', '2026-08-10', -1090),
-    ])
-
-    expect(achados.size).toBe(0)
-  })
-
-  it('recusa duas cobranças em dias distantes do mês', () => {
-    const achados = detectSeries([
-      entrada('a', 'MERCADO', '2026-07-03', -990),
-      entrada('b', 'MERCADO', '2026-08-27', -990),
+      entrada('a', 'SHOEBIZ COMERCIO LTDA GUARULHOS BRA', '2026-06-23', -20999),
+      entrada('b', 'SHOEBIZ COMERCIO LTDA GUARULHOS BRA', '2026-07-23', -20999),
     ])
 
     expect(achados.size).toBe(0)
@@ -314,6 +307,32 @@ describe('planSeriesForHistory', () => {
     expect(planos[0].kind).toBe('installment')
     expect(planos[0].label).toBe('NOTEBOOK')
     expect(planos[0].indexById['2']).toEqual({ index: 2, total: 10 })
+  })
+
+  /*
+   * O defeito que trouxe compra parcelada de volta como assinatura.
+   *
+   * O "3 de 8" chega da Pluggy em campo próprio e é gravado no lançamento; o
+   * Inter, entre outros, não repete a parcela na descrição. Reconhecer de novo
+   * sem reler esse campo perdia a única evidência que existia, e o que sobrava
+   * era uma cobrança de mesmo valor, no mesmo dia, todo mês — a descrição
+   * exata de uma assinatura.
+   */
+  it('relê a parcela declarada pelo banco, mesmo sem ela na descrição', () => {
+    const comParcela = (id: string, date: string, index: number) => ({
+      ...gravada(id, 'DORINHOS - LOJA 42 - D GUARULHOS BRA', date, 9935),
+      installment: { index, total: 8 },
+    })
+
+    const planos = planSeriesForHistory([
+      comParcela('1', '2026-06-22', 1),
+      comParcela('2', '2026-07-22', 2),
+      comParcela('3', '2026-08-22', 3),
+    ])
+
+    expect(planos).toHaveLength(1)
+    expect(planos[0].kind).toBe('installment')
+    expect(planos[0].indexById['3']).toEqual({ index: 3, total: 8 })
   })
 
   /*
