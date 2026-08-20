@@ -6,6 +6,7 @@ import {
   MOTIVO_DE_RECUSA,
   planSeriesForHistory,
   reviewSubscriptionCandidates,
+  type SeriesRejection,
 } from '@/domain/detectSeries'
 import { useFinanceStore } from '@/store/financeStore'
 import { useTransactions } from '@/store/hooks'
@@ -39,6 +40,25 @@ export function SeriesReviewCard() {
       .map((item) => item.seriesId)).size,
     [transactions],
   )
+
+  /*
+   * Vira o jogo numa recusa: o grupo passa a ser assinatura por decisão de quem
+   * gastou, e não por medida.
+   *
+   * Não afrouxa a régua para todo mundo, que era a outra saída possível e a
+   * pior delas: baixar o limite até esta linha aparecer traria junto o mercado
+   * e a padaria, e o preço sairia na projeção anual — um número inflado é mais
+   * difícil de perceber que uma linha faltando.
+   */
+  const marcarComoAssinatura = (recusa: SeriesRejection) =>
+    applySeriesPlans([
+      {
+        kind: 'subscription',
+        label: recusa.label,
+        transactionIds: recusa.transactionIds,
+        indexById: {},
+      },
+    ])
 
   const refazer = () => {
     ungroupImportedSeries()
@@ -76,21 +96,32 @@ export function SeriesReviewCard() {
         <>
           <p className="mt-3.5 border-t border-hairline pt-3 text-xs text-muted">
             Cobranças que se repetem e <strong className="font-medium text-ink">não</strong> viraram
-            assinatura, com o que faltou:
+            assinatura. Se a régua errou, o botão resolve:
           </p>
 
           <ul className="mt-1 flex flex-col divide-y divide-hairline">
             {recusas.slice(0, LIMITE).map((recusa) => (
-              <li
-                key={recusa.label}
-                className="flex items-center justify-between gap-3 py-2 text-xs"
-              >
-                <span className="flex min-w-0 items-center gap-2">
-                  <Icon name="circle-dashed" size={12} className="shrink-0 text-faint" />
-                  <span className="truncate text-ink">{recusa.label}</span>
-                  <span className="tnum shrink-0 text-faint">{recusa.count}x</span>
+              <li key={recusa.label} className="flex items-center justify-between gap-3 py-2.5">
+                <span className="min-w-0">
+                  <span className="flex min-w-0 items-center gap-2 text-xs">
+                    <Icon name="circle-dashed" size={12} className="shrink-0 text-faint" />
+                    <span className="truncate text-ink">{recusa.label}</span>
+                    <span className="tnum shrink-0 text-faint">{recusa.count}x</span>
+                  </span>
+                  <span className="mt-0.5 block pl-5 text-xs text-muted">
+                    {MOTIVO_DE_RECUSA[recusa.reason]}
+                  </span>
                 </span>
-                <span className="shrink-0 text-muted">{MOTIVO_DE_RECUSA[recusa.reason]}</span>
+
+                <Button
+                  variant="quiet"
+                  size="sm"
+                  icon="repeat"
+                  className="shrink-0 bg-sheet"
+                  onClick={() => marcarComoAssinatura(recusa)}
+                >
+                  É assinatura
+                </Button>
               </li>
             ))}
           </ul>

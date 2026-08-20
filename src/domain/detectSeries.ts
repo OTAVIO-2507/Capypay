@@ -435,6 +435,14 @@ export interface SeriesRejection {
   label: string
   count: number
   reason: MotivoDeRecusa
+  /**
+   * Os lançamentos do grupo, para quem discordar da recusa poder virar o jogo.
+   *
+   * A régua vai errar: ela decide por três medidas e a realidade tem mais que
+   * três formas de cobrar. Mostrar o motivo sem oferecer a correção deixaria a
+   * pessoa lendo um diagnóstico que ela não pode usar para nada.
+   */
+  transactionIds: string[]
 }
 
 /**
@@ -490,6 +498,7 @@ export function reviewSubscriptionCandidates(
       label: ordenado[ordenado.length - 1].description.trim(),
       count: ordenado.length,
       reason: motivo,
+      transactionIds: ordenado.map((item) => item.key),
     })
   }
 
