@@ -148,6 +148,7 @@ export function SubscriptionsPage() {
                         seriesId={assinatura.seriesId}
                         label={marca?.nome ?? assinatura.label}
                         kind="subscription"
+                        charges={assinatura.occurrences}
                       />
                     </span>
                   </Card>

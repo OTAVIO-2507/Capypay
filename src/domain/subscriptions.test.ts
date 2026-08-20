@@ -58,6 +58,8 @@ describe('activeSubscriptions', () => {
     expect(assinatura.cadence).toBe('monthly')
     // Junho e julho já passaram; agosto e setembro ainda não.
     expect(assinatura.charged).toBe(2)
+    // O piso de quem converter em parcelamento conta as quatro.
+    expect(assinatura.occurrences).toBe(4)
   })
 
   /*

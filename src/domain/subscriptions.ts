@@ -43,6 +43,14 @@ export interface Subscription {
    * responde "há quanto tempo eu pago isto" é o passado.
    */
   charged: number
+  /**
+   * Todas as ocorrências da série, futuras inclusive.
+   *
+   * `charged` responde "há quanto tempo eu pago isto" e é o que a linha
+   * mostra. Este é o piso de quem for converter a série em parcelamento: uma
+   * compra não pode ter menos parcelas que os lançamentos que ela já tem.
+   */
+  occurrences: number
 }
 
 /** O "(3/12)" que a expansão anexa à descrição. */
@@ -122,6 +130,7 @@ export function activeSubscriptions(
       next: proxima.date,
       cadence,
       charged: ocorrencias.length - futuras.length,
+      occurrences: ocorrencias.length,
     })
   }
 

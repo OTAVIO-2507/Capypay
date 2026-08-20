@@ -261,7 +261,12 @@ function LinhaDeCompra({ compra }: { compra: Installment }) {
               </>
             )}
           </span>
-          <SeriesRowMenu seriesId={compra.seriesId} label={compra.label} kind="installment" />
+          <SeriesRowMenu
+            seriesId={compra.seriesId}
+            label={compra.label}
+            kind="installment"
+            charges={compra.totalCount}
+          />
         </span>
       </div>
 

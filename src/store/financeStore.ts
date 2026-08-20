@@ -86,6 +86,8 @@ interface FinanceState {
   ungroupSeries: (seriesId: string) => void
   /** Solta as séries vindas de importação, para serem reconhecidas de novo. */
   ungroupImportedSeries: () => void
+  /** Passa uma série para compra parcelada, no número de vezes informado. */
+  convertToInstallment: (seriesId: string, total: number) => void
 
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'archived'>) => void
   updateGoal: (id: string, patch: Partial<Goal>) => void
@@ -447,6 +449,45 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
      * explícita por um palpite. O corte é por origem: só solta a série cujas
      * ocorrências vieram todas de importação.
      */
+    /*
+     * Passa a série para compra parcelada, com o total que a pessoa informa.
+     *
+     * O total precisa vir de fora porque não existe em lugar nenhum: quando o
+     * banco declara "3 de 8" a detecção já acerta sozinha e ninguém chega
+     * aqui; quando ele não declara — e vários não declaram para compra no
+     * débito, ou depois que a informação se perdeu — não há como deduzir se
+     * três cobranças de mesmo valor são um terço de uma compra em nove vezes
+     * ou uma assinatura de três meses. Quem comprou sabe, e é a única fonte.
+     *
+     * As posições saem da ordem das datas, e o total nunca fica abaixo do que
+     * já existe: uma compra não pode ter menos parcelas que as já lançadas.
+     */
+    convertToInstallment: (seriesId, total) =>
+      mutate((data) => {
+        const now = Date.now()
+        const daSerie = data.transactions
+          .filter((transaction) => transaction.seriesId === seriesId)
+          .sort((a, b) => (a.date < b.date ? -1 : 1))
+
+        const posicao = new Map(daSerie.map((transaction, i) => [transaction.id, i + 1]))
+        const totalFinal = Math.max(total, daSerie.length)
+
+        return {
+          ...data,
+          transactions: data.transactions.map((transaction) => {
+            const index = posicao.get(transaction.id)
+            if (!index) return transaction
+
+            return {
+              ...transaction,
+              seriesKind: 'installment' as const,
+              installment: { index, total: totalFinal },
+              updatedAt: now,
+            }
+          }),
+        }
+      }),
+
     ungroupImportedSeries: () =>
       mutate((data) => {
         const daImportacao = new Set<string>()
