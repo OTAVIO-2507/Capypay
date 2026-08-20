@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Icon } from '@/components/Icon'
 import { PageHeader } from '@/components/PageHeader'
+import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Segmented, Progress, type SegmentOption } from '@/components/ui/Controls'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -30,6 +32,7 @@ type Aba = 'ongoing' | 'done'
  * devo"), e a aba de finalizadas continua ali para quem quiser conferir.
  */
 export function InstallmentsPage() {
+  const navigate = useNavigate()
   const transactions = useTransactions()
   const categories = useCategories()
   const [aba, setAba] = useState<Aba>('ongoing')
@@ -58,10 +61,28 @@ export function InstallmentsPage() {
 
       {compras.length === 0 ? (
         <Card>
+          {/*
+            O vazio aqui tem duas causas opostas, e a mensagem antiga só
+            descrevia uma. Quem nunca cadastrou parcelamento precisa saber por
+            onde se cadastra; quem importou do banco e não vê nada quase sempre
+            tem as compras do outro lado, classificadas como assinatura —
+            porque sem a parcela declarada as duas têm a mesma cara. Mandar
+            essa pessoa para o formulário é mandá-la para o lugar errado.
+          */}
           <EmptyState
             icon="credit-card"
             title="Nenhuma compra parcelada"
-            description="Ao lançar uma despesa, marque “Repetir lançamento” e escolha Parcelamento para a compra aparecer aqui."
+            description="Ao lançar uma despesa, marque “Repetir lançamento” e escolha Parcelamento. Se você importou do banco e a compra foi parar em Assinaturas, o menu da linha de lá tem “É parcelamento”."
+            action={
+              <Button
+                size="sm"
+                variant="quiet"
+                icon="repeat"
+                onClick={() => navigate('/assinaturas')}
+              >
+                Ver assinaturas
+              </Button>
+            }
           />
         </Card>
       ) : (

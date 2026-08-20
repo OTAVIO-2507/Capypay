@@ -302,3 +302,55 @@ describe('compra parcelada vinda de importação, com parcelas ausentes', () => 
     expect(sofa.totalCents).toBe(64000)
   })
 })
+
+/*
+ * O contrato entre "É parcelamento" e esta tela.
+ *
+ * A conversão é a saída para o caso em que o banco não declara a parcela e a
+ * detecção classifica a compra como assinatura — as duas cobram o mesmo valor,
+ * no mesmo dia, todo mês. Ela grava posição e total nos lançamentos que já
+ * existem, e é aqui que se confere se o que ela grava chega inteiro na tela.
+ */
+describe('série convertida de assinatura para compra parcelada', () => {
+  /** O que `convertToInstallment` grava: posição pela ordem das datas. */
+  function convertida(total: number, meses: string[]): Transaction[] {
+    return meses.map((mes, index) =>
+      tx({
+        kind: 'expense',
+        amountCents: 9935,
+        date: `${mes}-22`,
+        description: 'dorinhos - loja 42 - d guarulhos bra',
+        source: 'imported',
+        seriesId: 's1',
+        seriesKind: 'installment',
+        installment: { index: index + 1, total },
+      }),
+    )
+  }
+
+  it('mostra as parcelas que faltam quando o total informado é maior', () => {
+    const [compra] = installmentPurchases(
+      convertida(8, ['2026-06', '2026-07', '2026-08']),
+      DEFAULT_CATEGORIES,
+      HOJE,
+    )
+
+    expect(compra.totalCount).toBe(8)
+    expect(compra.parcels).toHaveLength(8)
+    expect(compra.parcels.filter((parcela) => parcela.projected)).toHaveLength(5)
+    expect(compra.totalCents).toBe(9935 * 8)
+    expect(compra.done).toBe(false)
+  })
+
+  it('fecha a compra quando o total informado é o que já existe', () => {
+    const [compra] = installmentPurchases(
+      convertida(3, ['2026-05', '2026-06', '2026-07']),
+      DEFAULT_CATEGORIES,
+      HOJE,
+    )
+
+    expect(compra.totalCount).toBe(3)
+    expect(compra.remainingCents).toBe(0)
+    expect(compra.done).toBe(true)
+  })
+})
