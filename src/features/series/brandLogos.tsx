@@ -16,12 +16,9 @@
 export function NetflixLogo() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[58%]">
-      <path
-        d="M5 2h4.2l5.6 15.5V2H19v20h-4.2L9.2 6.6V22H5z"
-        fill="currentColor"
-      />
+      <path d="M5 2h4.2l5.6 15.5V2H19v20h-4.2L9.2 6.6V22H5z" fill="currentColor" />
     </svg>
-  );
+  )
 }
 
 /** As três ondas do Spotify, concêntricas e de raios crescentes. */
@@ -36,7 +33,7 @@ export function SpotifyLogo() {
         fill="none"
       />
     </svg>
-  );
+  )
 }
 
 /** O botão de play do YouTube. */
@@ -45,7 +42,7 @@ export function YoutubeLogo() {
     <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[58%]">
       <path d="M9.5 8.2l7 3.8-7 3.8z" fill="currentColor" />
     </svg>
-  );
+  )
 }
 
 /** A nuvem do iCloud e de serviços de hospedagem. */
@@ -57,7 +54,7 @@ export function CloudLogo() {
         fill="currentColor"
       />
     </svg>
-  );
+  )
 }
 
 /** O halteres de academia. */
@@ -72,7 +69,7 @@ export function GymLogo() {
         fill="none"
       />
     </svg>
-  );
+  )
 }
 
 /** O balão de conversa, para assistentes e mensageria. */
@@ -84,7 +81,7 @@ export function ChatLogo() {
         fill="currentColor"
       />
     </svg>
-  );
+  )
 }
 
 /** A birrete, para plataformas de curso. */
@@ -100,7 +97,7 @@ export function CourseLogo() {
         strokeLinecap="round"
       />
     </svg>
-  );
+  )
 }
 
 /** O play em triângulo cheio, para serviços de vídeo em geral. */
@@ -109,65 +106,7 @@ export function StreamLogo() {
     <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[56%]">
       <path d="M8.5 5.5l10 6.5-10 6.5z" fill="currentColor" />
     </svg>
-  );
-}
-
-/**
- * A estrela da Anthropic, que identifica o Claude.
- *
- * Oito raios saindo do mesmo centro, os retos mais longos que os diagonais.
- * O comprimento alternado é o que separa esta forma de um asterisco comum:
- * com todos os raios iguais o desenho vira tipografia, e não marca.
- */
-export function AnthropicLogo() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[64%]">
-      <path
-        d="M12 12V2.6M12 12v9.4M12 12H2.6M12 12h9.4M12 12 7.4 7.4M12 12l4.6 4.6M12 12l4.6-4.6M12 12l-4.6 4.6"
-        stroke="currentColor"
-        strokeWidth="2.3"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-/**
- * A figura de braços abertos da Vivo.
- *
- * Cabeça solta e corpo em arco, que é o que sobra da marca quando ela é
- * reduzida ao tamanho de um ícone de aplicativo.
- */
-export function VivoLogo() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[66%]">
-      <circle cx="12" cy="6.9" r="3.2" fill="currentColor" />
-      <path
-        d="M12 11.6c-4.5 0-8.2 3.5-8.5 8-.07 1 .74 1.9 1.75 1.9h13.5c1.01 0 1.82-.9 1.75-1.9-.3-4.5-4-8-8.5-8z"
-        fill="currentColor"
-      />
-    </svg>
   )
-}
-
-/**
- * O G do Google: o anel aberto em cima e a barra que entra pela direita.
- *
- * Desenhado em traço único, então a barra nasce da própria ponta do arco, que
- * é a junção que faz a letra ser lida como G e não como C com um risco.
- */
-export function GoogleLogo() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-[64%]">
-      <path
-        d="M16.95 7.05A7 7 0 1 0 19 12h-6.2"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        fill="none"
-      />
-    </svg>
-  );
 }
 
 /**

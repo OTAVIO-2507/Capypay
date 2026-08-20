@@ -1,25 +1,25 @@
-import { useMemo } from "react";
-import { Icon } from "@/components/Icon";
-import { PageHeader } from "@/components/PageHeader";
-import { Card } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { Money } from "@/components/ui/Money";
-import { categoryColor } from "@/domain/categories";
+import { useMemo } from 'react'
+import { Icon } from '@/components/Icon'
+import { PageHeader } from '@/components/PageHeader'
+import { Card } from '@/components/ui/Card'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Money } from '@/components/ui/Money'
+import { categoryColor } from '@/domain/categories'
 import {
   activeSubscriptions,
   monthlySubscriptionCost,
   type Subscription,
-} from "@/domain/subscriptions";
-import { BrandMark, findBrand } from "@/features/series/BrandMark";
-import { SeriesSummary } from "@/features/series/SeriesSummary";
-import { formatDayMonth } from "@/lib/date";
-import { useCategories, useTransactions } from "@/store/hooks";
+} from '@/domain/subscriptions'
+import { BrandMark, findBrand } from '@/features/series/BrandMark'
+import { SeriesSummary } from '@/features/series/SeriesSummary'
+import { formatDayMonth } from '@/lib/date'
+import { useCategories, useTransactions } from '@/store/hooks'
 
-const CADENCIA: Record<Subscription["cadence"], string> = {
-  weekly: "toda semana",
-  monthly: "todo mês",
-  yearly: "todo ano",
-};
+const CADENCIA: Record<Subscription['cadence'], string> = {
+  weekly: 'toda semana',
+  monthly: 'todo mês',
+  yearly: 'todo ano',
+}
 
 /**
  * As assinaturas ativas, e o que elas custam.
@@ -34,17 +34,14 @@ const CADENCIA: Record<Subscription["cadence"], string> = {
  * decisões opostas.
  */
 export function SubscriptionsPage() {
-  const transactions = useTransactions();
-  const categories = useCategories();
+  const transactions = useTransactions()
+  const categories = useCategories()
 
   const assinaturas = useMemo(
     () => activeSubscriptions(transactions, categories),
     [transactions, categories],
-  );
-  const mensal = useMemo(
-    () => monthlySubscriptionCost(assinaturas),
-    [assinaturas],
-  );
+  )
+  const mensal = useMemo(() => monthlySubscriptionCost(assinaturas), [assinaturas])
 
   return (
     <>
@@ -62,48 +59,44 @@ export function SubscriptionsPage() {
           />
         </Card>
       ) : (
-        /* A mesma moldura de Parcelamentos, e pelo mesmo motivo: são páginas
-           irmãs, e eram as duas únicas do produto em coluna única. */
-        <div className="grid gap-5 lg:grid-cols-12">
-          <div className="lg:col-span-4">
-            <div className="lg:sticky lg:top-6">
-              <SeriesSummary
-                stats={[
-                  {
-                    label: "Assinaturas",
-                    icon: "repeat",
-                    count: assinaturas.length,
-                    countUnit: assinaturas.length === 1 ? "ativa" : "ativas",
-                  },
-                  { label: "Gasto mensal", cents: mensal },
-                  {
-                    label: "Projeção anual",
-                    cents: mensal * 12,
-                    highlight: true,
-                  },
-                  {
-                    label: "Média por serviço",
-                    cents: Math.round(mensal / assinaturas.length),
-                  },
-                ]}
-              />
-            </div>
-          </div>
+        /*
+          A faixa de números em cima, a lista inteira embaixo.
 
-          <ul className="flex flex-col gap-3 lg:col-span-8">
+          Antes o resumo era uma coluna fixa de um terço à esquerda, e a lista
+          vivia nos dois terços restantes. Numa página cujo conteúdo é uma
+          linha por serviço, isso estreitava justamente o que se veio ler: o
+          nome de um lado, o valor do outro, e a coluna do resumo parada
+          ocupando espaço que ela não usava depois da primeira olhada.
+        */
+        <div className="flex flex-col gap-5">
+          <SeriesSummary
+            stats={[
+              {
+                label: 'Assinaturas',
+                icon: 'repeat',
+                count: assinaturas.length,
+                countUnit: assinaturas.length === 1 ? 'ativa' : 'ativas',
+              },
+              { label: 'Gasto mensal', cents: mensal },
+              { label: 'Projeção anual', cents: mensal * 12, highlight: true },
+              { label: 'Média por serviço', cents: Math.round(mensal / assinaturas.length) },
+            ]}
+          />
+
+          <ul className="flex flex-col gap-3">
             {assinaturas.map((assinatura) => {
-              const marca = findBrand(assinatura.label);
+              const marca = findBrand(assinatura.label)
 
               return (
                 <li key={assinatura.seriesId}>
                   <Card className="flex items-center justify-between gap-4">
                     <span className="flex min-w-0 items-center gap-3">
                       {/*
-                      A mesma pastilha de Orçamento e do extrato. Estas duas
-                      páginas nasceram antes da cor de categoria existir e
-                      ficaram no cinza antigo — a categoria era a mesma coisa
-                      em três telas e se apresentava de dois jeitos.
-                    */}
+                        A arte da marca quando o serviço é conhecido, e a
+                        pastilha da categoria quando não é. As duas ocupam o
+                        mesmo quadrado, então a lista continua alinhada com
+                        marcas de origens diferentes lado a lado.
+                      */}
                       <BrandMark
                         label={assinatura.label}
                         fallbackIcon={assinatura.icon}
@@ -127,19 +120,13 @@ export function SubscriptionsPage() {
                         ) : null}
                         <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted">
                           <span className="flex items-center gap-1.5">
-                            <Icon
-                              name="calendar"
-                              size={11}
-                              className="shrink-0"
-                            />
+                            <Icon name="calendar" size={11} className="shrink-0" />
                             Próxima: {formatDayMonth(assinatura.next)}
                           </span>
                           <span aria-hidden="true">·</span>
                           <span>
-                            {assinatura.remaining}{" "}
-                            {assinatura.remaining === 1
-                              ? "cobrança lançada"
-                              : "cobranças lançadas"}
+                            {assinatura.remaining}{' '}
+                            {assinatura.remaining === 1 ? 'cobrança lançada' : 'cobranças lançadas'}
                           </span>
                         </span>
                       </span>
@@ -157,11 +144,11 @@ export function SubscriptionsPage() {
                     </span>
                   </Card>
                 </li>
-              );
+              )
             })}
           </ul>
         </div>
       )}
     </>
-  );
+  )
 }

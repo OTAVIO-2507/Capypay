@@ -1,20 +1,21 @@
-import type { ReactElement } from "react";
-import { Icon } from "@/components/Icon";
-import { cn } from "@/lib/cn";
+import type { ReactElement } from 'react'
+import anthropicArte from '@/assets/brands/anthropic.jpg'
+import googleArte from '@/assets/brands/google.jpg'
+import primeVideoArte from '@/assets/brands/prime-video.png'
+import vivoArte from '@/assets/brands/vivo.jpg'
+import { Icon } from '@/components/Icon'
+import { cn } from '@/lib/cn'
 import {
-  AnthropicLogo,
   ChatLogo,
   CloudLogo,
   CourseLogo,
-  GoogleLogo,
   GymLogo,
   NetflixLogo,
   SmileLogo,
   SpotifyLogo,
   StreamLogo,
-  VivoLogo,
   YoutubeLogo,
-} from "./brandLogos";
+} from './brandLogos'
 
 /**
  * A marca do serviço, desenhada aqui e não baixada de fora.
@@ -39,71 +40,83 @@ import {
  * aparece com frequência em fatura brasileira, e quem não está aqui cai no
  * ícone da categoria, que continua dizendo do que se trata.
  */
-type Desenho = () => ReactElement;
+type Desenho = () => ReactElement
 
+/**
+ * Três formas de identificar, nesta ordem de preferência.
+ *
+ * `imagem` é a arte oficial da marca, guardada em `src/assets/brands/` e
+ * servida pelo próprio aplicativo. Continua valendo que nada é buscado de
+ * terceiro: o arquivo viaja no pacote, então ninguém de fora fica sabendo o
+ * que esta pessoa assina. `logo` é o desenho em SVG, para marca cuja forma se
+ * reconstitui com honestidade em poucas figuras geométricas. Sem os dois,
+ * sobra a inicial sobre a cor, que identifica sem reproduzir nada.
+ */
 const MARCAS: readonly {
-  chave: string;
-  nome: string;
-  cor: string;
-  logo?: Desenho;
+  chave: string
+  nome: string
+  cor: string
+  logo?: Desenho
+  imagem?: string
 }[] = [
-  { chave: "netflix", nome: "Netflix", cor: "#E50914", logo: NetflixLogo },
-  { chave: "spotify", nome: "Spotify", cor: "#1DB954", logo: SpotifyLogo },
-  { chave: "youtube", nome: "YouTube", cor: "#FF0000", logo: YoutubeLogo },
-  { chave: "disney", nome: "Disney+", cor: "#113CCF", logo: StreamLogo },
-  { chave: "hbo", nome: "Max", cor: "#0046FF", logo: StreamLogo },
+  { chave: 'netflix', nome: 'Netflix', cor: '#E50914', logo: NetflixLogo },
+  { chave: 'spotify', nome: 'Spotify', cor: '#1DB954', logo: SpotifyLogo },
+  { chave: 'youtube', nome: 'YouTube', cor: '#FF0000', logo: YoutubeLogo },
+  { chave: 'disney', nome: 'Disney+', cor: '#113CCF', logo: StreamLogo },
+  { chave: 'hbo', nome: 'Max', cor: '#0046FF', logo: StreamLogo },
   {
-    chave: "prime video",
-    nome: "Prime Video",
-    cor: "#1399DA",
+    chave: 'prime video',
+    nome: 'Prime Video',
+    cor: '#1399DA',
     logo: SmileLogo,
+    imagem: primeVideoArte,
   },
-  { chave: "globoplay", nome: "Globoplay", cor: "#FF4C00", logo: StreamLogo },
-  { chave: "paramount", nome: "Paramount+", cor: "#0064FF", logo: StreamLogo },
-  {
-    chave: "crunchyroll",
-    nome: "Crunchyroll",
-    cor: "#F47521",
-    logo: StreamLogo,
-  },
-  { chave: "deezer", nome: "Deezer", cor: "#A238FF", logo: SpotifyLogo },
-  { chave: "amazon", nome: "Amazon", cor: "#FF9900", logo: SmileLogo },
-  { chave: "apple", nome: "Apple", cor: "#555555" },
-  { chave: "icloud", nome: "iCloud", cor: "#3B82F6", logo: CloudLogo },
-  { chave: "google one", nome: "Google One", cor: "#4285F4", logo: GoogleLogo },
-  { chave: "dropbox", nome: "Dropbox", cor: "#0061FF", logo: CloudLogo },
-  { chave: "google", nome: "Google", cor: "#4285F4", logo: GoogleLogo },
-  { chave: "microsoft", nome: "Microsoft", cor: "#00A4EF" },
-  { chave: "adobe", nome: "Adobe", cor: "#FF0000" },
-  { chave: "canva", nome: "Canva", cor: "#00C4CC" },
-  { chave: "claude", nome: "Claude", cor: "#D97757", logo: AnthropicLogo },
-  { chave: "anthropic", nome: "Claude", cor: "#D97757", logo: AnthropicLogo },
-  { chave: "openai", nome: "OpenAI", cor: "#10A37F", logo: ChatLogo },
-  { chave: "chatgpt", nome: "ChatGPT", cor: "#10A37F", logo: ChatLogo },
-  { chave: "hostinger", nome: "Hostinger", cor: "#673DE6", logo: CloudLogo },
-  { chave: "alura", nome: "Alura", cor: "#00C86F", logo: CourseLogo },
-  { chave: "udemy", nome: "Udemy", cor: "#A435F0", logo: CourseLogo },
-  { chave: "coursera", nome: "Coursera", cor: "#0056D2", logo: CourseLogo },
-  { chave: "smartfit", nome: "Smart Fit", cor: "#FFE000", logo: GymLogo },
-  { chave: "bluefit", nome: "Bluefit", cor: "#0B5FFF", logo: GymLogo },
-  { chave: "academia", nome: "Academia", cor: "#3F3F46", logo: GymLogo },
-  { chave: "vivo", nome: "Vivo", cor: "#660099", logo: VivoLogo },
-  { chave: "uber", nome: "Uber", cor: "#000000" },
-  { chave: "ifood", nome: "iFood", cor: "#EA1D2C" },
-];
+  { chave: 'globoplay', nome: 'Globoplay', cor: '#FF4C00', logo: StreamLogo },
+  { chave: 'paramount', nome: 'Paramount+', cor: '#0064FF', logo: StreamLogo },
+  { chave: 'crunchyroll', nome: 'Crunchyroll', cor: '#F47521', logo: StreamLogo },
+  { chave: 'deezer', nome: 'Deezer', cor: '#A238FF', logo: SpotifyLogo },
+  { chave: 'amazon', nome: 'Amazon', cor: '#FF9900', logo: SmileLogo },
+  { chave: 'apple', nome: 'Apple', cor: '#555555' },
+  { chave: 'icloud', nome: 'iCloud', cor: '#3B82F6', logo: CloudLogo },
+  { chave: 'google one', nome: 'Google One', cor: '#4285F4', imagem: googleArte },
+  { chave: 'dropbox', nome: 'Dropbox', cor: '#0061FF', logo: CloudLogo },
+  { chave: 'google', nome: 'Google', cor: '#4285F4', imagem: googleArte },
+  { chave: 'microsoft', nome: 'Microsoft', cor: '#00A4EF' },
+  { chave: 'adobe', nome: 'Adobe', cor: '#FF0000' },
+  { chave: 'canva', nome: 'Canva', cor: '#00C4CC' },
+  { chave: 'claude', nome: 'Claude', cor: '#D97757', imagem: anthropicArte },
+  { chave: 'anthropic', nome: 'Claude', cor: '#D97757', imagem: anthropicArte },
+  { chave: 'openai', nome: 'OpenAI', cor: '#10A37F', logo: ChatLogo },
+  { chave: 'chatgpt', nome: 'ChatGPT', cor: '#10A37F', logo: ChatLogo },
+  { chave: 'hostinger', nome: 'Hostinger', cor: '#673DE6', logo: CloudLogo },
+  { chave: 'alura', nome: 'Alura', cor: '#00C86F', logo: CourseLogo },
+  { chave: 'udemy', nome: 'Udemy', cor: '#A435F0', logo: CourseLogo },
+  { chave: 'coursera', nome: 'Coursera', cor: '#0056D2', logo: CourseLogo },
+  { chave: 'smartfit', nome: 'Smart Fit', cor: '#FFE000', logo: GymLogo },
+  { chave: 'bluefit', nome: 'Bluefit', cor: '#0B5FFF', logo: GymLogo },
+  { chave: 'academia', nome: 'Academia', cor: '#3F3F46', logo: GymLogo },
+  { chave: 'vivo', nome: 'Vivo', cor: '#660099', imagem: vivoArte },
+  { chave: 'uber', nome: 'Uber', cor: '#000000' },
+  { chave: 'ifood', nome: 'iFood', cor: '#EA1D2C' },
+]
 
 /** A marca reconhecida na descrição, ou nula quando nenhuma bate. */
 export function findBrand(
   description: string,
-): { nome: string; cor: string; logo?: Desenho } | null {
+): { nome: string; cor: string; logo?: Desenho; imagem?: string } | null {
   const texto = description
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
 
-  const encontrada = MARCAS.find((marca) => texto.includes(marca.chave));
-  if (!encontrada) return null;
-  return { nome: encontrada.nome, cor: encontrada.cor, logo: encontrada.logo };
+  const encontrada = MARCAS.find((marca) => texto.includes(marca.chave))
+  if (!encontrada) return null
+  return {
+    nome: encontrada.nome,
+    cor: encontrada.cor,
+    logo: encontrada.logo,
+    imagem: encontrada.imagem,
+  }
 }
 
 /**
@@ -114,36 +127,38 @@ export function findBrand(
  * é a mesma que decide contraste em qualquer sistema de acessibilidade.
  */
 function tintaSobre(cor: string): string {
-  const hex = cor.replace("#", "");
-  const canais = [0, 2, 4].map(
-    (inicio) => Number.parseInt(hex.slice(inicio, inicio + 2), 16) / 255,
-  );
+  const hex = cor.replace('#', '')
+  const canais = [0, 2, 4].map((inicio) => Number.parseInt(hex.slice(inicio, inicio + 2), 16) / 255)
   const [r, g, b] = canais.map((canal) =>
     canal <= 0.04045 ? canal / 12.92 : ((canal + 0.055) / 1.055) ** 2.4,
-  );
-  const luminancia = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  )
+  const luminancia = 0.2126 * r + 0.7152 * g + 0.0722 * b
 
-  return luminancia > 0.45 ? "#111111" : "#ffffff";
+  return luminancia > 0.45 ? '#111111' : '#ffffff'
 }
 
+/**
+ * Quadrado de canto arredondado, e não círculo.
+ *
+ * A pastilha do extrato é redonda porque carrega um ícone de categoria, que é
+ * um desenho de linha com folga de sobra nas bordas. Aqui ela carrega arte de
+ * marca, que vem quadrada e com o desenho encostando nos cantos: recortar em
+ * círculo come as pontas do "prime video" e da letra que estiver na quina. O
+ * formato acompanha o conteúdo, que é o mesmo motivo de todo ícone de
+ * aplicativo do mundo ser um quadrado arredondado.
+ */
 interface Props {
   /** A descrição do lançamento, de onde a marca é reconhecida. */
-  label: string;
+  label: string
   /** Ícone da categoria, usado quando a marca não é conhecida. */
-  fallbackIcon: string;
-  fallbackColor?: string | null;
-  size?: number;
-  className?: string;
+  fallbackIcon: string
+  fallbackColor?: string | null
+  size?: number
+  className?: string
 }
 
-export function BrandMark({
-  label,
-  fallbackIcon,
-  fallbackColor,
-  size = 36,
-  className,
-}: Props) {
-  const marca = findBrand(label);
+export function BrandMark({ label, fallbackIcon, fallbackColor, size = 36, className }: Props) {
+  const marca = findBrand(label)
 
   if (!marca) {
     return (
@@ -154,14 +169,37 @@ export function BrandMark({
           height: size,
         }}
         className={cn(
-          "inline-flex shrink-0 items-center justify-center rounded-lg",
-          fallbackColor ? "text-white" : "bg-sunken text-faint",
+          'inline-flex shrink-0 items-center justify-center rounded-sm',
+          fallbackColor ? 'text-white' : 'bg-sunken text-faint',
           className,
         )}
       >
         <Icon name={fallbackIcon as never} size={Math.round(size * 0.44)} />
       </span>
-    );
+    )
+  }
+
+  /*
+    A arte oficial ocupa a pastilha inteira, borda a borda, porque ela já vem
+    com o fundo da marca embutido: o branco do Claude, o roxo da Vivo. Pintar
+    a pastilha por baixo só criaria uma moldura de cor errada em volta.
+
+    O anel de hairline existe por causa das duas artes claras. Sobre a folha
+    branca do tema claro, o quadrado do Claude e o do Google não têm onde
+    terminar, e a marca fica boiando sem contorno.
+  */
+  if (marca.imagem) {
+    return (
+      <img
+        src={marca.imagem}
+        alt=""
+        title={marca.nome}
+        loading="lazy"
+        decoding="async"
+        style={{ width: size, height: size }}
+        className={cn('shrink-0 rounded-sm object-cover ring-1 ring-hairline', className)}
+      />
+    )
   }
 
   return (
@@ -175,7 +213,7 @@ export function BrandMark({
         fontSize: Math.round(size * 0.42),
       }}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-lg font-semibold",
+        'inline-flex shrink-0 items-center justify-center rounded-sm font-semibold',
         className,
       )}
     >
@@ -186,5 +224,5 @@ export function BrandMark({
       */}
       {marca.logo ? <marca.logo /> : marca.nome.charAt(0).toUpperCase()}
     </span>
-  );
+  )
 }

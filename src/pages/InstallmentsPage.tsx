@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Money } from '@/components/ui/Money'
 import { categoryColor } from '@/domain/categories'
 import { installmentPurchases, installmentSummary, type Installment } from '@/domain/installments'
+import { BrandMark } from '@/features/series/BrandMark'
 import { SeriesSummary } from '@/features/series/SeriesSummary'
 import { cn } from '@/lib/cn'
 import { formatDayMonthYear, formatMonthLong, monthOf } from '@/lib/date'
@@ -52,18 +53,6 @@ export function InstallmentsPage() {
       <PageHeader
         title="Parcelamentos"
         description="Compras fatiadas, com o que já foi pago e o que ainda falta."
-        /*
-          O seletor vive no cabeçalho, como o de período em Transações. Solto
-          no corpo da página ele esticava de ponta a ponta: `Segmented`
-          distribui os botões em `flex-1`, e dois botões numa página de 1400px
-          viram dois botões de 700px. No cabeçalho ele se dimensiona pelo
-          conteúdo, que é o tamanho que um filtro deve ter.
-        */
-        actions={
-          compras.length > 0 ? (
-            <Segmented label="Situação" options={abas} value={aba} onChange={setAba} />
-          ) : null
-        }
       />
 
       {compras.length === 0 ? (
@@ -76,73 +65,80 @@ export function InstallmentsPage() {
         </Card>
       ) : (
         /*
-          A mesma moldura de duas colunas de Contas, Orçamento e Transações.
-          Esta página era a única em coluna única, e numa tela de 1400px isso
-          esticava linha de lista de ponta a ponta — o nome num extremo, o
-          valor no outro, com meio metro de vazio no meio.
+          A faixa de números em cima, a lista inteira embaixo.
 
-          O resumo fica fixo à esquerda enquanto a lista rola: ele é a resposta
-          da página, e some da tela justamente quando alguém desce para
-          conferir a compra que a produziu.
+          O resumo era uma coluna fixa de um terço, presa enquanto a lista
+          rolava. A intenção era boa — ele é a resposta da página — mas o
+          preço era alto: "já pago" e "restante" ficavam empilhados numa
+          coluna estreita, e comparar os dois exigia descer e voltar, quando
+          essa comparação é a leitura inteira. Em linha eles entram de uma vez.
+
+          A lista, que ganhou os dois terços de volta, é onde a diferença
+          aparece: cada compra tem título, contagem de parcelas, valor, barra
+          e data de fim, e nada disso cabia bem em 60% da tela.
         */
-        <div className="grid gap-5 lg:grid-cols-12">
-          <div className="lg:col-span-4">
-            <div className="lg:sticky lg:top-6">
-              <SeriesSummary
-                stats={[
-                  {
-                    label: 'Em andamento',
-                    icon: 'credit-card',
-                    count: resumo.ongoing,
-                    countUnit: resumo.ongoing === 1 ? 'compra' : 'compras',
-                  },
-                  { label: 'Valor total', cents: resumo.totalCents },
-                  { label: 'Já pago', cents: resumo.paidCents },
-                  { label: 'Restante', cents: resumo.remainingCents, highlight: true },
-                ]}
-              >
-                {resumo.ongoing > 0 ? (
-                  <div className="border-t border-hairline pt-4">
-                    <ProgressoGeral progress={resumo.progress} />
-                    {resumo.lastMonth ? (
-                      <p className="mt-4 flex items-center gap-1.5 text-xs text-muted">
-                        <Icon name="calendar" size={13} className="shrink-0" />
-                        Última parcela em{' '}
-                        <strong className="font-medium text-ink">
-                          {formatMonthLong(monthOf(resumo.lastMonth))}
-                        </strong>
-                      </p>
-                    ) : null}
-                  </div>
+        <div className="flex flex-col gap-5">
+          <SeriesSummary
+            stats={[
+              {
+                label: 'Em andamento',
+                icon: 'credit-card',
+                count: resumo.ongoing,
+                countUnit: resumo.ongoing === 1 ? 'compra' : 'compras',
+              },
+              { label: 'Valor total', cents: resumo.totalCents },
+              { label: 'Já pago', cents: resumo.paidCents },
+              { label: 'Restante', cents: resumo.remainingCents, highlight: true },
+            ]}
+          >
+            {resumo.ongoing > 0 ? (
+              <div className="mt-6 border-t border-hairline pt-5">
+                <ProgressoGeral progress={resumo.progress} />
+                {resumo.lastMonth ? (
+                  <p className="mt-4 flex items-center gap-1.5 border-t border-hairline pt-4 text-xs text-muted">
+                    <Icon name="calendar" size={13} className="shrink-0" />
+                    Última parcela em{' '}
+                    <strong className="font-medium text-ink">
+                      {formatMonthLong(monthOf(resumo.lastMonth))}
+                    </strong>
+                  </p>
                 ) : null}
-              </SeriesSummary>
-            </div>
+              </div>
+            ) : null}
+          </SeriesSummary>
+
+          {/*
+            As abas moram aqui, e não no cabeçalho, porque filtram a lista que
+            vem logo abaixo e não a faixa que vem logo acima. `w-fit` porque
+            `Segmented` distribui os botões em `flex-1`: solto numa página de
+            1400px, dois botões viram dois botões de 700px.
+          */}
+          <div className="w-fit">
+            <Segmented label="Situação" options={abas} value={aba} onChange={setAba} />
           </div>
 
-          <div className="lg:col-span-8">
-            {visiveis.length === 0 ? (
-              <Card>
-                <EmptyState
-                  icon="credit-card"
-                  size="sm"
-                  title={aba === 'ongoing' ? 'Nada em andamento' : 'Nada finalizado'}
-                  description={
-                    aba === 'ongoing'
-                      ? 'Todas as suas compras parceladas já foram quitadas.'
-                      : 'Nenhuma compra parcelada chegou ao fim ainda.'
-                  }
-                />
-              </Card>
-            ) : (
-              <ul className="flex flex-col gap-3">
-                {visiveis.map((compra) => (
-                  <li key={compra.seriesId}>
-                    <LinhaDeCompra compra={compra} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          {visiveis.length === 0 ? (
+            <Card>
+              <EmptyState
+                icon="credit-card"
+                size="sm"
+                title={aba === 'ongoing' ? 'Nada em andamento' : 'Nada finalizado'}
+                description={
+                  aba === 'ongoing'
+                    ? 'Todas as suas compras parceladas já foram quitadas.'
+                    : 'Nenhuma compra parcelada chegou ao fim ainda.'
+                }
+              />
+            </Card>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {visiveis.map((compra) => (
+                <li key={compra.seriesId}>
+                  <LinhaDeCompra compra={compra} />
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </>
@@ -220,20 +216,16 @@ function LinhaDeCompra({ compra }: { compra: Installment }) {
       <div className="flex items-start justify-between gap-4">
         <span className="flex min-w-0 items-center gap-3">
           {/*
-            A mesma pastilha de Orçamento e do extrato. Esta página nasceu
-            antes da cor de categoria existir e ficou no cinza antigo — a
-            categoria era a mesma coisa em três telas e se apresentava de dois
-            jeitos.
+            A mesma marca de Assinaturas: uma compra parcelada costuma vir de
+            uma loja com nome, e reconhecê-la aqui é o que separa "dorinhos -
+            loja 42 - d guarulhos bra" de uma linha que só se lê soletrando.
+            Sem marca conhecida, volta a pastilha da categoria.
           */}
-          <span
-            style={{ backgroundColor: categoryColor(compra.categoryId) ?? undefined }}
-            className={cn(
-              'inline-flex size-9 shrink-0 items-center justify-center rounded-lg',
-              categoryColor(compra.categoryId) ? 'text-white' : 'bg-sunken text-faint',
-            )}
-          >
-            <Icon name={compra.icon} size={16} />
-          </span>
+          <BrandMark
+            label={compra.label}
+            fallbackIcon={compra.icon}
+            fallbackColor={categoryColor(compra.categoryId)}
+          />
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium text-ink">{compra.label}</span>
             <span className="mt-0.5 block truncate text-xs text-muted">
