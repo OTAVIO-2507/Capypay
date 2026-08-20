@@ -42,7 +42,14 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
+      # `enablement` liga o Pages pela própria esteira quando ele ainda não
+      # está ligado. Sem isto, o primeiro deploy de um repositório novo falha
+      # neste passo com "Pages not enabled" e exige uma visita às configurações
+      # antes de qualquer publicação — um passo manual que só existe uma vez e
+      # que ninguém lembra que existe quando o deploy quebra.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       # `dist` inteiro, incluindo o `404.html` que o plugin do Vite gera: é ele
       # que faz um refresh em /transacoes devolver a aplicação em vez de um 404
