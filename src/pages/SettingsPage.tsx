@@ -11,6 +11,7 @@ import { TwoFactorCard } from '@/features/security/TwoFactorCard'
 import { DetectSeriesCard } from '@/features/settings/DetectSeriesCard'
 import { ImportDiagnosticsCard } from '@/features/settings/ImportDiagnosticsCard'
 import { RecategorizeCard } from '@/features/settings/RecategorizeCard'
+import { SeriesReviewCard } from '@/features/settings/SeriesReviewCard'
 import { exportTransactionsCsv } from '@/features/settings/exportCsv'
 import { EditProfileDialog } from '@/features/shell/EditProfileDialog'
 import type { ThemePreference } from '@/domain/types'
@@ -240,6 +241,7 @@ export function SettingsPage() {
             />
             <div className="flex flex-col gap-3">
               <DetectSeriesCard />
+              <SeriesReviewCard />
               <RecategorizeCard />
             </div>
           </Card>

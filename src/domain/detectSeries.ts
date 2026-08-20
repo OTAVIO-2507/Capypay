@@ -131,9 +131,6 @@ function diasEntre(a: string, b: string): number {
  */
 const JANELA_MENSAL = { minimo: 26, maximo: 36 }
 
-/** Quantas cobranças mensais sustentam a inferência de assinatura. */
-const MINIMO_DE_COBRANCAS = 3
-
 /**
  * Quanto o valor pode variar entre cobranças e ainda ser a mesma assinatura.
  *
@@ -190,20 +187,39 @@ function mediana(ordenados: readonly number[]): number {
 }
 
 /**
- * Se um grupo de cobranças do mesmo lugar se sustenta como assinatura.
+ * Por que um grupo de cobranças repetidas não virou assinatura.
+ *
+ * A recusa precisa ser dizível. "A tela está vazia" não dá para investigar, e
+ * a alternativa — afrouxar a regra até a linha aparecer — troca um problema
+ * visível por um invisível, que é a projeção anual contando um gasto que
+ * ninguém assinou. Nomear o motivo deixa a régua conferível: dá para olhar as
+ * cobranças e concordar ou discordar dela.
+ */
+export type MotivoDeRecusa = 'poucas' | 'intervalo' | 'dia' | 'valor'
+
+export const MOTIVO_DE_RECUSA: Record<MotivoDeRecusa, string> = {
+  poucas: 'só uma cobrança',
+  intervalo: 'não cai de mês em mês',
+  dia: 'dias do mês espalhados',
+  valor: 'valor muda demais',
+}
+
+/**
+ * Julga um grupo de cobranças do mesmo lugar, e diz o que faltou.
  *
  * Recebe as ocorrências já ordenadas por data. Três evidências precisam estar
  * presentes ao mesmo tempo — um mês entre cobranças, mesmo dia do mês, mesmo
  * valor — porque cada uma delas sozinha também descreve uma rotina de compras.
+ * Devolve `null` quando o grupo passa.
  */
-function pareceAssinatura(ordenado: readonly ImportEntry[]): boolean {
+export function julgarAssinatura(ordenado: readonly ImportEntry[]): MotivoDeRecusa | null {
   const valores = ordenado.map((item) => Math.abs(item.amountCents))
   const dias = ordenado.map((item) => diaDoMes(item.date))
   const intervalos = ordenado
     .slice(1)
     .map((item, indice) => diasEntre(ordenado[indice].date, item.date))
 
-  if (intervalos.length === 0) return false
+  if (intervalos.length === 0) return 'poucas'
 
   /*
    * Duas cobranças bastam quando não sobra nenhuma dúvida.
@@ -215,12 +231,11 @@ function pareceAssinatura(ordenado: readonly ImportEntry[]): boolean {
    * quanto três aproximadas — compra de rotina não se repete ao centavo.
    */
   if (ordenado.length === 2) {
-    return (
-      ehMensal(intervalos[0]) && valores[0] === valores[1] && distanciaDeDia(dias[0], dias[1]) <= 2
-    )
+    if (!ehMensal(intervalos[0])) return 'intervalo'
+    if (distanciaDeDia(dias[0], dias[1]) > 2) return 'dia'
+    if (valores[0] !== valores[1]) return 'valor'
+    return null
   }
-
-  if (ordenado.length < MINIMO_DE_COBRANCAS) return false
 
   /*
    * A maioria dos intervalos precisa ser de um mês, e não todos.
@@ -231,18 +246,20 @@ function pareceAssinatura(ordenado: readonly ImportEntry[]): boolean {
    * diferente, e a série inteira era descartada por causa dele.
    */
   const mensais = intervalos.filter(ehMensal).length
-  if (mensais < Math.ceil(intervalos.length / 2)) return false
+  if (mensais < Math.ceil(intervalos.length / 2)) return 'intervalo'
 
   const diaCombinado = mediana([...dias].sort((a, b) => a - b))
   const noDia = dias.filter((dia) => distanciaDeDia(dia, diaCombinado) <= TOLERANCIA_DE_DIA).length
-  if (noDia < Math.ceil(ordenado.length * PROPORCAO_NO_DIA)) return false
+  if (noDia < Math.ceil(ordenado.length * PROPORCAO_NO_DIA)) return 'dia'
 
   const valorCombinado = mediana([...valores].sort((a, b) => a - b))
-  if (valorCombinado <= 0) return false
+  if (valorCombinado <= 0) return 'valor'
 
-  return valores.every(
-    (valor) => Math.abs(valor - valorCombinado) / valorCombinado <= TOLERANCIA_DE_VALOR,
+  const foraDaFaixa = valores.some(
+    (valor) => Math.abs(valor - valorCombinado) / valorCombinado > TOLERANCIA_DE_VALOR,
   )
+
+  return foraDaFaixa ? 'valor' : null
 }
 
 export function detectSeries(entries: readonly ImportEntry[]): Map<string, SeriesHint> {
@@ -341,7 +358,7 @@ export function detectSeries(entries: readonly ImportEntry[]): Map<string, Serie
 
   for (const [chave, grupo] of porChave) {
     const ordenado = [...grupo].sort((a, b) => (a.date < b.date ? -1 : 1))
-    if (!pareceAssinatura(ordenado)) continue
+    if (julgarAssinatura(ordenado) !== null) continue
 
     for (const item of ordenado) {
       achados.set(item.key, {
@@ -411,4 +428,88 @@ export function planSeriesForHistory(transactions: readonly Transaction[]): Seri
   }
 
   return [...porGrupo.values()]
+}
+
+/** Uma repetição que não virou assinatura, e o que faltou para ela virar. */
+export interface SeriesRejection {
+  label: string
+  count: number
+  reason: MotivoDeRecusa
+}
+
+/**
+ * As repetições que a detecção viu e recusou.
+ *
+ * Existe porque "minha assinatura não aparece" não tem como ser investigado
+ * de fora: a regra descarta em silêncio, por bons motivos, e silêncio é
+ * exatamente o que não se consegue depurar. Sem isto, a única saída é
+ * afrouxar a régua no escuro até a linha aparecer — e o que aparece junto é
+ * mercado e padaria na projeção anual.
+ *
+ * Só olha o que ainda não faz parte de uma série, que é o mesmo recorte de
+ * `planSeriesForHistory`, e ignora o que já foi reconhecido como parcelamento.
+ * Grupos de uma ocorrência ficam de fora: uma compra que aconteceu uma vez não
+ * é uma assinatura que deixou de ser reconhecida, é uma compra.
+ */
+export function reviewSubscriptionCandidates(
+  transactions: readonly Transaction[],
+): SeriesRejection[] {
+  const elegiveis = transactions.filter((item) => !item.seriesId && item.kind === 'expense')
+
+  const entradas: ImportEntry[] = elegiveis.map((item) => ({
+    key: item.id,
+    date: item.date,
+    amountCents: -item.amountCents,
+    description: item.description,
+  }))
+
+  const reconhecidos = detectSeries(entradas)
+  const porChave = new Map<string, ImportEntry[]>()
+
+  for (const entrada of entradas) {
+    if (reconhecidos.has(entrada.key)) continue
+
+    const chave = chaveDeAgrupamento(entrada.description)
+    if (chave.length < 3) continue
+
+    const grupo = porChave.get(chave)
+    if (grupo) grupo.push(entrada)
+    else porChave.set(chave, [entrada])
+  }
+
+  const recusas: SeriesRejection[] = []
+
+  for (const grupo of porChave.values()) {
+    if (grupo.length < 2) continue
+
+    const ordenado = [...grupo].sort((a, b) => (a.date < b.date ? -1 : 1))
+    const motivo = julgarAssinatura(ordenado)
+    if (!motivo) continue
+
+    recusas.push({
+      label: ordenado[ordenado.length - 1].description.trim(),
+      count: ordenado.length,
+      reason: motivo,
+    })
+  }
+
+  /*
+   * Quem chegou mais perto de passar aparece primeiro.
+   *
+   * Ordenar por contagem parecia natural e enterrava justamente a resposta: um
+   * supermercado com quarenta compras soltas ocupava a lista inteira, e o
+   * serviço que falhou por um centavo de diferença ficava fora dela. A ordem
+   * dos motivos é a ordem das etapas — quem foi recusado no valor passou pelo
+   * intervalo e pelo dia, então é o candidato mais forte.
+   */
+  const PROXIMIDADE: Record<MotivoDeRecusa, number> = {
+    valor: 0,
+    dia: 1,
+    intervalo: 2,
+    poucas: 3,
+  }
+
+  return recusas.sort(
+    (a, b) => PROXIMIDADE[a.reason] - PROXIMIDADE[b.reason] || b.count - a.count,
+  )
 }

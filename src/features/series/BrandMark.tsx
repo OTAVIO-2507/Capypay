@@ -101,6 +101,9 @@ const MARCAS: readonly {
   { chave: 'boticario', nome: 'O Boticário', cor: '#00706A', imagem: boticarioArte },
   { chave: 'dorinho', nome: "Dorinho's", cor: '#1A2456', imagem: dorinhosArte },
   { chave: 'eniac', nome: 'Eniac', cor: '#0E3A55', imagem: eniacArte },
+  // A fatura vem no nome da mantenedora, e "EDVAC" não diz nada para quem
+  // matriculou no Eniac. Traduzir para a marca é o serviço inteiro desta lista.
+  { chave: 'edvac', nome: 'Eniac', cor: '#0E3A55', imagem: eniacArte },
   { chave: 'localiza', nome: 'Localiza', cor: '#009640', imagem: localizaArte },
   { chave: 'uber', nome: 'Uber', cor: '#000000' },
   { chave: 'ifood', nome: 'iFood', cor: '#EA1D2C' },

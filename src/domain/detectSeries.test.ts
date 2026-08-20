@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { detectSeries, parseInstallmentTag, planSeriesForHistory } from './detectSeries'
+import {
+  detectSeries,
+  julgarAssinatura,
+  parseInstallmentTag,
+  planSeriesForHistory,
+  reviewSubscriptionCandidates,
+} from './detectSeries'
 import type { ImportEntry } from './importing'
 
 function entrada(key: string, description: string, date: string, amountCents = -10000): ImportEntry {
@@ -161,9 +167,10 @@ describe('detectSeries com assinaturas', () => {
    */
   it('não confunde compra mensal de rotina com assinatura', () => {
     const achados = detectSeries([
-      entrada('a', 'MERCADO HAPPY F LTDA SAO PAULO BRA', '2026-06-04', -1199),
-      entrada('b', 'MERCADO HAPPY F LTDA SAO PAULO BRA', '2026-07-19', -1250),
-      entrada('c', 'MERCADO HAPPY F LTDA SAO PAULO BRA', '2026-08-28', -1150),
+      entrada('a', 'MERCADO HAPPY F LTDA SAO PAULO BRA', '2026-06-05', -1199),
+      entrada('b', 'MERCADO HAPPY F LTDA SAO PAULO BRA', '2026-07-08', -1199),
+      entrada('c', 'MERCADO HAPPY F LTDA SAO PAULO BRA', '2026-08-12', -1199),
+      entrada('d', 'MERCADO HAPPY F LTDA SAO PAULO BRA', '2026-09-16', -1199),
     ])
 
     expect(achados.size).toBe(0)
@@ -462,5 +469,81 @@ describe('detectSeries com histórico longo', () => {
     ]
 
     expect(detectSeries(noMesmoMes).size).toBe(0)
+  })
+})
+
+/*
+ * A recusa precisa ser dizível. "A tela está vazia" não dá para investigar, e a
+ * alternativa é afrouxar a régua no escuro até a linha aparecer.
+ */
+describe('julgarAssinatura', () => {
+  it('nomeia o que faltou em cada recusa', () => {
+    const mesmoLugar = (datas: string[], valores: number[]) =>
+      datas.map((data, i) => entrada(String(i), 'LUGAR', data, valores[i]))
+
+    expect(julgarAssinatura(mesmoLugar(['2026-08-10'], [-1000]))).toBe('poucas')
+
+    expect(
+      julgarAssinatura(mesmoLugar(['2026-08-03', '2026-08-14', '2026-08-27'], [-1000, -1000, -1000])),
+    ).toBe('intervalo')
+
+    // Intervalos todos dentro da janela mensal, mas o dia escorrega a cada
+    // visita: é o desenho de quem vai ao mesmo lugar "uma vez por mês".
+    expect(
+      julgarAssinatura(
+        mesmoLugar(
+          ['2026-06-05', '2026-07-08', '2026-08-12', '2026-09-16'],
+          [-1000, -1000, -1000, -1000],
+        ),
+      ),
+    ).toBe('dia')
+
+    expect(
+      julgarAssinatura(mesmoLugar(['2026-06-10', '2026-07-10', '2026-08-10'], [-1000, -1500, -1200])),
+    ).toBe('valor')
+
+    expect(
+      julgarAssinatura(mesmoLugar(['2026-06-10', '2026-07-10', '2026-08-10'], [-1000, -1000, -1000])),
+    ).toBeNull()
+  })
+})
+
+describe('reviewSubscriptionCandidates', () => {
+  const gravado = (id: string, description: string, date: string, amountCents: number) => ({
+    id,
+    kind: 'expense' as const,
+    description,
+    amountCents,
+    date,
+    categoryId: 'outros',
+    goalId: null,
+    accountId: null,
+    source: 'imported' as const,
+    externalId: `e${id}`,
+    seriesId: null,
+    seriesKind: null,
+    installment: null,
+    notes: null,
+    createdAt: 0,
+    updatedAt: 0,
+  })
+
+  it('lista a repetição recusada com o motivo, e ignora a que virou série', () => {
+    const recusas = reviewSubscriptionCandidates([
+      gravado('1', 'MERCADO HAPPY', '2026-06-05', 1199),
+      gravado('2', 'MERCADO HAPPY', '2026-07-08', 1199),
+      gravado('3', 'MERCADO HAPPY', '2026-08-12', 1199),
+      gravado('4', 'MERCADO HAPPY', '2026-09-16', 1199),
+      gravado('5', 'NETFLIX.COM', '2026-06-10', 3990),
+      gravado('6', 'NETFLIX.COM', '2026-07-10', 3990),
+      gravado('7', 'NETFLIX.COM', '2026-08-10', 3990),
+    ])
+
+    expect(recusas).toHaveLength(1)
+    expect(recusas[0]).toMatchObject({ count: 4, reason: 'dia' })
+  })
+
+  it('não reclama de compra que aconteceu uma vez só', () => {
+    expect(reviewSubscriptionCandidates([gravado('1', 'PADARIA', '2026-08-10', 900)])).toEqual([])
   })
 })

@@ -84,6 +84,8 @@ interface FinanceState {
   deleteSeries: (seriesId: string) => void
   /** Desfaz a série sem apagar os lançamentos. Ver a nota na implementação. */
   ungroupSeries: (seriesId: string) => void
+  /** Solta as séries vindas de importação, para serem reconhecidas de novo. */
+  ungroupImportedSeries: () => void
 
   addGoal: (goal: Omit<Goal, 'id' | 'createdAt' | 'archived'>) => void
   updateGoal: (id: string, patch: Partial<Goal>) => void
@@ -418,6 +420,43 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
             : transaction,
         ),
       })),
+
+    /*
+     * Solta tudo que a importação agrupou, para o reconhecimento correr de novo.
+     *
+     * A regra de detecção melhora com o tempo, e melhorar não alcançava nada:
+     * `planSeriesForHistory` só olha lançamento **sem** série, então o que foi
+     * agrupado errado por uma versão antiga ficava congelado para sempre. Uma
+     * academia classificada como assinatura em maio continuava assinatura em
+     * agosto, com a régua nova em vigor e sem nunca ser reexaminada.
+     *
+     * **Série feita à mão não entra.** Quem marcou "Repetir lançamento" já
+     * respondeu essa pergunta, e desfazer por cima trocaria uma decisão
+     * explícita por um palpite. O corte é por origem: só solta a série cujas
+     * ocorrências vieram todas de importação.
+     */
+    ungroupImportedSeries: () =>
+      mutate((data) => {
+        const daImportacao = new Set<string>()
+        const daMao = new Set<string>()
+
+        for (const transaction of data.transactions) {
+          if (!transaction.seriesId) continue
+          const destino = transaction.source === 'imported' ? daImportacao : daMao
+          destino.add(transaction.seriesId)
+        }
+
+        return {
+          ...data,
+          transactions: data.transactions.map((transaction) =>
+            transaction.seriesId &&
+            daImportacao.has(transaction.seriesId) &&
+            !daMao.has(transaction.seriesId)
+              ? { ...transaction, seriesId: null, seriesKind: null, installment: null }
+              : transaction,
+          ),
+        }
+      }),
 
     addGoal: (goal) =>
       mutate((data) => ({
