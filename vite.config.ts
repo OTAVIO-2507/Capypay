@@ -98,7 +98,12 @@ function contentSecurityPolicy(supabaseUrl: string | undefined): Plugin {
           // `data:` é do QR code da verificação em duas etapas, que o Supabase
           // devolve como SVG embutido. `blob:` é do CSV exportado.
           "img-src 'self' data: blob:",
-          "font-src 'self'",
+          // `data:` porque o Vite embute como URI qualquer asset abaixo de
+          // `assetsInlineLimit`, e um subset de fonte cabe nesse limite. Sem
+          // isto, a página perderia a fonte num build futuro sem nada ter
+          // mudado no código — e a política é justamente o que não pode
+          // quebrar em silêncio.
+          "font-src 'self' data:",
           // Para onde o aplicativo pode falar: o próprio projeto Supabase e a
           // API da Pluggy, usada pelo widget de conexão bancária.
           `connect-src 'self' ${origemSupabase} https://api.pluggy.ai`,

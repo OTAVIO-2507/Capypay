@@ -27,7 +27,22 @@ import { createClient } from '@supabase/supabase-js'
 const url = import.meta.env.VITE_SUPABASE_URL
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export async function senhaAtualConfere(email: string, senha: string): Promise<boolean> {
+/**
+ * O que a verificação apurou.
+ *
+ * Três estados, e não dois. "Não confere" e "não deu para perguntar" levam a
+ * ações opostas de quem está na tela: uma pede a senha certa, a outra pede para
+ * tentar de novo. Colapsar as duas num `false` faria alguém sem rede ler "a
+ * senha atual não confere" e concluir que esqueceu a própria senha — e o passo
+ * seguinte dessa conclusão é pedir a um administrador que a redefina, por causa
+ * de um problema de conexão.
+ */
+export type ResultadoDaConfirmacao = 'confere' | 'nao-confere' | 'indisponivel'
+
+export async function senhaAtualConfere(
+  email: string,
+  senha: string,
+): Promise<ResultadoDaConfirmacao> {
   const efemero = createClient(url, anonKey, {
     auth: {
       persistSession: false,
@@ -44,5 +59,16 @@ export async function senhaAtualConfere(email: string, senha: string): Promise<b
     // Nada a fazer: o cliente é descartado logo abaixo de qualquer forma.
   })
 
-  return !error
+  if (!error) return 'confere'
+
+  /*
+   * `AuthApiError` é resposta do servidor — ele recebeu, avaliou e recusou, o
+   * que inclui a credencial errada e também o excesso de tentativas. Qualquer
+   * outra falha (`AuthRetryableFetchError`, rede fora) é a pergunta não ter
+   * chegado, e sobre a senha ela não diz nada.
+   */
+  const status = (error as { status?: number }).status
+  return typeof status === 'number' && status >= 400 && status < 500
+    ? 'nao-confere'
+    : 'indisponivel'
 }

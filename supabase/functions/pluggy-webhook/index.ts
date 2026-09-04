@@ -73,6 +73,27 @@ async function segredoConfere(recebido: string, esperado: string): Promise<boole
 /** Teto do detalhe do erro que a Pluggy manda. Ver a nota no uso. */
 const MAXIMO_DETALHE = 500
 
+/**
+ * O detalhe do erro, em texto, dentro do teto.
+ *
+ * O campo `error` da Pluggy chega ora como texto, ora como objeto, ora não
+ * chega. `JSON.stringify(undefined ?? null)` devolve a **string** `"null"`, que
+ * passaria por qualquer checagem de "tem conteúdo" e gravaria a palavra `null`
+ * na coluna — um detalhe de erro que não descreve erro nenhum. Ausência é
+ * tratada aqui, antes de virar texto.
+ */
+function descreverErro(bruto: unknown): string {
+  if (bruto === null || bruto === undefined) return 'erro sem detalhe'
+  if (typeof bruto === 'string') return textoLimitado(bruto, MAXIMO_DETALHE) ?? 'erro sem detalhe'
+
+  try {
+    return textoLimitado(JSON.stringify(bruto), MAXIMO_DETALHE) ?? 'erro sem detalhe'
+  } catch {
+    // Estrutura circular: o que sobra é o tipo, que já não diz nada útil.
+    return 'erro sem detalhe'
+  }
+}
+
 Deno.serve(async (req) => {
   // Sem CORS: isto não é chamado por navegador nenhum. Um preflight aqui é
   // sinal de uso indevido, não de integração.
@@ -159,13 +180,7 @@ Deno.serve(async (req) => {
    * Quinhentos caracteres cobrem qualquer mensagem real de conexão quebrada, e
    * o que passar disso é volume, não informação.
    */
-  const detalhe =
-    event === 'item/error'
-      ? (textoLimitado(
-          typeof evento.error === 'string' ? evento.error : JSON.stringify(evento.error ?? null),
-          MAXIMO_DETALHE,
-        ) ?? 'erro sem detalhe')
-      : null
+  const detalhe = event === 'item/error' ? descreverErro(evento.error) : null
 
   const { error } = await admin
     .from('bank_connections')

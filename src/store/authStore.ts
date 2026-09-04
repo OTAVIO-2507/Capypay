@@ -76,8 +76,16 @@ export const useAuthStore = create<AuthState>()((set) => ({
      * navegador. Sem isso, o token de renovação continua valendo até expirar
      * sozinho: quem tivesse copiado o armazenamento antes da saída seguiria
      * dentro da conta, e "sair" teria sido só limpar a própria tela.
+     *
+     * A queda para `local` não é desistência: a saída global depende da rede, e
+     * sem rede ela falha. Nesse caso o certo é encerrar o que dá para encerrar
+     * — a sessão deste navegador —, porque a alternativa é a pessoa clicar em
+     * "Sair" e continuar dentro da conta, o que é o pior dos dois mundos: ela
+     * acredita que saiu. O token remoto segue valendo até expirar, e é isso que
+     * a rede indisponível custa.
      */
-    await supabase.auth.signOut({ scope: 'global' })
+    const { error } = await supabase.auth.signOut({ scope: 'global' })
+    if (error) await supabase.auth.signOut({ scope: 'local' })
 
     // Depois de sair, nada do que descreve a pessoa ou o dinheiro dela
     // continua neste computador. Ver `data/localCleanup.ts`.

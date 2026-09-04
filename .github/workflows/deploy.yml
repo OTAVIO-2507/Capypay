@@ -35,6 +35,13 @@ jobs:
 
       - run: npm ci
 
+      # A esteira de verificação roda em paralelo a esta, no mesmo push, e uma
+      # não espera a outra: sem este passo, um commit com teste quebrado sobe
+      # para o site enquanto o CI ainda está pintando de vermelho ao lado. Os
+      # testes são de lógica pura e levam poucos segundos — barato demais para
+      # publicar sem eles. (`npm run build` já roda o typecheck.)
+      - run: npm test
+
       # As chaves do Supabase entram no build, que é onde fazem falta: o Vite
       # as congela no pacote. Faltando, o site sobe e não consegue autenticar.
       - run: npm run build

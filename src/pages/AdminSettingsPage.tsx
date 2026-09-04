@@ -162,9 +162,17 @@ function TrocarSenha() {
      * `features/security/confirmarSenha.ts` para por que a verificação usa um
      * cliente à parte.
      */
-    if (!(await senhaAtualConfere(email, atual))) {
+    const confirmacaoDaAtual = await senhaAtualConfere(email, atual)
+
+    if (confirmacaoDaAtual !== 'confere') {
       setEnviando(false)
-      return setErro({ campo: 'atual', texto: 'A senha atual não confere.' })
+      return setErro({
+        campo: 'atual',
+        texto:
+          confirmacaoDaAtual === 'nao-confere'
+            ? 'A senha atual não confere.'
+            : 'Não foi possível confirmar a senha atual agora. Verifique a conexão e tente de novo.',
+      })
     }
 
     const { error } = await supabase.auth.updateUser({ password: senha })

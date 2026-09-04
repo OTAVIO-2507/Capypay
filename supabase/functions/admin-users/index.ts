@@ -8,7 +8,7 @@
 // sempre a mesma e não tem exceção — sessão válida, segundo fator quando a
 // conta o exige, papel de administrador, freio de repetição, validação da
 // entrada, e só então a ação.
-import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import type { SupabaseClient, User } from 'npm:@supabase/supabase-js@2'
 import { autenticar, clienteDeServico, ehAdministrador } from '../_shared/auth.ts'
 import { json, lerCorpoJson, origemPermitida, preflight } from '../_shared/http.ts'
 import { dentroDoLimite } from '../_shared/limite.ts'
@@ -215,8 +215,31 @@ Deno.serve(async (req) => {
   try {
     switch (body.action) {
       case 'list': {
-        const { data, error } = await admin.auth.admin.listUsers({ perPage: 200 })
-        if (error) throw error
+        /*
+         * A listagem é paginada, e antes não era.
+         *
+         * `listUsers({ perPage: 200 })` devolve a **primeira** página e mais
+         * nada. Com 201 contas, a de número 201 simplesmente não aparecia no
+         * painel — não havia erro, aviso ou reticências, e quem procurasse por
+         * ela concluiria que foi excluída. Um limite que ninguém vê é pior do
+         * que um limite baixo.
+         *
+         * O teto de páginas existe pelo mesmo motivo do teto de páginas da
+         * Pluggy: guardar contra laço, e não contra volume. Dez páginas são
+         * duas mil contas, ordens de grandeza acima do que esta instalação
+         * comporta.
+         */
+        const todas: User[] = []
+        const MAXIMO_DE_PAGINAS = 10
+
+        for (let pagina = 1; pagina <= MAXIMO_DE_PAGINAS; pagina += 1) {
+          const { data, error } = await admin.auth.admin.listUsers({ page: pagina, perPage: 200 })
+          if (error) throw error
+
+          todas.push(...data.users)
+          // Página incompleta é a última: pedir a seguinte devolveria vazio.
+          if (data.users.length < 200) break
+        }
 
         const { data: profiles, error: profilesError } = await admin
           .from('profiles')
@@ -227,7 +250,7 @@ Deno.serve(async (req) => {
           (profiles ?? []).map((profile) => [profile.id as string, profile.role as Role]),
         )
 
-        const users: AdminUserSummary[] = data.users.map((user) => ({
+        const users: AdminUserSummary[] = todas.map((user) => ({
           id: user.id,
           email: user.email ?? '',
           role: roleById.get(user.id) ?? 'user',

@@ -169,6 +169,50 @@ function diasAtras(dias: number): string {
   return new Date(Date.now() - dias * 86_400_000).toISOString().slice(0, 10)
 }
 
+/**
+ * O caminho da próxima página, a partir do que a Pluggy devolve em `next`.
+ *
+ * O campo é usado para montar a chamada seguinte, que sai com a `X-API-KEY` da
+ * aplicação no cabeçalho. Um endereço absoluto apontando para outro servidor
+ * entregaria essa chave a ele — então o que é aceito está enumerado aqui, e
+ * qualquer outra forma encerra a paginação em vez de virar uma chamada
+ * inventada. Perder uma página é um extrato incompleto, que a pessoa percebe;
+ * vazar a chave da aplicação, não.
+ *
+ * As três formas que a API usa hoje, e o motivo de cada uma ser aceita:
+ *
+ *   `?after=xyz`                      — só a query, o formato mais comum
+ *   `/v2/transactions?after=xyz`      — caminho absoluto no mesmo servidor
+ *   `https://api.pluggy.ai/v2/...`    — endereço completo, e **só** deles
+ *
+ * @returns o caminho relativo a `PLUGGY_API`, ou `null` para parar.
+ */
+function proximaPagina(bruto: unknown): string | null {
+  if (typeof bruto !== 'string' || bruto.trim() === '') return null
+  const valor = bruto.trim()
+
+  if (valor.includes('://')) {
+    try {
+      const url = new URL(valor)
+      // A origem precisa ser exatamente a da API. `startsWith` aceitaria
+      // `https://api.pluggy.ai.outro-dominio.com`, que é outro servidor.
+      if (url.origin !== PLUGGY_API) return null
+      return `${url.pathname}${url.search}`
+    } catch {
+      return null
+    }
+  }
+
+  // `//outro-host/caminho` é endereço absoluto sem esquema, e o `new URL`
+  // acima não o pegou por não ter `://`.
+  if (valor.startsWith('//')) return null
+
+  const semInterrogacao = valor.replace(/^\?/, '')
+  return semInterrogacao.startsWith('/')
+    ? semInterrogacao
+    : `/v2/transactions?${semInterrogacao}`
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin')
 
@@ -342,18 +386,9 @@ Deno.serve(async (req) => {
         const resposta = await pluggyGet(caminho)
         lancamentos.push(...((resposta.results ?? []) as LancamentoPluggy[]))
 
-        const proxima = resposta.next
-        if (typeof proxima !== 'string' || proxima === '') break
-        /*
-         * `next` vem da Pluggy, mas é usado para montar um caminho nosso: um
-         * valor absoluto ali (`https://outro-host/...`) faria a chamada
-         * seguinte sair com a `X-API-KEY` da aplicação no cabeçalho, para um
-         * servidor que não é o deles. Aceitar só caminho relativo é o que
-         * mantém a chave dentro de casa.
-         */
-        const seguinte = proxima.replace(/^\?/, '')
-        if (seguinte.includes('://') || seguinte.startsWith('//')) break
-        caminho = seguinte.startsWith('/') ? seguinte : `/v2/transactions?${seguinte}`
+        const proxima = proximaPagina(resposta.next)
+        if (!proxima) break
+        caminho = proxima
       }
 
       extratos.push({

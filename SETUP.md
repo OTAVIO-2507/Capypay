@@ -451,16 +451,20 @@ cadastre dois secrets com os mesmos valores do `.env.local`:
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 
-O workflow (`.github/workflows/ci.yml`) já está configurado para injetá-los no
-passo de build. Um push em `main` deve rodar verde de ponta a ponta.
+Os dois workflows (`.github/workflows/ci.yml` e `deploy.yml`) já estão
+configurados para injetá-los no passo de build. Um push em `main` deve rodar
+verde de ponta a ponta.
 
-A esteira **não publica** o site: o repositório é privado, e o GitHub Pages
-não atende repositório privado no plano gratuito.
+São duas esteiras separadas, e elas rodam em paralelo no mesmo push: `ci.yml`
+confere o código, `deploy.yml` publica. Separadas porque falham por motivos
+diferentes, e a aba Actions fica dizendo qual das duas quebrou. Como uma não
+espera a outra, a de deploy roda os testes por conta própria antes de publicar
+— sem isso, um commit com teste quebrado subiria para o site enquanto o CI
+ainda estivesse pintando de vermelho ao lado.
 
-**Para voltar a publicar**, torne o repositório público e aponte Settings →
-Pages para "GitHub Actions". Depois disso falta devolver ao workflow o job de
-deploy (`actions/upload-pages-artifact` e `actions/deploy-pages`) com as
-permissões `pages: write` e `id-token: write`, que saíram junto.
+O deploy exige que o repositório seja público (o GitHub Pages não atende
+repositório privado no plano gratuito) e que Settings → Pages esteja em "GitHub
+Actions" — o que o passo `configure-pages` liga sozinho na primeira publicação.
 
 Confira também o `base` em `vite.config.ts`: um Pages de projeto serve a
 partir de `/<nome-do-repositório>/`, então renomear o repositório sem mexer

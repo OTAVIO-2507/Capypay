@@ -161,6 +161,21 @@ describe('reconcileData', () => {
   })
 
   /*
+   * O tema é conferido contra os três valores que existem, e não adotado como
+   * veio. O documento chega de fora do processo — do banco, de uma base antiga,
+   * de uma edição à mão no DevTools —, e um campo aceito sem conferência já não
+   * é do tipo que o resto do código supõe.
+   */
+  it('mantém o tema quando ele é um dos três, e cai no automático quando não é', () => {
+    expect(reconcileData({ settings: { theme: 'dark' } }).settings.theme).toBe('dark')
+    expect(reconcileData({ settings: { theme: 'light' } }).settings.theme).toBe('light')
+    expect(reconcileData({ settings: { theme: 'roxo' } }).settings.theme).toBe('system')
+    expect(reconcileData({ settings: { theme: 42 } }).settings.theme).toBe('system')
+    expect(reconcileData({ settings: {} }).settings.theme).toBe('system')
+    expect(reconcileData({}).settings.theme).toBe('system')
+  })
+
+  /*
    * `avatar.image`, ao contrário dos outros campos do perfil, vira caminho
    * de imagem direto — um id fora da lista de dez não pode atravessar sem
    * checagem, mesmo vindo de uma base que a própria aplicação gravou numa

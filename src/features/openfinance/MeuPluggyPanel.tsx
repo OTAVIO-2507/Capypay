@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Segmented, type SegmentOption } from '@/components/ui/Controls'
 import { Field, TextInput } from '@/components/ui/Field'
+import { shiftDate, todayIso } from '@/lib/date'
 import { listarConexoes, type Conexao } from './connectionsApi'
 import { registrarItemDoMeuPluggy, sincronizarComPluggy, type ExtratoSincronizado } from './pluggyApi'
 
@@ -46,11 +47,36 @@ const PERIODOS: readonly SegmentOption<string>[] = [
   { value: '24', label: '2 anos' },
 ]
 
+/**
+ * O formato do identificador de conexão da Pluggy, que é um UUID.
+ *
+ * Deliberadamente mais frouxo que a checagem do servidor: aqui só interessa
+ * separar "digitou errado" de "é um identificador", e uma regra mais estrita
+ * que a do servidor recusaria na tela algo que o servidor aceitaria — o pior
+ * tipo de divergência, porque não há como a pessoa descobrir qual das duas
+ * está certa.
+ */
+const PARECE_ITEM_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * A data de partida da busca, contada a partir de hoje.
+ *
+ * Usa `shiftDate` em vez de montar a data à mão, e os dois motivos são os que o
+ * cabeçalho de `lib/date.ts` descreve como aprendidos do jeito caro:
+ *
+ * `new Date(ano, mes - 3, dia).toISOString()` constrói no fuso local e formata
+ * em UTC. No Brasil o dia sobrevive por três horas de folga; em qualquer fuso a
+ * leste de Greenwich, a data volta um dia — e o produto passaria a buscar uma
+ * janela diferente da escolhida, sem nada na tela dizendo isso.
+ *
+ * E `mes - 3` transborda: em 31 de maio, três meses atrás é 31 de fevereiro,
+ * que o `Date` normaliza para 3 de março. A busca começaria três dias depois do
+ * pedido, e quem procurasse um lançamento do fim de fevereiro não o encontraria
+ * sem entender por quê. `shiftDate` fixa no último dia do mês, que é o que
+ * "mesmo dia, três meses atrás" quer dizer quando esse dia não existe.
+ */
 function inicioDe(mesesAtras: number): string {
-  const hoje = new Date()
-  return new Date(hoje.getFullYear(), hoje.getMonth() - mesesAtras, hoje.getDate())
-    .toISOString()
-    .slice(0, 10)
+  return shiftDate(todayIso(), -mesesAtras, 'month')
 }
 
 export function MeuPluggyPanel({ onExtratos }: Props) {
@@ -78,6 +104,22 @@ export function MeuPluggyPanel({ onExtratos }: Props) {
   async function vincular() {
     const limpo = itemId.trim()
     if (!limpo) return
+
+    /*
+     * O formato é conferido aqui só para a mensagem ser útil.
+     *
+     * Quem recusa de verdade é a Edge Function, e é lá que a recusa importa —
+     * mas a mensagem dela ("Informe a conexão do Meu Pluggy") foi escrita para
+     * campo vazio e não ajuda quem colou um pedaço do identificador ou copiou
+     * a linha errada do painel. Este campo é preenchido à mão, olhando para
+     * outra tela; errar aqui é o caso comum, não a exceção.
+     */
+    if (!PARECE_ITEM_ID.test(limpo)) {
+      setErro(
+        'Isto não parece um Item ID. Ele tem 36 caracteres, no formato 00000000-0000-0000-0000-000000000000, e fica no Dashboard da Pluggy.',
+      )
+      return
+    }
 
     setOcupado('vincular')
     setErro(null)

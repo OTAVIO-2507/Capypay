@@ -73,19 +73,27 @@ $$;
 revoke all on function public.mfa_satisfeita() from public, anon;
 grant execute on function public.mfa_satisfeita() to authenticated;
 
+-- As políticas abaixo chamam a função dentro de `(select ...)`, e não direto.
+-- Não é enfeite de estilo: escrita direta, a expressão é avaliada **por
+-- linha**, e a função consulta uma tabela. Envolvida num subselect sem
+-- referência à linha, o planejador a promove a InitPlan e a executa uma vez
+-- por consulta. É a mesma recomendação que o Supabase faz para `auth.uid()`, e
+-- vale mais aqui, porque isto não é a leitura de uma claim: é um `exists`
+-- contra `auth.mfa_factors`.
+
 drop policy if exists "exige segundo fator quando ha fator" on public.user_finance_data;
 create policy "exige segundo fator quando ha fator"
   on public.user_finance_data
   as restrictive
   to authenticated
-  using (public.mfa_satisfeita());
+  using ((select public.mfa_satisfeita()));
 
 drop policy if exists "exige segundo fator quando ha fator" on public.profiles;
 create policy "exige segundo fator quando ha fator"
   on public.profiles
   as restrictive
   to authenticated
-  using (public.mfa_satisfeita());
+  using ((select public.mfa_satisfeita()));
 
 -- `bank_connections` pode não existir: ela só nasce com a integração da Pluggy
 -- configurada (etapa opcional do SETUP.md). O bloco abaixo simplesmente não faz
@@ -100,7 +108,7 @@ begin
         on public.bank_connections
         as restrictive
         to authenticated
-        using (public.mfa_satisfeita());
+        using ((select public.mfa_satisfeita()));
     $sql$;
   end if;
 end $$;
