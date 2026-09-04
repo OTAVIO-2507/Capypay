@@ -1,5 +1,6 @@
 import type { Session } from '@supabase/supabase-js'
 import { create } from 'zustand'
+import { limparResiduosLocais } from '@/data/localCleanup'
 import { supabase } from '@/data/supabaseClient'
 import {
   descartarInscricao,
@@ -69,7 +70,18 @@ export const useAuthStore = create<AuthState>()((set) => ({
     // Limpo aqui, antes do listener reagir — evita que um erro antigo de
     // "conta não confirmada" sobreviva a uma saída manual e comum.
     set({ authError: null })
-    await supabase.auth.signOut()
+
+    /*
+     * `scope: 'global'` invalida a sessão no servidor, e não só neste
+     * navegador. Sem isso, o token de renovação continua valendo até expirar
+     * sozinho: quem tivesse copiado o armazenamento antes da saída seguiria
+     * dentro da conta, e "sair" teria sido só limpar a própria tela.
+     */
+    await supabase.auth.signOut({ scope: 'global' })
+
+    // Depois de sair, nada do que descreve a pessoa ou o dinheiro dela
+    // continua neste computador. Ver `data/localCleanup.ts`.
+    limparResiduosLocais()
   },
 }))
 

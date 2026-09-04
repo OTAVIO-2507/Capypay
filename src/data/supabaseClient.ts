@@ -22,4 +22,26 @@ if (!url || !anonKey) {
   )
 }
 
-export const supabase = createClient(url, anonKey)
+/*
+ * As opções vão escritas, e não deixadas no padrão.
+ *
+ * Todas coincidem com o padrão da biblioteca hoje. Estão aqui porque padrão é
+ * decisão de outra pessoa, que muda de versão em versão sem passar por revisão
+ * nossa — e estas três decidem onde o token da sessão vive e quando ele é
+ * criado, que é o material mais sensível que este cliente manipula.
+ *
+ * `flowType: 'pkce'` é a que muda alguma coisa: no fluxo anterior o token
+ * chegava no fragmento da URL, onde ele entra no histórico do navegador e pode
+ * vazar por extensão ou por captura de tela. Com PKCE, a URL carrega um código
+ * de uso único que só vale acompanhado de um segredo gerado neste navegador e
+ * que nunca sai dele.
+ */
+export const supabase = createClient(url, anonKey, {
+  auth: {
+    flowType: 'pkce',
+    persistSession: true,
+    autoRefreshToken: true,
+    // Necessário para o link de convite completar a entrada ao abrir o app.
+    detectSessionInUrl: true,
+  },
+})

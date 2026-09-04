@@ -19,10 +19,17 @@
 // `/v2/transactions` e não `/transactions`: a versão paginada por número de
 // página está marcada como descontinuada e sai do ar em 31/12/2026. Nascer já
 // no cursor evita uma migração daqui a alguns meses.
-import { createClient } from 'npm:@supabase/supabase-js@2'
+//
+// **As credenciais são da aplicação, não de quem chama.** É a frase que
+// governa este arquivo inteiro: a Pluggy responde qualquer `itemId` que ela
+// conheça, sem perguntar de quem ele é. Quem responde isso é a tabela
+// `bank_connections`, e é por isso que toda leitura passa por ela antes de
+// passar pela Pluggy.
+import { autenticar, clienteDeServico } from '../_shared/auth.ts'
+import { json, lerCorpoJson, origemPermitida, preflight } from '../_shared/http.ts'
+import { dentroDoLimite } from '../_shared/limite.ts'
+import { ehDataIso, ehUuid } from '../_shared/validacao.ts'
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const PLUGGY_CLIENT_ID = Deno.env.get('PLUGGY_CLIENT_ID') ?? ''
 const PLUGGY_CLIENT_SECRET = Deno.env.get('PLUGGY_CLIENT_SECRET') ?? ''
 
@@ -34,33 +41,13 @@ const MAXIMO_DE_PAGINAS = 20
 /** Quantos dias para trás, quando quem chama não diz. */
 const JANELA_PADRAO_EM_DIAS = 90
 
-function isAllowedOrigin(origin: string): boolean {
-  try {
-    const { hostname } = new URL(origin)
-    return hostname === 'localhost' || hostname.endsWith('.github.io')
-  } catch {
-    return false
-  }
-}
-
-const CABECALHOS_PERMITIDOS = 'authorization, content-type, apikey, x-client-info'
-
-function corsHeaders(origin: string | null): HeadersInit {
-  return {
-    'Access-Control-Allow-Origin': origin && isAllowedOrigin(origin) ? origin : 'null',
-    'Access-Control-Allow-Headers': CABECALHOS_PERMITIDOS,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Max-Age': '86400',
-    Vary: 'Origin',
-  }
-}
-
-function json(body: unknown, status: number, origin: string | null): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
-  })
-}
+/*
+ * Freio por conta. Cada sincronização são dezenas de chamadas à Pluggy, que
+ * tem cota própria: um laço aqui não derruba só esta função, gasta a cota da
+ * aplicação inteira e deixa todo mundo sem importar.
+ */
+const LIMITE_DE_SYNCS = 20
+const JANELA_MS = 60_000
 
 let apiKeyCache: { key: string; expiraEm: number } | null = null
 
@@ -185,9 +172,12 @@ function diasAtras(dias: number): string {
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin')
 
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders(origin) })
+  if (req.method === 'OPTIONS') return preflight(origin)
   if (req.method !== 'POST') {
     return json({ ok: false, error: 'Método não suportado.' }, 405, origin)
+  }
+  if (origin !== null && !origemPermitida(origin)) {
+    return json({ ok: false, error: 'Origem não autorizada.' }, 403, origin)
   }
 
   if (!PLUGGY_CLIENT_ID || !PLUGGY_CLIENT_SECRET) {
@@ -198,51 +188,100 @@ Deno.serve(async (req) => {
     )
   }
 
-  const authHeader = req.headers.get('authorization')
-  if (!authHeader) return json({ ok: false, error: 'Sessão ausente.' }, 401, origin)
+  const admin = clienteDeServico()
 
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
-  const { data: caller, error: callerError } = await admin.auth.getUser(
-    authHeader.replace(/^Bearer\s+/i, ''),
-  )
-  if (callerError || !caller.user) {
-    return json({ ok: false, error: 'Sessão inválida.' }, 401, origin)
+  const autenticacao = await autenticar(req, admin)
+  if (!autenticacao.ok) {
+    return json({ ok: false, error: autenticacao.erro }, autenticacao.status, origin)
+  }
+  const usuarioId = autenticacao.chamador.id
+
+  if (!dentroDoLimite(`sync:${usuarioId}`, LIMITE_DE_SYNCS, JANELA_MS)) {
+    return json(
+      { ok: false, error: 'Muitas buscas em pouco tempo. Espere um minuto e tente de novo.' },
+      429,
+      origin,
+    )
   }
 
-  let corpo: { action?: string; itemId?: string; dateFrom?: string }
-  try {
-    corpo = await req.json()
-  } catch {
-    return json({ ok: false, error: 'Corpo inválido.' }, 400, origin)
-  }
+  const corpo = await lerCorpoJson<{ action?: unknown; itemId?: unknown; dateFrom?: unknown }>(req)
+  if (!corpo) return json({ ok: false, error: 'Corpo inválido.' }, 400, origin)
 
-  const itemId = String(corpo.itemId ?? '').trim()
-  if (!itemId) return json({ ok: false, error: 'Informe a conexão do Meu Pluggy.' }, 400, origin)
+  /*
+   * O identificador da conexão é UUID na Pluggy, e é conferido como tal.
+   *
+   * Não é formalidade: ele entra numa URL e numa consulta ao banco. Aceitar
+   * qualquer texto obrigaria a confiar no `encodeURIComponent` como única
+   * barreira, e um formato fixo é uma barreira que não depende de ninguém
+   * lembrar de escapar nada.
+   */
+  if (!ehUuid(corpo.itemId)) {
+    return json({ ok: false, error: 'Informe a conexão do Meu Pluggy.' }, 400, origin)
+  }
+  const itemId = corpo.itemId
 
   try {
     /*
-     * `register` valida o item **antes** de gravá-lo.
+     * `register` valida o item **antes** de gravá-lo, em duas frentes.
      *
-     * O identificador é digitado à mão, copiado do portal, e um engano de
-     * digitação gravaria uma conexão que nunca vai sincronizar — a pessoa
+     * A primeira é de digitação: o identificador é copiado à mão do portal, e
+     * um engano gravaria uma conexão que nunca vai sincronizar — a pessoa
      * ficaria olhando para uma linha na tela esperando dados que não existem.
-     * Perguntar à Pluggy custa uma chamada e transforma o erro em mensagem na
-     * hora da digitação.
+     *
+     * A segunda é de posse, e é a que faltava. A versão anterior fazia
+     * `upsert(..., { onConflict: 'item_id' })` com a chave de serviço, que
+     * ignora RLS: quem informasse o `itemId` **de outra pessoa** reescrevia o
+     * `user_id` da linha para si e, no `pull` seguinte, lia o extrato bancário
+     * dela — passando por uma checagem de posse que ele mesmo tinha acabado de
+     * reescrever. A linha existente decide agora, e ela nunca troca de dono.
      */
     if (corpo.action === 'register') {
+      const { data: existente, error: erroExistente } = await admin
+        .from('bank_connections')
+        .select('user_id')
+        .eq('item_id', itemId)
+        .maybeSingle()
+
+      if (erroExistente) throw new Error(`consulta falhou: ${erroExistente.message}`)
+
+      if (existente && existente.user_id !== usuarioId) {
+        /*
+         * A mensagem não confirma que a conexão existe e é de outra pessoa —
+         * isso transformaria esta função num verificador de identificadores
+         * alheios. Ela diz o que quem digitou precisa saber: não deu, confira.
+         */
+        console.warn('pluggy-sync: tentativa de vincular item de outra conta', itemId)
+        return json(
+          { ok: false, error: 'Não foi possível vincular esta conexão a esta conta.' },
+          409,
+          origin,
+        )
+      }
+
+      // Só depois da posse resolvida é que a Pluggy é consultada: perguntar
+      // antes gastaria uma chamada para responder sobre item alheio.
       await pluggyGet(`/items/${encodeURIComponent(itemId)}`)
 
-      const { error } = await admin.from('bank_connections').upsert(
-        {
-          user_id: caller.user.id,
-          provider: 'pluggy',
-          item_id: itemId,
-          pending_sync: true,
-          last_error: null,
-        },
-        { onConflict: 'item_id' },
-      )
-      if (error) throw new Error(`upsert falhou: ${error.message}`)
+      const registro = {
+        user_id: usuarioId,
+        provider: 'pluggy',
+        item_id: itemId,
+        pending_sync: true,
+        last_error: null,
+      }
+
+      // Linha nova é `insert`; renovar a própria é `update` com o dono fixado
+      // na condição. Nenhum dos dois caminhos consegue trocar o `user_id` de
+      // uma linha que já existe, que era exatamente o que o `upsert` permitia.
+      const { error } = existente
+        ? await admin
+            .from('bank_connections')
+            .update(registro)
+            .eq('item_id', itemId)
+            .eq('user_id', usuarioId)
+        : await admin.from('bank_connections').insert(registro)
+
+      if (error) throw new Error(`gravação falhou: ${error.message}`)
 
       return json({ ok: true, itemId }, 200, origin)
     }
@@ -260,7 +299,7 @@ Deno.serve(async (req) => {
       .from('bank_connections')
       .select('item_id')
       .eq('item_id', itemId)
-      .eq('user_id', caller.user.id)
+      .eq('user_id', usuarioId)
       .maybeSingle()
 
     if (conexaoError) throw new Error(`consulta falhou: ${conexaoError.message}`)
@@ -268,7 +307,7 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: 'Esta conexão não está vinculada à sua conta.' }, 403, origin)
     }
 
-    const dateFrom = corpo.dateFrom?.match(/^\d{4}-\d{2}-\d{2}$/)
+    const dateFrom = ehDataIso(corpo.dateFrom)
       ? corpo.dateFrom
       : diasAtras(JANELA_PADRAO_EM_DIAS)
 
@@ -305,8 +344,16 @@ Deno.serve(async (req) => {
 
         const proxima = resposta.next
         if (typeof proxima !== 'string' || proxima === '') break
-        // `next` já vem como query string pronta; só falta o caminho na frente.
-        caminho = proxima.startsWith('/') ? proxima : `/v2/transactions?${proxima.replace(/^\?/, '')}`
+        /*
+         * `next` vem da Pluggy, mas é usado para montar um caminho nosso: um
+         * valor absoluto ali (`https://outro-host/...`) faria a chamada
+         * seguinte sair com a `X-API-KEY` da aplicação no cabeçalho, para um
+         * servidor que não é o deles. Aceitar só caminho relativo é o que
+         * mantém a chave dentro de casa.
+         */
+        const seguinte = proxima.replace(/^\?/, '')
+        if (seguinte.includes('://') || seguinte.startsWith('//')) break
+        caminho = seguinte.startsWith('/') ? seguinte : `/v2/transactions?${seguinte}`
       }
 
       extratos.push({
@@ -365,7 +412,7 @@ Deno.serve(async (req) => {
       .from('bank_connections')
       .update({ pending_sync: false, last_error: null })
       .eq('item_id', itemId)
-      .eq('user_id', caller.user.id)
+      .eq('user_id', usuarioId)
 
     return json({ ok: true, dateFrom, statements: extratos }, 200, origin)
   } catch (erro) {

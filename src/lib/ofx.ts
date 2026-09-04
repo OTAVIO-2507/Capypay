@@ -151,7 +151,22 @@ function decodificarEntidades(texto: string): string {
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
-    .replace(/&#(\d+);/g, (_, codigo: string) => String.fromCodePoint(Number(codigo)))
+    /*
+     * O número da entidade é conferido antes de virar caractere.
+     *
+     * `String.fromCodePoint` **lança** fora da faixa Unicode, e `&#999999999;`
+     * cabe num arquivo tanto quanto `&#233;`. A exceção subiria de dentro de
+     * uma função de decodificação de texto, num arquivo que a pessoa acabou de
+     * escolher — e o que ela veria é uma falha de leitura sem explicação. Fora
+     * da faixa, a entidade fica como está: mostrar o texto cru é melhor do que
+     * não mostrar o extrato.
+     */
+    .replace(/&#(\d+);/g, (original, codigo: string) => {
+      const ponto = Number(codigo)
+      return Number.isInteger(ponto) && ponto >= 0 && ponto <= 0x10ffff
+        ? String.fromCodePoint(ponto)
+        : original
+    })
 }
 
 /**

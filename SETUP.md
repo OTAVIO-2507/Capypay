@@ -391,6 +391,58 @@ Quem perdeu o aparelho não consegue chegar em Ajustes, porque a conta trava
 na tela de código. Nesse caso, um admin resolve em **Usuários → (abrir a
 conta) → Remover verificação em duas etapas**.
 
+## Etapa 2d — Endurecimento do banco (obrigatória)
+
+Rode [`supabase/security.sql`](supabase/security.sql) inteiro no **SQL Editor**,
+uma vez. Ele não cria tabela nenhuma: ajusta permissões e políticas do que as
+etapas anteriores já criaram, e é idempotente — rodar duas vezes não faz mal.
+
+O que ele muda, e por que cada coisa importa:
+
+- **A verificação em duas etapas passa a valer no servidor.** Sem ele, uma
+  sessão que passou pela senha e parou antes do código continua podendo ler e
+  escrever os dados financeiros pela API REST do projeto: quem a barra é o
+  guarda de rota, que mora no navegador. Contas sem aplicativo autenticador
+  cadastrado não sentem diferença — a regra só vale para quem ativou.
+- **A escrita em `bank_connections` fecha para o navegador.** Criar uma conexão
+  exige perguntar "este identificador já é de outra pessoa?", e o navegador não
+  tem como: as linhas dos outros são invisíveis para ele. A pergunta só existe
+  onde a chave de serviço enxerga a tabela inteira, que é a Edge Function. Ler e
+  desvincular continuam do lado do cliente.
+- **Teto de 5 MB no documento financeiro**, que era uma coluna `jsonb` sem
+  limite nenhum.
+- **Permissões de `anon` e `authenticated` escritas**, em vez de herdadas do
+  padrão do Postgres.
+
+O arquivo termina com três consultas de conferência. Vale rodá-las e ler o
+resultado: a segunda precisa devolver vazio.
+
+**Depois de rodar o script, republique as quatro Edge Functions.** Elas não
+passam pelo CI nem pelo build do site, e as correções de servidor da mesma
+revisão só existem no repositório até isso ser feito:
+
+```bash
+npx supabase functions deploy admin-users --project-ref mkxjmrmkgsetnclfkxcj
+npx supabase functions deploy pluggy-connect-token --project-ref mkxjmrmkgsetnclfkxcj
+npx supabase functions deploy pluggy-sync --project-ref mkxjmrmkgsetnclfkxcj
+npx supabase functions deploy pluggy-webhook --no-verify-jwt --project-ref mkxjmrmkgsetnclfkxcj
+```
+
+As funções compartilham código em `supabase/functions/_shared/`, que a CLI
+inclui no pacote de cada uma automaticamente. Uma mudança lá vale para todas,
+mas só depois de todas serem republicadas.
+
+**Origens permitidas.** O padrão são `https://otavio-2507.github.io` e o
+`localhost` de desenvolvimento. Se o endereço do site mudar, ajuste sem publicar
+código:
+
+```bash
+npx supabase secrets set ALLOWED_ORIGINS=https://outro-endereco,http://localhost:5173 --project-ref mkxjmrmkgsetnclfkxcj
+```
+
+O raciocínio inteiro por trás destas mudanças, e o que ainda fica em aberto,
+está em [`SECURITY.md`](SECURITY.md).
+
 ## Etapa 3 — Deploy (GitHub Actions)
 
 Em **Settings → Secrets and variables → Actions** no repositório GitHub,
@@ -417,8 +469,16 @@ está em `/Capypay/`.
 
 **Teste manual #3**, quando houver site publicado: abra-o (não `localhost`) e
 confirme que o login funciona a partir dali. Se der erro de CORS, a origem
-precisa estar liberada em `supabase/functions/admin-users/index.ts`
-(`isAllowedOrigin` já cobre qualquer `*.github.io`).
+precisa estar na lista de `supabase/functions/_shared/http.ts` — ou, sem
+publicar código, no secret `ALLOWED_ORIGINS` (ver Etapa 2d). Diferente da
+versão anterior, a lista é de origens **exatas**: um `*.github.io` genérico
+liberava qualquer página publicada por qualquer pessoa no GitHub Pages.
+
+Confira também o console do navegador nesse primeiro acesso. O build publica
+uma política de segurança de conteúdo montada em `vite.config.ts`, e é ali que
+aparece qualquer recurso que ela esteja recusando — a política não existe no
+`npm run dev`, então este é o primeiro lugar em que ela é exercitada de
+verdade. `npm run preview` reproduz o mesmo build localmente.
 
 ## O que ainda não existe (decisão consciente, não esquecimento)
 

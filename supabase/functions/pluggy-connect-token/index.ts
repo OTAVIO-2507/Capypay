@@ -16,42 +16,22 @@
 //
 //   POST https://api.pluggy.ai/auth           { clientId, clientSecret } -> { apiKey }
 //   POST https://api.pluggy.ai/connect_token  X-API-KEY, { options: { clientUserId } } -> { accessToken }
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { autenticar, clienteDeServico } from '../_shared/auth.ts'
+import { json, origemPermitida, preflight } from '../_shared/http.ts'
+import { dentroDoLimite } from '../_shared/limite.ts'
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
-const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 const PLUGGY_CLIENT_ID = Deno.env.get('PLUGGY_CLIENT_ID') ?? ''
 const PLUGGY_CLIENT_SECRET = Deno.env.get('PLUGGY_CLIENT_SECRET') ?? ''
 
 const PLUGGY_API = 'https://api.pluggy.ai'
 
-function isAllowedOrigin(origin: string): boolean {
-  try {
-    const { hostname } = new URL(origin)
-    return hostname === 'localhost' || hostname.endsWith('.github.io')
-  } catch {
-    return false
-  }
-}
-
-const CABECALHOS_PERMITIDOS = 'authorization, content-type, apikey, x-client-info'
-
-function corsHeaders(origin: string | null): HeadersInit {
-  return {
-    'Access-Control-Allow-Origin': origin && isAllowedOrigin(origin) ? origin : 'null',
-    'Access-Control-Allow-Headers': CABECALHOS_PERMITIDOS,
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Max-Age': '86400',
-    Vary: 'Origin',
-  }
-}
-
-function json(body: unknown, status: number, origin: string | null): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders(origin), 'Content-Type': 'application/json' },
-  })
-}
+/*
+ * Freio por conta. Connect Token é credencial: um laço aqui emite centenas
+ * delas por minuto e queima a cota da aplicação na Pluggy. Abrir o widget
+ * algumas vezes seguidas é uso normal; dez vezes por minuto não é.
+ */
+const LIMITE_DE_TOKENS = 10
+const JANELA_MS = 60_000
 
 /**
  * A API Key da Pluggy, guardada entre chamadas.
@@ -97,11 +77,12 @@ async function obterApiKey(): Promise<string> {
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin')
 
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders(origin) })
-  }
+  if (req.method === 'OPTIONS') return preflight(origin)
   if (req.method !== 'POST') {
     return json({ ok: false, error: 'Método não suportado.' }, 405, origin)
+  }
+  if (origin !== null && !origemPermitida(origin)) {
+    return json({ ok: false, error: 'Origem não autorizada.' }, 403, origin)
   }
 
   if (!PLUGGY_CLIENT_ID || !PLUGGY_CLIENT_SECRET) {
@@ -112,17 +93,11 @@ Deno.serve(async (req) => {
     )
   }
 
-  const authHeader = req.headers.get('authorization')
-  if (!authHeader) {
-    return json({ ok: false, error: 'Sessão ausente.' }, 401, origin)
-  }
-  const jwt = authHeader.replace(/^Bearer\s+/i, '')
+  const admin = clienteDeServico()
 
-  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
-
-  const { data: callerData, error: callerError } = await admin.auth.getUser(jwt)
-  if (callerError || !callerData.user) {
-    return json({ ok: false, error: 'Sessão inválida.' }, 401, origin)
+  const autenticacao = await autenticar(req, admin)
+  if (!autenticacao.ok) {
+    return json({ ok: false, error: autenticacao.erro }, autenticacao.status, origin)
   }
 
   /*
@@ -133,9 +108,17 @@ Deno.serve(async (req) => {
    * abriria uma conexão bancária carimbada como dela, e a partir daí as contas
    * conectadas chegariam vinculadas à conta errada. O id de quem chama já está
    * provado pelo JWT — não há motivo para perguntar de novo, e perguntar é o
-   * que cria a brecha.
+   * que cria a brecha. O corpo desta requisição não é lido em lugar nenhum.
    */
-  const clientUserId = callerData.user.id
+  const clientUserId = autenticacao.chamador.id
+
+  if (!dentroDoLimite(`token:${clientUserId}`, LIMITE_DE_TOKENS, JANELA_MS)) {
+    return json(
+      { ok: false, error: 'Muitas tentativas em pouco tempo. Espere um minuto.' },
+      429,
+      origin,
+    )
+  }
 
   try {
     const apiKey = await obterApiKey()

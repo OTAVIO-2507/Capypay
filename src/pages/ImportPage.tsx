@@ -59,6 +59,17 @@ const ORIGENS: readonly SegmentOption<Origem>[] = [
   { value: 'pluggy', label: 'Meu Pluggy' },
 ]
 
+/**
+ * Teto do arquivo aceito.
+ *
+ * Dez megabytes de OFX são centenas de milhares de lançamentos — muito além do
+ * que qualquer extrato pessoal traz, e já bem acima do que o reconhecimento de
+ * séries processa sem a aba engasgar. O limite não protege um servidor (não há
+ * servidor nesse caminho: o arquivo é lido no próprio dispositivo); protege a
+ * janela de quem clicou no arquivo errado.
+ */
+const MAXIMO_DO_ARQUIVO = 10 * 1024 * 1024
+
 export function ImportPage() {
   const navegar = useNavigate()
   const transactions = useTransactions()
@@ -135,6 +146,18 @@ export function ImportPage() {
 
   async function receberArquivo(arquivo: File) {
     setErro(null)
+
+    /*
+     * Extrato de banco é arquivo de texto: um ano inteiro de lançamentos não
+     * passa de alguns megabytes. Acima disso não é extrato — é arquivo trocado
+     * por engano, ou um arquivo montado para travar a aba, já que a leitura e o
+     * reconhecimento acontecem na mesma linha de execução que desenha a tela.
+     * Recusar antes de ler é o que mantém a recusa barata.
+     */
+    if (arquivo.size > MAXIMO_DO_ARQUIVO) {
+      setErro('Este arquivo é grande demais para um extrato. O limite é de 10 MB.')
+      return
+    }
 
     try {
       const lidos = parseOfx(decodeOfxBytes(await arquivo.arrayBuffer()))

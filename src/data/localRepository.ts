@@ -6,6 +6,18 @@ import type { FinanceRepository } from './repository'
 /**
  * Persistência no navegador.
  *
+ * **Fora de uso.** Nada no aplicativo importa este arquivo desde que os dados
+ * passaram a viver no Supabase (`supabaseRepository.ts`, o único repositório
+ * que a `financeStore` conhece). Ele permanece porque `loadFromStorage`
+ * documenta o formato da base antiga que `migrate.ts` ainda sabe converter.
+ *
+ * Religar isto é uma decisão de privacidade, e não de arquitetura: o que ele
+ * grava é o documento financeiro **inteiro**, em claro, num armazenamento que
+ * sobrevive ao fechar do navegador e que nenhum servidor consegue apagar
+ * depois. Se voltar a ser usado, precisa vir acompanhado de limpeza na saída
+ * da conta — é o que `data/localCleanup.ts` faz hoje com as chaves que
+ * versões anteriores deixaram para trás.
+ *
  * `localStorage` pode simplesmente não existir: navegação privativa em alguns
  * navegadores, cookies bloqueados, iframe restrito. Nesses casos o aplicativo
  * segue funcionando em memória durante a sessão em vez de quebrar na abertura —

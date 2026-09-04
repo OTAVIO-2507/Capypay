@@ -15,11 +15,45 @@ export const MINIMO_SENHA = 6
  * `0`, `O`, `l` e `1`: esta senha vai ser lida em voz alta ou copiada à mão
  * por alguém, e um caractere ambíguo vira um chamado de suporte.
  */
+const ALFABETO = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+
+/**
+ * Quantidade de caracteres da senha sorteada.
+ *
+ * Quatorze caracteres neste alfabeto de 55 são cerca de 81 bits — muito além
+ * do que faz diferença para uma senha que existe até a pessoa trocá-la, e
+ * ainda curta o bastante para caber numa mensagem sem quebrar linha.
+ */
+const COMPRIMENTO = 14
+
+/*
+ * O maior múltiplo do alfabeto que cabe num byte.
+ *
+ * `byte % 55` parece inofensivo e não é: 256 não é múltiplo de 55, então os
+ * 36 primeiros caracteres do alfabeto saem com probabilidade maior que os
+ * outros 19. O desvio é pequeno, e é exatamente o tipo de coisa que se acumula
+ * quando alguém decide procurar por ele. Descartar os bytes que caem no pedaço
+ * incompleto custa uma repetição eventual e devolve um sorteio uniforme.
+ */
+const TETO = Math.floor(256 / ALFABETO.length) * ALFABETO.length
+
 function sortearSenha(): string {
-  const alfabeto = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
-  const bytes = new Uint8Array(14)
-  crypto.getRandomValues(bytes)
-  return Array.from(bytes, (byte) => alfabeto[byte % alfabeto.length]).join('')
+  const escolhidos: string[] = []
+
+  while (escolhidos.length < COMPRIMENTO) {
+    // Pede com folga: em média 14 bytes bastam, e pedir de uma vez evita uma
+    // chamada por caractere.
+    const bytes = new Uint8Array(COMPRIMENTO)
+    crypto.getRandomValues(bytes)
+
+    for (const byte of bytes) {
+      if (byte >= TETO) continue
+      escolhidos.push(ALFABETO[byte % ALFABETO.length])
+      if (escolhidos.length === COMPRIMENTO) break
+    }
+  }
+
+  return escolhidos.join('')
 }
 
 /**

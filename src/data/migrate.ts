@@ -237,6 +237,10 @@ export function migrateLegacyData(rawJson: string): FinanceData | null {
   }
 }
 
+function ehTema(valor: unknown): valor is FinanceData['settings']['theme'] {
+  return valor === 'light' || valor === 'dark' || valor === 'system'
+}
+
 /**
  * Aplica migrações entre versões do formato atual e completa campos que
  * versões futuras venham a adicionar. Um dado salvo por uma versão anterior
@@ -252,7 +256,13 @@ export function reconcileData(raw: unknown): FinanceData {
     schemaVersion: SCHEMA_VERSION,
     profile: reconcileProfile(data.profile),
     settings: {
-      theme: data.settings?.theme ?? 'system',
+      // O valor é conferido contra os três que existem, e não adotado como
+      // veio. O documento chega de fora do processo — do banco, de uma base
+      // antiga, de uma edição à mão no DevTools —, e um campo aceito sem
+      // conferência é um campo que já não é do tipo que o resto do código
+      // supõe. Aqui a consequência seria pequena; o hábito é que não pode ser
+      // seletivo.
+      theme: ehTema(data.settings?.theme) ? data.settings.theme : 'system',
       privacyMode: data.settings?.privacyMode === true,
     },
     accounts: Array.isArray(data.accounts) ? data.accounts : [],

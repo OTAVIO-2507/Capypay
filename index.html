@@ -9,6 +9,12 @@
       content="Controle de finanças pessoais que roda inteiro no navegador: lançamentos, limites por categoria e metas, sem servidor e sem cadastro."
     />
     <meta name="theme-color" content="#edeef0" />
+    <!--
+      O endereço completo nunca é enviado a outro site. Sem isto, o caminho da
+      tela em que a pessoa estava viaja no `Referer` de toda requisição para
+      fora — e num aplicativo de finanças o caminho já conta algo.
+    -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="icon" type="image/png" href="./favicon.png" />
     <link rel="apple-touch-icon" href="./favicon.png" />
 
@@ -20,8 +26,37 @@
        * escuro vê um lampejo branco a cada carregamento. É o único trecho de
        * script inline do projeto, e existe justamente porque precisa rodar
        * antes do bundle.
+       *
+       * A política de segurança de conteúdo (montada em `vite.config.ts`)
+       * libera este bloco pelo resumo do conteúdo dele, e não por
+       * `unsafe-inline`: qualquer edição aqui muda o resumo, e o plugin
+       * recalcula no build. Um script injetado por outra via não tem resumo
+       * autorizado e não roda.
        */
       ;(function () {
+        /*
+         * Recusa ser exibido dentro de um quadro de outro site.
+         *
+         * `frame-ancestors` seria o certo, mas ele é ignorado quando a
+         * política vem por `<meta>` — e o GitHub Pages não deixa mandar
+         * cabeçalho. Sem alguma barreira, dá para embutir o aplicativo numa
+         * página alheia, cobri-lo com uma isca e colher cliques de quem acha
+         * que está clicando em outra coisa. Enquanto o topo não for esta
+         * mesma janela, nada é pintado.
+         */
+        try {
+          if (window.top !== window.self) {
+            document.documentElement.style.display = 'none'
+            window.top.location = window.self.location.href
+            return
+          }
+        } catch (error) {
+          // Nem ler `window.top` foi permitido: é quadro de outra origem, e a
+          // resposta certa é a mesma.
+          document.documentElement.style.display = 'none'
+          return
+        }
+
         try {
           var raw = localStorage.getItem('controle-financeiro/v2')
           var theme = raw ? JSON.parse(raw).settings.theme : 'system'

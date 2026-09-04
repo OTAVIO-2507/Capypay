@@ -9,6 +9,7 @@ import { Field, TextInput } from '@/components/ui/Field'
 import { supabase } from '@/data/supabaseClient'
 import type { ThemePreference } from '@/domain/types'
 import { AdminProfileDialog } from '@/features/admin/AdminProfileDialog'
+import { senhaAtualConfere } from '@/features/security/confirmarSenha'
 import { TwoFactorCard } from '@/features/security/TwoFactorCard'
 import { useAdminProfile, useAdminPreferences } from '@/store/adminPreferences'
 import { useAuthStore } from '@/store/authStore'
@@ -111,9 +112,18 @@ function Aparencia() {
  */
 function TrocarSenha() {
   const email = useAuthStore((state) => state.session?.user.email)
+  const [atual, setAtual] = useState('')
   const [senha, setSenha] = useState('')
   const [confirmacao, setConfirmacao] = useState('')
-  const [erro, setErro] = useState<string | null>(null)
+  /*
+   * O erro guarda a qual campo pertence.
+   *
+   * Antes era só um texto, e havia só um lugar onde ele podia estar errado.
+   * Com a senha atual no formulário são dois, e uma recusa de "a senha atual
+   * não confere" exibida sob "Repita a nova senha" manda a pessoa corrigir o
+   * campo errado.
+   */
+  const [erro, setErro] = useState<{ campo: 'atual' | 'nova'; texto: string } | null>(null)
   const [pronto, setPronto] = useState(false)
   const [enviando, setEnviando] = useState(false)
 
@@ -122,19 +132,52 @@ function TrocarSenha() {
     setErro(null)
     setPronto(false)
 
+    if (atual === '') {
+      return setErro({ campo: 'atual', texto: 'Informe a senha atual.' })
+    }
     if (senha.length < MINIMO_SENHA) {
-      return setErro(`A senha precisa de pelo menos ${MINIMO_SENHA} caracteres.`)
+      return setErro({
+        campo: 'nova',
+        texto: `A senha precisa de pelo menos ${MINIMO_SENHA} caracteres.`,
+      })
     }
     if (senha !== confirmacao) {
-      return setErro('As duas senhas não são iguais.')
+      return setErro({ campo: 'nova', texto: 'As duas senhas não são iguais.' })
+    }
+    if (!email) {
+      return setErro({
+        campo: 'atual',
+        texto: 'Sessão sem e-mail. Entre de novo antes de trocar a senha.',
+      })
     }
 
     setEnviando(true)
+
+    /*
+     * A senha atual é conferida antes, e conferida pelo servidor.
+     *
+     * Sem isto, `updateUser` troca a senha com a sessão que já está aberta e
+     * mais nada: bastaria alguém pegar este computador desbloqueado por dois
+     * minutos para virar dono da conta, com quem é dono do lado de fora. Ver
+     * `features/security/confirmarSenha.ts` para por que a verificação usa um
+     * cliente à parte.
+     */
+    if (!(await senhaAtualConfere(email, atual))) {
+      setEnviando(false)
+      return setErro({ campo: 'atual', texto: 'A senha atual não confere.' })
+    }
+
     const { error } = await supabase.auth.updateUser({ password: senha })
     setEnviando(false)
 
-    if (error) return setErro('Não foi possível trocar a senha. Tente entrar de novo.')
+    if (error) {
+      return setErro({
+        campo: 'nova',
+        texto: 'Não foi possível trocar a senha. Tente entrar de novo.',
+      })
+    }
 
+    setAtual('')
     setSenha('')
     setConfirmacao('')
     setPronto(true)
@@ -148,6 +191,24 @@ function TrocarSenha() {
       />
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        <Field
+          label="Senha atual"
+          hint="Confirma que é você quem está trocando."
+          error={erro?.campo === 'atual' ? erro.texto : undefined}
+        >
+          {({ id, describedBy, invalid }) => (
+            <TextInput
+              id={id}
+              type="password"
+              autoComplete="current-password"
+              aria-describedby={describedBy}
+              invalid={invalid}
+              value={atual}
+              onChange={(event) => setAtual(event.target.value)}
+            />
+          )}
+        </Field>
+
         <Field label="Nova senha" hint={`Pelo menos ${MINIMO_SENHA} caracteres.`}>
           {({ id, describedBy }) => (
             <TextInput
@@ -161,7 +222,10 @@ function TrocarSenha() {
           )}
         </Field>
 
-        <Field label="Repita a nova senha" error={erro ?? undefined}>
+        <Field
+          label="Repita a nova senha"
+          error={erro?.campo === 'nova' ? erro.texto : undefined}
+        >
           {({ id, describedBy, invalid }) => (
             <TextInput
               id={id}

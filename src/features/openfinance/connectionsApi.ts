@@ -1,4 +1,5 @@
 import { supabase } from '@/data/supabaseClient'
+import { registrarItemDoMeuPluggy } from './pluggyApi'
 
 const TABELA = 'bank_connections'
 
@@ -63,30 +64,21 @@ export async function esquecerConexao(itemId: string): Promise<void> {
 /**
  * Registra a autorização recém-concedida.
  *
- * `upsert` e não `insert`: reconectar o mesmo banco devolve o mesmo `itemId`,
- * e um insert simples falharia na chave única. Reconectar é renovar, não
- * criar — e é justamente o gesto que resolve uma conexão quebrada, então
- * `last_error` volta a nulo e a conexão volta a valer como pendente de
+ * Escrever daqui, direto na tabela, é o que esta função **deixou** de fazer.
+ * A gravação passa pela Edge Function `pluggy-sync`, e a diferença não é de
+ * arrumação:
+ *
+ * - a função confere se aquele identificador já pertence a outra conta antes
+ *   de gravar, coisa que o navegador não tem como perguntar (ele só enxerga as
+ *   próprias linhas);
+ * - com a escrita fechada no banco para o navegador, existe **um** caminho
+ *   para uma conexão nascer, e é um caminho que valida. Dois caminhos, sendo
+ *   que só um valida, é o mesmo que nenhum.
+ *
+ * Reconectar continua funcionando como antes: a função trata a linha existente
+ * como renovação, zera o último erro e marca a conexão como pendente de
  * importação.
  */
-export async function registrarConexao(itemId: string, provider = 'pluggy'): Promise<void> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) throw new Error('Sessão ausente.')
-
-  const { error } = await supabase.from(TABELA).upsert(
-    {
-      user_id: user.id,
-      provider,
-      item_id: itemId,
-      pending_sync: true,
-      last_event: null,
-      last_event_at: null,
-      last_error: null,
-    },
-    { onConflict: 'item_id' },
-  )
-
-  if (error) throw new Error('Não foi possível registrar a conexão bancária.', { cause: error })
+export async function registrarConexao(itemId: string): Promise<void> {
+  await registrarItemDoMeuPluggy(itemId)
 }
