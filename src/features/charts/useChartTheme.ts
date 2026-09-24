@@ -18,7 +18,7 @@ export interface ChartTheme {
   income: string
   expense: string
   contribution: string
-  /** A mesma identidade, calibrada para o bloco de tinta — usada no balão do gráfico. */
+  /** A mesma identidade, calibrada para pousar sobre a pílula clara. */
   incomeOnBlock: string
   expenseOnBlock: string
   contributionOnBlock: string

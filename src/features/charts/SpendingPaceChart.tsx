@@ -10,6 +10,7 @@ import {
 } from 'recharts'
 import type { SpendingPace } from '@/domain/selectors'
 import { formatCurrencyCompact } from '@/lib/format'
+import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion'
 import { usePrivacy } from '@/store/hooks'
 import { ChartTooltipBody } from './ChartTooltip'
 import { useChartTheme } from './useChartTheme'
@@ -35,6 +36,7 @@ import { useChartTheme } from './useChartTheme'
 export function SpendingPaceChart({ pace }: { pace: SpendingPace }) {
   const theme = useChartTheme()
   const masked = usePrivacy()
+  const semMovimento = usePrefersReducedMotion()
 
   const ultimo = pace.points.find((ponto) => ponto.day === pace.dayCursor)
   const diasNoMes = pace.points.length
@@ -86,6 +88,19 @@ export function SpendingPaceChart({ pace }: { pace: SpendingPace }) {
             }}
           />
 
+          {/*
+            As duas linhas são desenhadas, da esquerda para a direita, toda vez
+            que a tela abre. É a única animação do produto sobre um dado, e ela
+            se justifica: a linha *é* o tempo passando, e vê-la ser traçada diz
+            o que ela significa antes de qualquer legenda. O mês passado vem
+            primeiro, porque é o contexto; o mês corrente vem por cima dele,
+            que é a ordem em que se lê.
+
+            Duração longa para os padrões do sistema — 700ms e 900ms contra os
+            220ms de uma entrada de painel — porque aqui a animação não é
+            confirmação de clique, é a explicação de uma curva. Com
+            `prefers-reduced-motion`, as duas aparecem prontas.
+          */}
           <Line
             type="monotone"
             dataKey="previous"
@@ -93,7 +108,9 @@ export function SpendingPaceChart({ pace }: { pace: SpendingPace }) {
             strokeWidth={1.5}
             strokeDasharray="4 4"
             dot={false}
-            isAnimationActive={false}
+            isAnimationActive={!semMovimento}
+            animationDuration={700}
+            animationEasing="ease-out"
           />
           <Line
             type="monotone"
@@ -103,7 +120,10 @@ export function SpendingPaceChart({ pace }: { pace: SpendingPace }) {
             dot={false}
             /* `connectNulls` desligado é o que faz a linha parar em hoje. */
             connectNulls={false}
-            isAnimationActive={false}
+            isAnimationActive={!semMovimento}
+            animationBegin={120}
+            animationDuration={900}
+            animationEasing="ease-out"
           />
 
           {/*
@@ -119,6 +139,9 @@ export function SpendingPaceChart({ pace }: { pace: SpendingPace }) {
               fill={theme.ink}
               stroke={theme.sheet}
               strokeWidth={2}
+              /* Aparece quando a linha termina de ser traçada: o ponto marca
+                 o fim dela, e chegar antes seria chegar sozinho. */
+              className={semMovimento ? undefined : 'ponto-do-ritmo'}
             />
           ) : null}
         </LineChart>

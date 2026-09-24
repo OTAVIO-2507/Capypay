@@ -8,6 +8,7 @@ import { formatMonthLong, formatMonthShort } from '@/lib/date'
 import { usePrivacy } from '@/store/hooks'
 import { ChartTooltipBody } from './ChartTooltip'
 import { useChartTheme } from './useChartTheme'
+import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion'
 
 interface FlowChartProps {
   data: MonthlyFlowPoint[]
@@ -23,12 +24,11 @@ const SERIES = [
 /**
  * Fluxo dos últimos seis meses em colunas agrupadas.
  *
- * As três séries vestem a identidade de fluxo — a segunda exceção de cor do
- * sistema, fixa e nunca escolhida (ver DESIGN.md, "As Duas Exceções de
- * Cor"). Antes eram uma rampa ordinal monocromática; a cor aqui substitui
- * o degrau de luminosidade pelo mesmo matiz que a Figura, o ícone da lista de
- * lançamentos e o resumo do período já usam para a mesma categoria — o
- * gráfico deixa de ser o único lugar sem essa pista.
+ * As três séries vestem a identidade de fluxo — fixa, nunca escolhida por
+ * quem usa. Elas já foram uma rampa de luminosidade, e a cor substituiu esse
+ * degrau pelo mesmo matiz que a Figura, o ícone da lista de lançamentos e o
+ * resumo do período usam para a mesma categoria: o gráfico deixou de ser o
+ * único lugar sem essa pista.
  *
  * Como a identidade é o único canal de cor que sobra, a legenda é obrigatória
  * e o gráfico nunca passa de três séries — a quarta não teria matiz fixo
@@ -36,6 +36,9 @@ const SERIES = [
  */
 export function FlowChart({ data, className }: FlowChartProps) {
   const theme = useChartTheme()
+  // As colunas crescem por JavaScript, e a regra de movimento reduzido do
+  // CSS não alcança isso. Ver `usePrefersReducedMotion`.
+  const semMovimento = usePrefersReducedMotion()
   const masked = usePrivacy()
   const hasData = data.some((point) => point.income + point.expense + point.contribution > 0)
 
@@ -121,6 +124,7 @@ export function FlowChart({ data, className }: FlowChartProps) {
                 // base e não deve parecer flutuar sobre ela.
                 radius={[4, 4, 0, 0]}
                 maxBarSize={16}
+                isAnimationActive={!semMovimento}
               />
             ))}
           </BarChart>

@@ -1,7 +1,5 @@
-import { Icon, type IconName } from '@/components/Icon'
-import { Card } from '@/components/ui/Card'
-import { Money } from '@/components/ui/Money'
-import { cn } from '@/lib/cn'
+import type { IconName } from '@/components/Icon'
+import { SummaryCard, type SummaryStat } from '@/components/ui/SummaryCard'
 import type { Cents } from '@/lib/money'
 
 /**
@@ -11,16 +9,16 @@ import type { Cents } from '@/lib/money'
  * disto existe, e quanto custa" — então dividem o componente em vez de
  * repetir o layout duas vezes e ele divergir na terceira mudança.
  *
- * **Os quatro lado a lado, ocupando a largura toda.** A versão anterior era
- * uma coluna fixa de um terço da tela, com um número grande e três linhas de
- * rótulo e valor. Empilhados numa coluna estreita, os números viravam uma
- * lista de fatos: para comparar "já pago" com "restante" o olho tinha que
- * descer e voltar, quando a comparação entre eles é a leitura inteira. Em
- * linha, os quatro entram de uma vez e a página abre respondendo.
+ * Hoje ele é um adaptador fino sobre `SummaryCard`, e isso conserta uma
+ * duplicação que eu mesmo criei: montei o `SummaryCard` para Transações sem
+ * notar que esta faixa já resolvia o mesmo problema desde antes. Duas
+ * implementações do mesmo cartão divergem na primeira mudança que alguém
+ * aplica só de um lado — e a grade, o corte de duas para quatro colunas e o
+ * espaçamento já eram idênticos nas duas.
  *
- * Nenhum deles ganha caixa própria: a Regra da Folha Única é explícita —
- * agrupamento interno é Rebaixado, nunca outra folha — e aqui nem Rebaixado é
- * preciso, porque o espaço entre as colunas já separa.
+ * O que sobrevive aqui é a **tradução de vocabulário**: `SeriesStat` fala em
+ * contagem e centavos, que é como as duas páginas pensam; `SummaryStat` fala
+ * em conteúdo renderizado, que é como o cartão desenha.
  */
 
 export interface SeriesStat {
@@ -31,13 +29,16 @@ export interface SeriesStat {
   cents?: Cents
   icon?: IconName
   /**
-   * O número que a página existe para mostrar, e só um por faixa.
+   * A cor do valor.
    *
-   * Com os quatro do mesmo tamanho, o peso da tinta é o que sobra para dizer
-   * qual deles é a resposta. Sem isso a faixa não tem hierarquia: o olho
-   * começa pelo primeiro porque é o primeiro, não porque é o que importa.
+   * Substituiu o antigo `highlight`, que engrossava um dos quatro para dizer
+   * qual era a resposta. Com todos em negrito — que é como o cartão desenha
+   * agora — o peso parou de estar disponível como canal, e a cor ocupou o
+   * lugar dele. É uma leitura melhor, e não só uma diferente: `attention` num
+   * "restante a pagar" diz *o que* aquele número é, e não apenas que ele
+   * importa mais que os vizinhos.
    */
-  highlight?: boolean
+  tone?: SummaryStat['tone']
 }
 
 export function SeriesSummary({
@@ -47,56 +48,19 @@ export function SeriesSummary({
   stats: SeriesStat[]
   children?: React.ReactNode
 }) {
+  const icone = stats.find((stat) => stat.icon)?.icon
+
   return (
-    <Card>
-      {/*
-        Duas colunas até o desktop largo, quatro depois.
-
-        O corte não é o do celular, é o do valor: "R$ 6.692,40" em corpo 24
-        ocupa perto de 180 pixels, e quatro colunas só cabem quando a folha
-        passa de mil. Entre 640 e 1024 a grade de quatro encostava um número no
-        outro — e número encostado em número vira um algarismo só.
-      */}
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-6 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="min-w-0">
-            <dt className="flex items-center gap-1.5 text-xs text-muted">
-              {stat.icon ? <Icon name={stat.icon} size={13} className="shrink-0" /> : null}
-              <span className="truncate">{stat.label}</span>
-            </dt>
-
-            {stat.count === undefined ? (
-              <dd>
-                {/*
-                  Todos do mesmo tamanho, e só o destaque em semibold. Foi o
-                  que sobrou de hierarquia quando os quatro passaram a dividir
-                  a linha: apagar os outros três em tinta secundária faria um
-                  número de 24px parecer desligado, não secundário.
-                */}
-                <Money
-                  cents={stat.cents ?? 0}
-                  emphasis={stat.highlight ? 'strong' : 'plain'}
-                  className={cn(
-                    'mt-1.5 block text-xl tracking-[-0.03em] sm:text-2xl',
-                    !stat.highlight && 'font-normal',
-                  )}
-                />
-              </dd>
-            ) : (
-              <dd className="mt-1.5">
-                <span className="tnum block text-xl font-semibold tracking-[-0.03em] text-ink sm:text-2xl">
-                  {stat.count}
-                </span>
-                {stat.countUnit ? (
-                  <span className="mt-0.5 block truncate text-xs text-muted">{stat.countUnit}</span>
-                ) : null}
-              </dd>
-            )}
-          </div>
-        ))}
-      </dl>
-
+    <SummaryCard
+      icon={icone}
+      stats={stats.map((stat) => ({
+        label: stat.label,
+        ...(stat.count === undefined ? { cents: stat.cents ?? 0 } : { value: stat.count }),
+        caption: stat.countUnit,
+        tone: stat.tone,
+      }))}
+    >
       {children}
-    </Card>
+    </SummaryCard>
   )
 }

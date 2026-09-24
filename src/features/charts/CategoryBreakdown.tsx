@@ -1,17 +1,15 @@
 import { Icon } from '@/components/Icon'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Money } from '@/components/ui/Money'
+import { DeltaBadge, Money } from '@/components/ui/Money'
 import { categoryColor } from '@/domain/categories'
-import type { CategorySpend } from '@/domain/selectors'
+import type { CategoryComparison } from '@/domain/selectors'
 import { cn } from '@/lib/cn'
-import { formatPercent } from '@/lib/format'
-import { usePrivacy } from '@/store/hooks'
 
 interface CategoryBreakdownProps {
-  data: CategorySpend[]
+  data: CategoryComparison[]
   /**
-   * Quantas barras aparecem. O que sobra vira uma linha de rodapé com o total,
-   * nunca some calado: a soma das barras precisa poder ser conferida contra o
+   * Quantas linhas aparecem. O que sobra vira uma linha de rodapé com o total,
+   * nunca some calado: a soma das linhas precisa poder ser conferida contra o
    * total de despesas do mês, e uma lista que esconde a cauda sem dizer quanto
    * ela vale quebra essa conta.
    */
@@ -20,20 +18,27 @@ interface CategoryBreakdownProps {
 }
 
 /**
- * Composição das despesas do mês, em barras ordenadas de tinta.
+ * "Principais categorias": onde o dinheiro foi, e o que mudou desde o mês
+ * passado.
  *
- * Substitui a rosca multicolorida da versão original por dois motivos. O
- * primeiro é de leitura: comparar comprimento é mais fácil que comparar
- * ângulo, e a pergunta aqui é "qual categoria pesou mais". O segundo é que uma
- * rosca precisa de uma cor por fatia — e este sistema não tem cor nenhuma.
+ * O painel já foi só composição — barras ordenadas respondendo "qual categoria
+ * pesou mais". Ele passou a carregar a **variação** junto, e isso muda a
+ * pergunta que ele responde: de "onde foi" para "onde foi, e isso é novidade?".
+ * Um gasto de oitocentos reais em compras não diz nada sozinho; dizer que ele
+ * era de quatrocentos no mês passado diz tudo.
  *
- * Feito em HTML, e não no Recharts, porque rótulo longo em português
- * ("Alimentação", "Assinaturas") cabe sem truncar, a lista é navegável e o
- * leitor de tela recebe uma estrutura que faz sentido.
+ * Feito em tabela de verdade, e não em lista de divs: são cinco colunas com
+ * cabeçalho, e é exatamente para isso que `<table>` existe. O leitor de tela
+ * anuncia "Variação, mais 74 por cento" em vez de ler quatro números soltos.
+ *
+ * **A barra codifica tamanho e direção ao mesmo tempo.** O comprimento é
+ * proporcional ao valor, e a cor diz para onde ele foi: vermelha quando o gasto
+ * subiu, menta quando caiu. São dois canais em um só elemento, e isso é
+ * deliberado — "quanto" e "para onde" se respondem no mesmo relance. Categoria
+ * nova e categoria igual ao mês anterior ficam em tinta neutra, porque não
+ * subiram nem caíram.
  */
 export function CategoryBreakdown({ data, limit, className }: CategoryBreakdownProps) {
-  const masked = usePrivacy()
-
   if (data.length === 0) {
     return (
       <EmptyState
@@ -51,69 +56,122 @@ export function CategoryBreakdown({ data, limit, className }: CategoryBreakdownP
   const totalDaCauda = cauda.reduce((soma, item) => soma + item.amount, 0)
 
   return (
-    /*
-     * As linhas ficam juntas no topo, e a sobra fica embaixo.
-     *
-     * Distribuí-las pela altura da coluna funcionava com cinco categorias e
-     * quebrava com duas: as duas iam para as pontas opostas do painel, com um
-     * vazio enorme entre elas, e a lista deixava de parecer uma lista. Sobra
-     * embaixo de um painel lê como respiro; buraco no meio de uma lista lê como
-     * defeito.
-     */
-    <ul className={cn('flex flex-col gap-4', className)}>
-      {visiveis.map((item) => (
-        <li key={item.categoryId}>
-          <div className="mb-2 flex items-baseline justify-between gap-3">
-            <span className="flex min-w-0 items-center gap-2.5">
-              <Icon
-                name={item.icon}
-                size={15}
-                className={cn('shrink-0', categoryColor(item.categoryId) ? '' : 'text-faint')}
-                style={{ color: categoryColor(item.categoryId) ?? undefined }}
-              />
-              <span className="truncate text-[0.8125rem] font-medium text-ink">{item.label}</span>
-            </span>
-            <span className="flex shrink-0 items-baseline gap-2.5">
-              <Money cents={item.amount} className="text-[0.8125rem]" />
-              <span className="tnum w-9 text-right text-xs text-muted">
-                {formatPercent(item.share, { masked })}
-              </span>
-            </span>
-          </div>
-          {/*
-            A barra é proporcional à maior categoria, não ao total: com um
-            gasto dominante, escalar pelo total achataria todo o resto em
-            traços indistinguíveis.
-          */}
-          <div className="h-2 w-full overflow-hidden rounded-full bg-sunken">
-            {/*
-              A barra veste o matiz da categoria. Aqui a cor não é enfeite: as
-              barras estão empilhadas e a mesma categoria precisa ser
-              reconhecível entre esta lista e a de Orçamento, que é a única
-              outra tela onde as oito aparecem juntas. Sem matiz, cai em Tinta.
-            */}
-            <div
-              className={cn(
-                'h-full rounded-full transition-[width] duration-300',
-                categoryColor(item.categoryId) ? '' : 'bg-ink',
-              )}
-              style={{
-                width: `${Math.max((item.amount / largest) * 100, 2)}%`,
-                backgroundColor: categoryColor(item.categoryId) ?? undefined,
-              }}
-            />
-          </div>
-        </li>
-      ))}
+    <div className={cn('min-w-0', className)}>
+      <table className="w-full border-collapse">
+        <thead>
+          <tr className="text-left text-xs font-medium tracking-[0.06em] text-muted uppercase">
+            <th scope="col" className="pb-3">
+              Categoria
+            </th>
+            <th scope="col" className="pb-3 text-right">
+              Atual
+            </th>
+            {/* A coluna da barra não tem rótulo: ela é a leitura visual da
+                variação que a coluna seguinte diz em número. */}
+            <th scope="col" className="hidden w-[30%] pb-3 sm:table-cell">
+              <span className="sr-only">Comparativo com o mês anterior</span>
+            </th>
+            <th scope="col" className="hidden pb-3 text-right lg:table-cell">
+              Variação
+            </th>
+            <th scope="col" className="hidden pb-3 text-right lg:table-cell">
+              Anterior
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {visiveis.map((item) => {
+            const cor = categoryColor(item.groupId)
+            const subiu = item.changeRatio !== null && item.changeRatio > 0
+            // Zero é "igual", e não uma queda de zero por cento: sem esta
+            // separação a pastilha saía "−0%", um sinal de menos sem número.
+            const igual = item.changeRatio === 0
+
+            return (
+              <tr key={item.groupId} className="border-t border-hairline">
+                <td className="py-3 pr-3">
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    {/*
+                      Pastilha com o glifo em preto sobre o matiz: as oito cores
+                      de categoria foram derivadas para suportar tinta preta por
+                      cima. Sem matiz — categoria criada pelo usuário — a
+                      pastilha cai na superfície rebaixada com o ícone em tinta.
+                    */}
+                    <span
+                      style={{ backgroundColor: cor ?? undefined }}
+                      className={cn(
+                        'inline-flex size-7 shrink-0 items-center justify-center rounded-xs',
+                        cor ? 'text-accent-ink' : 'bg-sunken text-ink',
+                      )}
+                    >
+                      <Icon name={item.icon} size={14} />
+                    </span>
+                    <span className="truncate text-[0.8125rem] font-medium text-ink">
+                      {item.label}
+                    </span>
+                  </span>
+                </td>
+
+                <td className="py-3 text-right">
+                  <Money cents={item.amount} className="text-[0.8125rem]" />
+                </td>
+
+                <td className="hidden px-3 py-3 sm:table-cell">
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-sunken">
+                    <div
+                      className={cn(
+                        'h-full rounded-full transition-[width] duration-300',
+                        item.changeRatio === null || igual
+                          ? 'bg-faint'
+                          : subiu
+                            ? 'bg-expense'
+                            : 'bg-income',
+                      )}
+                      // Proporcional à maior categoria, não ao total: com um
+                      // gasto dominante, escalar pelo total achataria todo o
+                      // resto em traços indistinguíveis.
+                      style={{ width: `${Math.max((item.amount / largest) * 100, 3)}%` }}
+                    />
+                  </div>
+                </td>
+
+                <td className="hidden py-3 text-right lg:table-cell">
+                  {item.changeRatio === null ? (
+                    <span className="text-xs text-muted">novo</span>
+                  ) : igual ? (
+                    <span className="text-xs text-muted">igual</span>
+                  ) : (
+                    <DeltaBadge
+                      percent={item.changeRatio * 100}
+                      // Gasto que sobe é ruim. O julgamento é explícito porque
+                      // a mesma seta para cima seria boa numa receita.
+                      tone={subiu ? 'bad' : 'good'}
+                    />
+                  )}
+                </td>
+
+                <td className="hidden py-3 text-right lg:table-cell">
+                  {item.previousCents === 0 ? (
+                    <span className="text-xs text-faint">—</span>
+                  ) : (
+                    <Money cents={item.previousCents} className="text-xs text-muted" />
+                  )}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
 
       {cauda.length > 0 ? (
-        <li className="flex items-baseline justify-between gap-3 border-t border-hairline pt-3 text-xs text-muted">
+        <div className="flex items-baseline justify-between gap-3 border-t border-hairline pt-3 text-xs text-muted">
           <span>
             +{cauda.length} {cauda.length === 1 ? 'categoria' : 'categorias'}
           </span>
           <Money cents={totalDaCauda} className="text-xs text-muted" />
-        </li>
+        </div>
       ) : null}
-    </ul>
+    </div>
   )
 }

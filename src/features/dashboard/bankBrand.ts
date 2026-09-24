@@ -61,8 +61,8 @@ function tintaSobre(cor: string): string {
 /**
  * Reconhece o banco pelo nome da conta ou da instituição.
  *
- * Devolve `null` quando nada bate, e aí o cartão volta ao bloco de tinta do
- * sistema — que continua correto, só não é reconhecível de longe.
+ * Devolve `null` quando nada bate, e aí o cartão fica com o nome cru e a
+ * pastilha neutra — que continua correto, só não é reconhecível de longe.
  */
 export function findBankBrand(...textos: (string | null | undefined)[]): BankBrand | null {
   const alvo = textos

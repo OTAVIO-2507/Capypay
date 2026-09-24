@@ -1,21 +1,32 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { Icon, type IconName } from '@/components/Icon'
-import { PageHeader } from '@/components/PageHeader'
+import { NarrowColumn } from '@/components/NarrowColumn'
 import { Button, IconButton } from '@/components/ui/Button'
-import { Card, CardHeader } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Controls'
-import { ConfirmDialog } from '@/components/ui/Dialog'
+import { Card, CardHeader, NoticePanel } from '@/components/ui/Card'
+import { ConfirmDialog, Dialog } from '@/components/ui/Dialog'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { ConnectBankButton } from '@/features/openfinance/ConnectBankButton'
 import { Field, MoneyInput, TextInput } from '@/components/ui/Field'
-import { Select } from '@/components/ui/Select'
+import { ItemMedia, ItemRow } from '@/components/ui/ItemRow'
 import { Money } from '@/components/ui/Money'
+import { Select } from '@/components/ui/Select'
+import { cardSummary, currentInvoiceMonth } from '@/domain/invoices'
 import { transactionsInMonth } from '@/domain/selectors'
-import type { Account, AccountKind, BankConnection } from '@/domain/types'
-import { formatMonthLong } from '@/lib/date'
+import type { Account, AccountKind } from '@/domain/types'
+import { CardTile } from '@/features/accounts/CardTile'
+import { InvoiceDrawer } from '@/features/accounts/InvoiceDrawer'
+import { InvoiceHistory } from '@/features/accounts/InvoiceHistory'
+import { findBankBrand } from '@/features/dashboard/bankBrand'
+import { ConnectBankButton } from '@/features/openfinance/ConnectBankButton'
+import { formatMonthLong, fromIsoDate, todayIso } from '@/lib/date'
 import { parseDecimalInput, toCents } from '@/lib/money'
 import { useFinanceStore } from '@/store/financeStore'
-import { useAccounts, useConnections, useSelectedMonth, useTransactions } from '@/store/hooks'
+import {
+  useAccounts,
+  useCategories,
+  useGoals,
+  useSelectedMonth,
+  useTransactions,
+} from '@/store/hooks'
 
 const KIND_META: Record<AccountKind, { label: string; icon: IconName }> = {
   checking: { label: 'Conta corrente', icon: 'landmark' },
@@ -24,25 +35,79 @@ const KIND_META: Record<AccountKind, { label: string; icon: IconName }> = {
   investment: { label: 'Investimento', icon: 'coins' },
 }
 
+const MES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+
+/**
+ * Contas: os cartões na frente, como no produto de referência, e as demais
+ * contas embaixo.
+ *
+ * A tela abre pela fatura, que é a pergunta mais frequente sobre dinheiro que
+ * ainda não saiu: quanto vai vencer, e quando. Depois vêm os cartões um a um,
+ * com o limite tomado, e as faturas anteriores para comparação. Contas
+ * correntes, dinheiro e investimento — que não têm fatura — ficam numa lista
+ * própria no fim, com o cadastro manual e a conexão com o banco.
+ *
+ * O cartão desenhado que já ocupou esta tela saiu: ele respondia "de qual
+ * cartão estamos falando", e o cartão da lista responde o mesmo com o logo e o
+ * final do número, dizendo também quanto ele deve.
+ */
 export function AccountsPage() {
   const accounts = useAccounts()
-  const connections = useConnections()
   const transactions = useTransactions()
+  const categories = useCategories()
+  const goals = useGoals()
   const month = useSelectedMonth()
   const addAccount = useFinanceStore((state) => state.addAccount)
   const deleteAccount = useFinanceStore((state) => state.deleteAccount)
 
   const [removing, setRemoving] = useState<Account | null>(null)
+  const [adicionando, setAdicionando] = useState(false)
+  // O painel guarda o id do cartão, e não o resumo: lido a cada renderização,
+  // ele acompanha uma sincronização que chegue com o painel aberto.
+  const [detalheId, setDetalheId] = useState<string | null>(null)
 
-  /** Quanto saiu por conta no mês selecionado. */
+  const hoje = todayIso()
+  const ativas = accounts.filter((account) => !account.archived)
+  const cartoes = ativas.filter((account) => account.kind === 'credit_card')
+  const outras = ativas.filter((account) => account.kind !== 'credit_card')
+
+  /*
+   * O banco reconhecido em qualquer conta serve para todas. O cartão importado
+   * costuma se chamar "GOLD", com a instituição chegando como "MeuPluggy" — o
+   * proxy da conexão, não o banco. É da conta corrente da mesma conexão, que
+   * vem como "BANCO INTER", que sai o nome.
+   */
+  const bancoDasContas =
+    ativas.map((account) => findBankBrand(account.name, account.institution)).find(Boolean) ?? null
+
+  const resumos = useMemo(
+    () => cartoes.map((cartao) => cardSummary(cartao, transactions, hoje)),
+    [cartoes, transactions, hoje],
+  )
+  const faturaAtual = resumos.reduce((soma, resumo) => soma + resumo.invoiceCents, 0)
+  // O gráfico começa na fatura aberta mais adiantada entre os cartões: com
+  // fechamentos diferentes, um pode já estar na fatura de novembro enquanto o
+  // outro ainda está na de outubro.
+  const mesDaFaturaAberta = resumos
+    .map((resumo) => currentInvoiceMonth(resumo.account.creditCard, hoje))
+    .sort()
+    .at(-1)
+
+  // A data até onde os dados dos cartões sincronizados chegam, para o aviso.
+  const ultimaSincronizada = resumos
+    .filter((resumo) => resumo.account.sync)
+    .map((resumo) => resumo.lastTransactionDate)
+    .filter((data): data is string => Boolean(data))
+    .sort()
+    .at(-1)
+  const ultimaData = ultimaSincronizada ? fromIsoDate(ultimaSincronizada) : null
+
+  /** Quanto saiu por conta no mês selecionado — para as contas sem fatura. */
   const spendByAccount = useMemo(() => {
     const totals = new Map<string, number>()
     for (const transaction of transactionsInMonth(transactions, month)) {
       if (transaction.kind === 'income' || !transaction.accountId) continue
-      totals.set(
-        transaction.accountId,
-        (totals.get(transaction.accountId) ?? 0) + transaction.amountCents,
-      )
+      totals.set(transaction.accountId, (totals.get(transaction.accountId) ?? 0) + transaction.amountCents)
     }
     return totals
   }, [transactions, month])
@@ -57,114 +122,167 @@ export function AccountsPage() {
   }, [transactions])
 
   return (
-    <>
-      <PageHeader
-        title="Contas e cartões"
-        description="Separe de onde cada gasto saiu. Cadastre à mão ou conecte o banco por Open Finance."
-        actions={<ConnectBankButton />}
-      />
+    <NarrowColumn width="lg">
+      <h1 className="sr-only">Contas</h1>
 
-      <div className="grid gap-5 lg:grid-cols-12">
-        <div className="flex flex-col gap-5 lg:col-span-8">
-          <Card>
-            <CardHeader
-              title="Suas contas"
-              description={`Movimentação de ${formatMonthLong(month).toLowerCase()}`}
-            />
-            {accounts.length === 0 ? (
-              <EmptyState
-                icon="credit-card"
-                title="Nenhuma conta cadastrada"
-                description="Cadastrar suas contas e cartões permite marcar de onde cada gasto saiu, e é o mesmo cadastro que a sincronização com o banco vai usar quando existir."
-              />
-            ) : (
-              <ul className="flex flex-col divide-y divide-hairline">
-                {accounts.map((account) => {
-                  const meta = KIND_META[account.kind]
-                  const spent = spendByAccount.get(account.id) ?? 0
+      {cartoes.length > 0 ? (
+        <section
+          aria-label="Fatura atual"
+          className="mb-6 rounded-lg border border-hairline bg-[linear-gradient(120deg,var(--sunken),var(--sheet)_65%)] px-6 py-9 text-center"
+        >
+          <p className="flex items-center justify-center gap-1.5 text-[0.8125rem] text-muted">
+            <Icon name="banknote" size={14} />
+            Fatura atual
+          </p>
+          <Money cents={faturaAtual} className="mt-1 block text-5xl leading-tight font-bold tracking-tight" />
+          {cartoes.length > 1 ? (
+            <p className="mt-1 text-xs text-muted">somando {cartoes.length} cartões</p>
+          ) : null}
+        </section>
+      ) : null}
 
-                  return (
-                    <li
-                      key={account.id}
-                      className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0"
-                    >
-                      <span className="flex min-w-0 items-center gap-3">
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-sunken text-faint">
-                          <Icon name={meta.icon} size={17} />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="flex items-center gap-2">
-                            <span className="truncate text-[0.8125rem] font-semibold text-ink">
-                              {account.name}
-                            </span>
-                            {account.last4 ? (
-                              <span className="tnum shrink-0 font-mono text-xs text-faint">
-                                ••{account.last4}
-                              </span>
-                            ) : null}
-                          </span>
-                          <span className="block truncate text-xs text-muted">
-                            {meta.label}
-                            {account.institution ? ` · ${account.institution}` : ''}
-                            {account.creditCard
-                              ? ` · fecha dia ${account.creditCard.closingDay}`
-                              : ''}
-                          </span>
-                        </span>
-                      </span>
-
-                      <span className="flex shrink-0 items-center gap-3">
-                        <span className="text-right">
-                          {/*
-                            O saldo informado pelo banco tem precedência sobre o
-                            gasto do mês, quando existe: é o número que a pessoa
-                            foi conferir. Ele não entra no saldo do painel, que
-                            soma lançamentos — são duas perguntas diferentes, e
-                            juntá-las faria o histórico importado parecer a
-                            conta inteira.
-                          */}
-                          {account.balanceCents == null ? (
-                            <>
-                              <span className="block text-[0.8125rem]">
-                                <Money cents={spent} className="font-medium" />
-                              </span>
-                              <span className="block text-xs text-muted">no mês</span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="block text-[0.8125rem]">
-                                <Money cents={account.balanceCents} className="font-medium" />
-                              </span>
-                              <span className="block text-xs text-muted">no banco</span>
-                            </>
-                          )}
-                        </span>
-                        <IconButton
-                          icon="trash-2"
-                          label={`Remover ${account.name}`}
-                          size="sm"
-                          onClick={() => setRemoving(account)}
-                        />
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-          </Card>
-
-          <SyncRoadmap connections={connections} />
-        </div>
-
-        <div className="lg:col-span-4">
-          <div className="lg:sticky lg:top-6">
-            <Card>
-              <CardHeader title="Nova conta" />
-              <AccountForm onSubmit={addAccount} />
-            </Card>
-          </div>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2.5 text-[0.9375rem] font-semibold text-ink">
+          <span aria-hidden className="inline-flex size-8 items-center justify-center rounded-md bg-sunken text-muted">
+            <Icon name="credit-card" size={16} />
+          </span>
+          Seus cartões
+          <span className="tnum text-xs font-normal text-muted">({cartoes.length})</span>
+        </h2>
+        <div className="flex items-center gap-2">
+          <ConnectBankButton />
+          <Button variant="outline" icon="plus" onClick={() => setAdicionando(true)}>
+            Adicionar
+          </Button>
         </div>
       </div>
+
+      {cartoes.length === 0 ? (
+        <Card className="mb-6">
+          <EmptyState
+            icon="credit-card"
+            title="Nenhum cartão ainda"
+            description="Conecte o banco para trazer os cartões com limite e fatura, ou cadastre um à mão com o dia de fechamento e de vencimento."
+          />
+        </Card>
+      ) : (
+        <>
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {resumos.map((resumo) => (
+              <li key={resumo.account.id}>
+                <CardTile
+                  summary={resumo}
+                  fallbackBank={bancoDasContas}
+                  onRemove={() => setRemoving(resumo.account)}
+                  onOpenDetails={() => setDetalheId(resumo.account.id)}
+                />
+              </li>
+            ))}
+          </ul>
+
+          <NoticePanel tone="attention" className="mt-4 flex items-start gap-2.5 px-4 py-3 text-xs leading-relaxed">
+            <Icon name="info" size={14} className="mt-0.5 shrink-0" />
+            <p>
+              {ultimaData
+                ? `Fatura estimada. Compras após ${String(ultimaData.getDate()).padStart(2, '0')}/${MES[ultimaData.getMonth()]}/${ultimaData.getFullYear()} podem levar 1–3 dias para aparecer via Open Finance. O app do banco pode mostrar um valor maior.`
+                : 'Fatura estimada pela soma das compras lançadas em cada cartão entre um fechamento e o próximo. O valor cobrado pelo banco pode ser diferente.'}
+            </p>
+          </NoticePanel>
+
+          <div className="mt-6">
+            <InvoiceHistory
+              cards={cartoes}
+              transactions={transactions}
+              currentMonth={mesDaFaturaAberta ?? hoje.slice(0, 7)}
+            />
+          </div>
+        </>
+      )}
+
+      {/*
+        As contas sem fatura: corrente, dinheiro, investimento. Continuam
+        aqui, e não numa aba própria, porque são o mesmo cadastro — e o mesmo
+        botão de conectar o banco traz as duas coisas juntas.
+      */}
+      <Card className="mt-6">
+        <CardHeader title="Outras contas" description={`Movimentação de ${formatMonthLong(month).toLowerCase()}`} />
+        {outras.length === 0 ? (
+          <EmptyState
+            icon="landmark"
+            size="sm"
+            title="Nenhuma conta além dos cartões"
+            description="Conta corrente, dinheiro e investimento entram aqui, cadastrados à mão ou trazidos pela conexão com o banco."
+          />
+        ) : (
+          <ul className="flex flex-col divide-y divide-hairline">
+            {outras.map((account) => {
+              const meta = KIND_META[account.kind]
+              const spent = spendByAccount.get(account.id) ?? 0
+              const banco = findBankBrand(account.name, account.institution)
+
+              return (
+                <li key={account.id}>
+                  <ItemRow
+                    media={
+                      <ItemMedia size={40} tint={banco?.cor} ink={banco?.tinta}>
+                        {banco ? (
+                          <span className="text-xs font-bold">{banco.nome.slice(0, 2).toUpperCase()}</span>
+                        ) : (
+                          <Icon name={meta.icon} size={17} />
+                        )}
+                      </ItemMedia>
+                    }
+                    title={account.name}
+                    meta={
+                      <>
+                        {meta.label}
+                        {account.institution ? ` · ${account.institution}` : ''}
+                      </>
+                    }
+                    /*
+                      O saldo informado pelo banco tem precedência sobre o
+                      gasto do mês, quando existe: é o número que a pessoa foi
+                      conferir. Ele não entra no saldo do painel, que soma
+                      lançamentos — são duas perguntas diferentes.
+                    */
+                    value={<Money cents={account.balanceCents ?? spent} />}
+                    caption={account.balanceCents == null ? 'no mês' : 'no banco'}
+                    actions={
+                      <IconButton
+                        icon="trash-2"
+                        label={`Remover ${account.name}`}
+                        size="sm"
+                        onClick={() => setRemoving(account)}
+                      />
+                    }
+                  />
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </Card>
+
+      <InvoiceDrawer
+        summary={resumos.find((resumo) => resumo.account.id === detalheId) ?? null}
+        bank={(() => {
+          const aberto = resumos.find((resumo) => resumo.account.id === detalheId)?.account
+          return aberto ? (findBankBrand(aberto.name, aberto.institution) ?? bancoDasContas) : null
+        })()}
+        transactions={transactions}
+        categories={categories}
+        goals={goals}
+        onClose={() => setDetalheId(null)}
+      />
+
+      <Dialog open={adicionando} onClose={() => setAdicionando(false)} title="Nova conta ou cartão">
+        <AccountForm
+          onSubmit={(account) => {
+            addAccount(account)
+            setAdicionando(false)
+          }}
+        />
+      </Dialog>
 
       <ConfirmDialog
         open={removing !== null}
@@ -172,50 +290,15 @@ export function AccountsPage() {
         onConfirm={() => {
           if (removing) deleteAccount(removing.id)
         }}
-        title="Remover conta"
+        title={removing?.kind === 'credit_card' ? 'Remover cartão' : 'Remover conta'}
         message={
           removing
-            ? `${removing.name} será removida. Os ${countByAccount.get(removing.id) ?? 0} lançamentos vinculados continuam no histórico, apenas sem conta associada.`
+            ? `${removing.name} será removido. Os ${countByAccount.get(removing.id) ?? 0} lançamentos vinculados continuam no histórico, apenas sem conta associada.`
             : ''
         }
-        confirmLabel="Remover conta"
+        confirmLabel={removing?.kind === 'credit_card' ? 'Remover cartão' : 'Remover conta'}
       />
-    </>
-  )
-}
-
-/**
- * O que está planejado e o que não existe.
- *
- * O usuário pretende ligar o aplicativo ao banco dele. Enquanto isso não
- * existe, esta seção precisa dizer isso sem rodeio — um painel que insinua
- * integração que não tem é pior que um painel que admite não ter.
- */
-function SyncRoadmap({ connections }: { connections: readonly BankConnection[] }) {
-  return (
-    <Card>
-      <CardHeader
-        title="Sincronização com o banco"
-        description={
-          connections.length > 0
-            ? `${connections.length} ${connections.length === 1 ? 'banco autorizado' : 'bancos autorizados'}`
-            : undefined
-        }
-        action={<Badge tone="quiet">Importação ainda não disponível</Badge>}
-      />
-      <p className="max-w-[68ch] text-xs leading-relaxed text-muted">
-        Conectar o banco já funciona: “Conectar banco” abre o consentimento do Open Finance, e a
-        autorização que volta dele fica guardada. O que ainda não existe é a etapa seguinte — ler
-        compras do cartão, faturas, extrato e posição de investimentos e trazer isso para cá. Até
-        lá, todo lançamento continua manual, inclusive nas contas já conectadas.
-      </p>
-      <p className="mt-2.5 max-w-[68ch] text-xs leading-relaxed text-muted">
-        A estrutura embaixo está pronta há mais tempo que a conexão: cada lançamento guarda a
-        origem e um espaço para o identificador externo, que é o que evita duplicar a mesma compra
-        a cada sincronia. As credenciais do agregador vivem no servidor, numa Edge Function, e
-        nunca chegam ao navegador.
-      </p>
-    </Card>
+    </NarrowColumn>
   )
 }
 

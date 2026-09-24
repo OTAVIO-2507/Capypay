@@ -8,9 +8,9 @@ import { formatDayNumber, formatFullDate, formatWeekdayShort, type IsoDate } fro
  * aparece em nenhum outro lugar do painel e é o único dado da tela que muda
  * todo dia, o que faz dela a coisa certa para abrir.
  *
- * É papel sobre papel, não bloco de tinta: a cota de tinta da tela já está
- * gasta na barra lateral e no cartão, e uma terceira mancha escura no topo
- * puxaria o peso todo para o canto esquerdo.
+ * Fica na superfície comum, sem acento e sem inversão. O topo da tela já tem
+ * a saudação e a ação principal disputando atenção; uma terceira ênfase ao
+ * lado delas não cria hierarquia, desfaz a que existe.
  */
 export function TodayLeaf({ date }: { date: IsoDate }) {
   return (

@@ -179,7 +179,7 @@ export function BrandMark({ label, fallbackIcon, fallbackColor, size = 36, class
         }}
         className={cn(
           'inline-flex shrink-0 items-center justify-center rounded-sm',
-          fallbackColor ? 'text-white' : 'bg-sunken text-faint',
+          fallbackColor ? 'text-accent-ink' : 'bg-sunken text-faint',
           className,
         )}
       >

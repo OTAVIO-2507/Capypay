@@ -13,6 +13,7 @@ import { formatMonthLong, formatMonthShort, monthsOfYear, type MonthKey } from '
 import type { Cents } from '@/lib/money'
 import { ChartTooltipBody } from './ChartTooltip'
 import { useChartTheme } from './useChartTheme'
+import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion'
 
 interface BalanceTrendProps {
   year: number
@@ -28,8 +29,10 @@ interface BalanceTrendProps {
  *
  * Área e não colunas porque a pergunta aqui é de forma — "está subindo ou
  * caindo" — e não de comparação item a item. O preenchimento é degradê de
- * **opacidade**, nunca de matiz: num sistema sem cor, o degradê de tinta é a
- * única gradação permitida, e ela existe para a curva não parecer um bloco.
+ * **opacidade**, nunca de matiz. A curva é uma série só — o resultado do mês —
+ * e um degradê de matiz sugeriria que a cor no topo significa algo diferente
+ * da cor embaixo. A opacidade existe para a área não parecer um bloco, e não
+ * para codificar nada.
  *
  * As pílulas de mês abaixo do gráfico não são só eixo: clicar nelas muda o mês
  * que governa a rota inteira, o que faz do gráfico um controle e não uma
@@ -43,6 +46,7 @@ export function BalanceTrend({
   onChangeYear,
 }: BalanceTrendProps) {
   const theme = useChartTheme()
+  const semMovimento = usePrefersReducedMotion()
   const currentYear = new Date().getFullYear()
   const hasData = data.some((point) => point.net !== 0)
   const selected = data.find((point) => point.month === selectedMonth)
@@ -140,6 +144,7 @@ export function BalanceTrend({
               // transformaria a curva numa fileira de bolinhas.
               dot={false}
               activeDot={{ r: 4, fill: theme.series1, stroke: theme.sheet, strokeWidth: 2 }}
+              isAnimationActive={!semMovimento}
             />
           </AreaChart>
         </ResponsiveContainer>

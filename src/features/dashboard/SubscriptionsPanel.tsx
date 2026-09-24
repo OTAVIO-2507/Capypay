@@ -1,13 +1,14 @@
 import { Icon } from '@/components/Icon'
-import { Card, CardHeader } from '@/components/ui/Card'
+import { Card, CardHeader, CardLink } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Figure, Money } from '@/components/ui/Money'
-import { QuietLink } from '@/components/ui/QuietLink'
 import { monthlySubscriptionCost, type Subscription } from '@/domain/subscriptions'
 import { formatDayMonth } from '@/lib/date'
 
 interface SubscriptionsPanelProps {
   subscriptions: readonly Subscription[]
+  /** Abre o detalhe de uma assinatura. Sem ele a lista é só leitura. */
+  onAbrir?: (subscription: Subscription) => void
 }
 
 /** Quantas cabem antes de a lista virar rolagem dentro de um painel de resumo. */
@@ -35,7 +36,7 @@ const VISIVEIS = 3
  * por linha e abriria uma quarta exceção de cor para decoração — e a lista já
  * se lê pelo nome, que é o que a pessoa procura.
  */
-export function SubscriptionsPanel({ subscriptions }: SubscriptionsPanelProps) {
+export function SubscriptionsPanel({ subscriptions, onAbrir }: SubscriptionsPanelProps) {
   const total = monthlySubscriptionCost(subscriptions)
   const restantes = subscriptions.length - VISIVEIS
 
@@ -44,7 +45,7 @@ export function SubscriptionsPanel({ subscriptions }: SubscriptionsPanelProps) {
       <CardHeader
         title="Assinaturas"
         action={
-          subscriptions.length > 0 ? <QuietLink to="/assinaturas">Ver todas</QuietLink> : undefined
+          subscriptions.length > 0 ? <CardLink to="/assinaturas">ver todas</CardLink> : undefined
         }
       />
 
@@ -66,28 +67,48 @@ export function SubscriptionsPanel({ subscriptions }: SubscriptionsPanelProps) {
           </div>
 
           <ul className="mt-5 flex flex-1 flex-col divide-y divide-hairline">
-            {subscriptions.slice(0, VISIVEIS).map((item) => (
-              <li
-                key={item.seriesId}
-                className="flex items-center justify-between gap-3 py-2.5 first:pt-0"
-              >
-                <span className="flex min-w-0 items-center gap-2.5">
-                  <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-sm bg-sunken text-faint">
-                    <Icon name={item.icon} size={14} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-[0.8125rem] font-medium text-ink">
-                      {item.label}
+            {subscriptions.slice(0, VISIVEIS).map((item) => {
+              const conteudo = (
+                <>
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-sm bg-sunken text-faint">
+                      <Icon name={item.icon} size={14} />
                     </span>
-                    <span className="flex items-center gap-1.5 text-xs text-muted">
-                      <Icon name="calendar" size={11} className="shrink-0" />
-                      <span className="truncate">Próxima: {formatDayMonth(item.next)}</span>
+                    <span className="min-w-0 text-left">
+                      <span className="block truncate text-[0.8125rem] font-medium text-ink">
+                        {item.label}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs text-muted">
+                        <Icon name="calendar" size={11} className="shrink-0" />
+                        <span className="truncate">Próxima: {formatDayMonth(item.next)}</span>
+                      </span>
                     </span>
                   </span>
-                </span>
-                <Money cents={item.amountCents} className="shrink-0 text-[0.8125rem]" />
-              </li>
-            ))}
+                  <Money cents={item.amountCents} className="shrink-0 text-[0.8125rem]" />
+                </>
+              )
+
+              return (
+                <li key={item.seriesId} className="first:*:pt-0">
+                  {onAbrir ? (
+                    /*
+                      A linha inteira é o botão, e não um "ver" no canto: o
+                      alvo é a linha que a pessoa está lendo, e um alvo de
+                      44px de altura é o que o dedo acerta sem mirar.
+                    */
+                    <button
+                      type="button"
+                      onClick={() => onAbrir(item)}
+                      className="-mx-2 flex w-[calc(100%+1rem)] items-center justify-between gap-3 rounded-sm px-2 py-2.5 transition-colors duration-150 hover:bg-sunken"
+                    >
+                      {conteudo}
+                    </button>
+                  ) : (
+                    <div className="flex items-center justify-between gap-3 py-2.5">{conteudo}</div>
+                  )}
+                </li>
+              )
+            })}
           </ul>
 
           {restantes > 0 ? (

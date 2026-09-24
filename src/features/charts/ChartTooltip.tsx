@@ -7,12 +7,12 @@ import { usePrivacy } from '@/store/hooks'
 import { useChartTheme, type ChartTheme } from './useChartTheme'
 
 /**
- * A identidade de fluxo comum, e não a variante calibrada para bloco.
+ * A identidade de fluxo comum, e não a variante calibrada para superfície
+ * clara.
  *
- * O balão deixou de ser bloco de tinta e virou folha erguida, então a
- * superfície de trás passou a ser a mesma contra a qual estas três foram
- * validadas. A variante `*-on-block` continua existindo para quem de fato
- * pousa sobre tinta cheia — o cartão, a barra lateral.
+ * O balão é uma superfície erguida escura, ou seja, a mesma contra a qual as
+ * três cores foram validadas. A variante `*-on-block` continua existindo para
+ * quem de fato pousa sobre a pílula clara.
  */
 const NA_FOLHA: Record<TransactionKind, keyof ChartTheme> = {
   income: 'income',
@@ -23,7 +23,7 @@ const NA_FOLHA: Record<TransactionKind, keyof ChartTheme> = {
 export interface TooltipRow {
   label: string
   value: Cents
-  /** A marca é a seta de direção, na variante da identidade de fluxo calibrada para o bloco de tinta. */
+  /** A marca é a seta de direção, na identidade de fluxo. */
   tone?: TransactionKind
 }
 
@@ -38,12 +38,12 @@ export function ChartTooltipBody({ title, rows }: ChartTooltipProps) {
 
   return (
     /*
-     * Folha erguida, e não bloco de tinta.
+     * Superfície erguida, e não superfície invertida.
      *
      * O balão é o elemento mais efêmero da tela — aparece e some ao passar o
-     * mouse — e no sistema o que flutua é folha, não bloco. O bloco tem cota
-     * (no máximo dois ou três por tela, pela Regra da Tinta Escassa), e um
-     * balão de hover furava essa cota a cada movimento do ponteiro.
+     * mouse — e o que flutua, no sistema, é uma superfície um degrau acima da
+     * que está atrás. A inversão tinha cota apertada e um balão de hover a
+     * furava a cada movimento do ponteiro.
      *
      * Invertendo, ele também piscava: preto sobre a tela clara, quase branco
      * sobre a tela escura. Como folha erguida ele pousa sobre o gráfico em vez
@@ -74,7 +74,7 @@ export function ChartTooltipBody({ title, rows }: ChartTooltipProps) {
               ) : null}
               {row.label}
             </span>
-            <span className="tnum font-mono font-medium">
+            <span className="tnum font-medium">
               {formatCurrency(row.value, { masked })}
             </span>
           </li>
