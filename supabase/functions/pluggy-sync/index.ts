@@ -98,8 +98,19 @@ interface ContaPluggy {
   marketingName?: string
   number?: string
   balance?: number
-  /** Só em conta de cartão. Traz a bandeira, entre outras coisas. */
-  creditData?: { brand?: string; level?: string } | null
+  /**
+   * Só em conta de cartão. Traz a bandeira, o limite e as datas da fatura
+   * aberta — o que a tela de Contas precisa para dizer quanto do limite está
+   * tomado e quando a fatura vence.
+   */
+  creditData?: {
+    brand?: string
+    level?: string
+    creditLimit?: number
+    availableCreditLimit?: number
+    balanceCloseDate?: string
+    balanceDueDate?: string
+  } | null
 }
 
 interface LancamentoPluggy {
@@ -109,6 +120,11 @@ interface LancamentoPluggy {
   descriptionRaw?: string
   amount?: number
   type?: string
+  /**
+   * A subcategoria que o Pluggy atribuiu, pelo nome da folha na árvore dele
+   * ("Gas stations", "Video streaming"). Nulo quando ele não classificou.
+   */
+  category?: string | null
   /**
    * O parcelamento **declarado** pela instituição, em campo próprio.
    *
@@ -410,6 +426,27 @@ Deno.serve(async (req) => {
         // A bandeira só existe em cartão, e nem toda instituição informa. Vai
         // como veio: quem desenha decide o que reconhece.
         brand: conta.creditData?.brand ?? null,
+        // Os termos do cartão, só o que a tela usa. Valor em centavos e data
+        // no calendário, pelas mesmas funções que convertem os lançamentos.
+        card:
+          conta.type === 'CREDIT' && conta.creditData
+            ? {
+                limitCents:
+                  typeof conta.creditData.creditLimit === 'number'
+                    ? paraCentavos(conta.creditData.creditLimit)
+                    : null,
+                availableCents:
+                  typeof conta.creditData.availableCreditLimit === 'number'
+                    ? paraCentavos(conta.creditData.availableCreditLimit)
+                    : null,
+                closeDate: conta.creditData.balanceCloseDate
+                  ? dataDeCalendario(conta.creditData.balanceCloseDate)
+                  : null,
+                dueDate: conta.creditData.balanceDueDate
+                  ? dataDeCalendario(conta.creditData.balanceDueDate)
+                  : null,
+              }
+            : null,
         institution: instituicao,
         entries: lancamentos
           .filter((item) => typeof item.amount === 'number' && item.date)
@@ -423,6 +460,9 @@ Deno.serve(async (req) => {
               date: dataDeCalendario(item.date as string),
               amountCents: normalizarSinal(paraCentavos(item.amount as number), conta.type),
               description: item.description ?? item.descriptionRaw ?? 'Lançamento sem descrição',
+              // Só o nome da categoria atravessa, nunca o lançamento inteiro
+              // como veio: o cliente casa o nome com o catálogo dele.
+              aggregatorCategory: typeof item.category === 'string' ? item.category : null,
               // Só vale como parcelamento se houver mais de uma: o campo vem
               // preenchido com 1/1 em compra à vista, que não é parcelamento
               // nenhum e encheria a tela de compras de uma parcela só.
