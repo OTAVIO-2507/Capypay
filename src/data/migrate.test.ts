@@ -82,7 +82,6 @@ describe('migrateLegacyData', () => {
 
   it('preserva perfil e preferências', () => {
     expect(result?.profile.name).toBe('Otávio')
-    expect(result?.settings.theme).toBe('dark')
     expect(result?.settings.privacyMode).toBe(true)
   })
 
@@ -161,18 +160,17 @@ describe('reconcileData', () => {
   })
 
   /*
-   * O tema é conferido contra os três valores que existem, e não adotado como
-   * veio. O documento chega de fora do processo — do banco, de uma base antiga,
-   * de uma edição à mão no DevTools —, e um campo aceito sem conferência já não
-   * é do tipo que o resto do código supõe.
+   * `theme` foi removido de `Settings` quando o produto passou a ter um tema
+   * só. Base gravada antes disso continua trazendo o campo, e o que se exige
+   * dele agora é que seja ignorado sem derrubar nada — nem a reconciliação,
+   * nem o resto do documento.
    */
-  it('mantém o tema quando ele é um dos três, e cai no automático quando não é', () => {
-    expect(reconcileData({ settings: { theme: 'dark' } }).settings.theme).toBe('dark')
-    expect(reconcileData({ settings: { theme: 'light' } }).settings.theme).toBe('light')
-    expect(reconcileData({ settings: { theme: 'roxo' } }).settings.theme).toBe('system')
-    expect(reconcileData({ settings: { theme: 42 } }).settings.theme).toBe('system')
-    expect(reconcileData({ settings: {} }).settings.theme).toBe('system')
-    expect(reconcileData({}).settings.theme).toBe('system')
+  it('descarta o tema de base antiga sem estragar o resto das preferências', () => {
+    expect(reconcileData({ settings: { theme: 'dark', privacyMode: true } }).settings).toEqual({
+      privacyMode: true,
+    })
+    expect(reconcileData({ settings: { theme: 'roxo' } }).settings).toEqual({ privacyMode: false })
+    expect(reconcileData({}).settings).toEqual({ privacyMode: false })
   })
 
   /*
@@ -227,5 +225,50 @@ describe('reconcileData', () => {
       expect(reconcileData({ profile: {} }).profile.onboardedAt).toBeNull()
       expect(reconcileData({}).profile.onboardedAt).toBeNull()
     })
+  })
+})
+
+describe('reconcileData — categorias em dois níveis', () => {
+  it('passa o orçamento gravado por categoria para o grupo dela', () => {
+    const result = reconcileData({
+      budgets: { '2026-09': { assinaturas: 5000, transporte: 30000, alimentacao: 80000 } },
+    })
+    expect(result.budgets['2026-09']).toEqual({
+      'servicos-digitais': 5000,
+      transporte: 30000,
+      alimentacao: 80000,
+    })
+  })
+
+  it('soma limites que caem no mesmo grupo, em vez de descartar um', () => {
+    const result = reconcileData({
+      budgets: { '2026-09': { combustivel: 10000, transporte: 20000 } },
+    })
+    expect(result.budgets['2026-09']).toEqual({ transporte: 30000 })
+  })
+
+  it('descarta limite que não é número positivo', () => {
+    const result = reconcileData({
+      budgets: { '2026-09': { lazer: 0, compras: 'mil', moradia: -5 } },
+    })
+    expect(result.budgets['2026-09']).toEqual({})
+  })
+
+  it('põe em Outros a categoria personalizada gravada sem grupo', () => {
+    const result = reconcileData({
+      categories: [{ id: 'minha', label: 'Minha', icon: 'x', appliesTo: ['expense'], builtin: false }],
+    })
+    expect(result.categories.find((category) => category.id === 'minha')?.group).toBe('outros')
+  })
+
+  it('a nativa gravada com o rótulo antigo volta com o rótulo e o grupo atuais', () => {
+    const result = reconcileData({
+      categories: [
+        { id: 'assinaturas', label: 'Assinaturas', icon: 'repeat', appliesTo: ['expense'], builtin: true },
+      ],
+    })
+    const assinaturas = result.categories.find((category) => category.id === 'assinaturas')
+    expect(assinaturas?.label).toBe('Serviços digitais')
+    expect(assinaturas?.group).toBe('servicos-digitais')
   })
 })

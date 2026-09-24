@@ -1,4 +1,10 @@
-import { CONTRIBUTION_CATEGORY_ID, FALLBACK_CATEGORY_ID, LEGACY_CATEGORY_MAP } from '@/domain/categories'
+import {
+  CONTRIBUTION_CATEGORY_ID,
+  FALLBACK_CATEGORY_ID,
+  FALLBACK_GROUP_ID,
+  groupIdOf,
+  LEGACY_CATEGORY_MAP,
+} from '@/domain/categories'
 import type {
   AvatarImageId,
   CategoryId,
@@ -222,23 +228,17 @@ export function migrateLegacyData(rawJson: string): FinanceData | null {
 
   const base = createEmptyData()
   const { goals, idMap } = migrateGoals(parsed.goals)
-  const legacyTheme = asString(parsed.settings?.theme)
 
   return {
     ...base,
     profile: { ...base.profile, name: asString(parsed.user?.name) },
     settings: {
-      theme: legacyTheme === 'dark' || legacyTheme === 'light' ? legacyTheme : 'system',
       privacyMode: parsed.settings?.privacyMode === true,
     },
     goals,
     transactions: migrateTransactions(parsed.transactions, idMap),
     budgets: migrateBudgets(parsed.settings),
   }
-}
-
-function ehTema(valor: unknown): valor is FinanceData['settings']['theme'] {
-  return valor === 'light' || valor === 'dark' || valor === 'system'
 }
 
 /**
@@ -256,13 +256,14 @@ export function reconcileData(raw: unknown): FinanceData {
     schemaVersion: SCHEMA_VERSION,
     profile: reconcileProfile(data.profile),
     settings: {
-      // O valor é conferido contra os três que existem, e não adotado como
-      // veio. O documento chega de fora do processo — do banco, de uma base
-      // antiga, de uma edição à mão no DevTools —, e um campo aceito sem
-      // conferência é um campo que já não é do tipo que o resto do código
-      // supõe. Aqui a consequência seria pequena; o hábito é que não pode ser
-      // seletivo.
-      theme: ehTema(data.settings?.theme) ? data.settings.theme : 'system',
+      // O valor é conferido, e não adotado como veio. O documento chega de
+      // fora do processo — do banco, de uma base antiga, de uma edição à mão
+      // no DevTools —, e um campo aceito sem conferência é um campo que já não
+      // é do tipo que o resto do código supõe.
+      //
+      // `theme` morava aqui e não mora mais: com tema único não há preferência
+      // a guardar. Base gravada antes disso ainda traz o campo, e ele é
+      // descartado em silêncio — não há migração a fazer, só um campo a menos.
       privacyMode: data.settings?.privacyMode === true,
     },
     accounts: Array.isArray(data.accounts) ? data.accounts : [],
@@ -275,8 +276,42 @@ export function reconcileData(raw: unknown): FinanceData {
     categories: mergeCategories(base.categories, data.categories),
     transactions: sanitizeTransactions(data.transactions),
     goals: Array.isArray(data.goals) ? data.goals : [],
-    budgets: data.budgets && typeof data.budgets === 'object' ? data.budgets : {},
+    budgets: reconcileBudgets(data.budgets, mergeCategories(base.categories, data.categories)),
   }
+}
+
+/**
+ * Passa cada limite de orçamento para a chave de grupo.
+ *
+ * Quando havia um nível só, o orçamento era por categoria. As categorias
+ * viraram subcategorias, e o teto passou a ser do grupo — então uma base
+ * antiga chega aqui com chaves como `assinaturas`, que hoje é uma
+ * subcategoria de "Serviços digitais". Cada chave vai para o grupo da sua
+ * subcategoria; chave que já é de grupo fica onde está, porque `groupIdOf`
+ * devolve o próprio grupo para a subcategoria homônima.
+ *
+ * Duas chaves que caem no mesmo grupo têm os limites **somados**, pelo mesmo
+ * motivo da migração da primeira versão: descartar um deles faria o teto
+ * encolher sem ninguém ter pedido.
+ */
+function reconcileBudgets(
+  raw: unknown,
+  categories: FinanceData['categories'],
+): FinanceData['budgets'] {
+  if (!raw || typeof raw !== 'object') return {}
+
+  const result: FinanceData['budgets'] = {}
+  for (const [month, limits] of Object.entries(raw as Record<string, unknown>)) {
+    if (!limits || typeof limits !== 'object') continue
+    const doMes: Record<string, number> = {}
+    for (const [key, value] of Object.entries(limits as Record<string, unknown>)) {
+      if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) continue
+      const grupo = groupIdOf(key, categories)
+      doMes[grupo] = (doMes[grupo] ?? 0) + value
+    }
+    result[month] = doMes
+  }
+  return result
 }
 
 /**
@@ -400,7 +435,11 @@ function mergeCategories(
     if (!category?.id) continue
     // Categoria criada pelo usuário entra; nativa mantém a definição atual do
     // catálogo, para que renomear um rótulo nativo chegue a quem já usava.
-    if (!byId.has(category.id)) byId.set(category.id, category)
+    // Personalizada gravada antes dos grupos existirem vem sem `group`, e
+    // entra em "Outros" em vez de ficar fora de toda soma.
+    if (!byId.has(category.id)) {
+      byId.set(category.id, { ...category, group: category.group || FALLBACK_GROUP_ID })
+    }
   }
 
   return [...byId.values()]

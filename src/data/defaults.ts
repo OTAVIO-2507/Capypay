@@ -18,7 +18,7 @@ export function createEmptyData(): FinanceData {
       greeting: true,
       onboardedAt: null,
     },
-    settings: { theme: 'system', privacyMode: false },
+    settings: { privacyMode: false },
     accounts: [],
     connections: [],
     categories: DEFAULT_CATEGORIES.map((category) => ({ ...category })),
