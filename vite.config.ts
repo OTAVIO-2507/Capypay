@@ -154,6 +154,33 @@ export default defineConfig(({ command, isPreview, mode }) => {
    */
   const env = loadEnv(mode, import.meta.dirname, 'VITE_')
 
+  /*
+   * Build sem as chaves do Supabase falha aqui, e não no navegador de quem
+   * abrir o site.
+   *
+   * `data/supabaseClient.ts` lança no topo do módulo quando as variáveis
+   * faltam. Em tempo de build isso deixa de ser um erro de execução: o
+   * compilador substitui `import.meta.env.VITE_SUPABASE_URL` por `undefined`,
+   * conclui que a linha seguinte sempre lança, e descarta como inalcançável
+   * **todo o aplicativo que vinha depois**. O build termina com sucesso, em um
+   * segundo, publicando uma página em branco — foi exatamente o que aconteceu
+   * numa tentativa local.
+   *
+   * A esteira injeta as duas variáveis a partir dos segredos do repositório;
+   * esta checagem é o que garante que um segredo renomeado ou removido apareça
+   * como falha de build, e não como um site vazio no ar.
+   */
+  if (command === 'build') {
+    const faltando = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'].filter((nome) => !env[nome])
+    if (faltando.length > 0) {
+      throw new Error(
+        `Build interrompido: ${faltando.join(' e ')} sem valor. ` +
+          'Sem elas o pacote sai vazio, sem erro nenhum. Preencha .env.local ' +
+          '(ou os segredos do repositório, na esteira) e rode de novo.',
+      )
+    }
+  }
+
   return {
     /*
      * `vite preview` roda com `command === 'serve'`, igual ao dev — então

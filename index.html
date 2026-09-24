@@ -8,7 +8,7 @@
       name="description"
       content="Controle de finanças pessoais que roda inteiro no navegador: lançamentos, limites por categoria e metas, sem servidor e sem cadastro."
     />
-    <meta name="theme-color" content="#edeef0" />
+    <meta name="theme-color" content="#000000" />
     <!--
       O endereço completo nunca é enviado a outro site. Sem isto, o caminho da
       tela em que a pessoa estava viaja no `Referer` de toda requisição para
@@ -20,12 +20,12 @@
 
     <script>
       /*
-       * Aplica o tema antes da primeira pintura.
+       * Barreira de enquadramento, antes da primeira pintura.
        *
-       * Sem isto, o React só aplica a classe depois de montar, e quem usa tema
-       * escuro vê um lampejo branco a cada carregamento. É o único trecho de
-       * script inline do projeto, e existe justamente porque precisa rodar
-       * antes do bundle.
+       * Este bloco já aplicou o tema também, e não aplica mais: com tema único
+       * escuro não há classe a decidir nem lampejo a evitar — o `:root` do CSS
+       * já nasce escuro. Sobrou a parte que precisa mesmo rodar antes do
+       * bundle, porque depois dele já seria tarde.
        *
        * A política de segurança de conteúdo (montada em `vite.config.ts`)
        * libera este bloco pelo resumo do conteúdo dele, e não por
@@ -55,18 +55,6 @@
           // resposta certa é a mesma.
           document.documentElement.style.display = 'none'
           return
-        }
-
-        try {
-          var raw = localStorage.getItem('controle-financeiro/v2')
-          var theme = raw ? JSON.parse(raw).settings.theme : 'system'
-          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-          if (theme === 'dark' || (theme === 'system' && prefersDark)) {
-            document.documentElement.classList.add('dark')
-            document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0c0d10')
-          }
-        } catch (error) {
-          /* Armazenamento indisponível ou JSON inválido: segue no tema claro. */
         }
       })()
     </script>

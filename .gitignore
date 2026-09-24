@@ -1,6 +1,9 @@
 node_modules
 dist
 dist-ssr
+
+# Cache incremental do TypeScript: sai do zero em qualquer máquina.
+*.tsbuildinfo
 *.local
 .vite
 
