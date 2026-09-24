@@ -44,7 +44,7 @@ export function AdminShell() {
     <>
       <Shell
         nav={ADMIN_NAV}
-        footerNav={ADMIN_SETTINGS_NAV}
+        railNav={[ADMIN_SETTINGS_NAV]}
         navLabel="Navegação do painel de administração"
         topBar={<AdminTopBar />}
       >

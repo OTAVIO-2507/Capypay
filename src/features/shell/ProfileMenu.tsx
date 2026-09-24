@@ -9,7 +9,7 @@ import { useAuthStore } from '@/store/authStore'
 import { useCategories, useGoals, useProfile, useTransactions } from '@/store/hooks'
 import { EditProfileDialog } from './EditProfileDialog'
 
-export function ProfileMenu() {
+export function ProfileMenu({ placement = 'bottom' }: { placement?: 'bottom' | 'top' }) {
   const profile = useProfile()
   const transactions = useTransactions()
   const categories = useCategories()
@@ -22,6 +22,7 @@ export function ProfileMenu() {
       <Popover
         label="Perfil"
         width={272}
+        placement={placement}
         trigger={({ open, toggle, controls }) => (
           <button
             type="button"

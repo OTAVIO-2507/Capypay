@@ -1,3 +1,4 @@
+import type { ImportedCardTerms } from '@/domain/importing'
 import { create } from 'zustand'
 import { createEmptyData } from '@/data/defaults'
 import { createSupabaseRepository } from '@/data/supabaseRepository'
@@ -6,15 +7,15 @@ import type { SeriesPlan } from '@/domain/detectSeries'
 import type {
   Account,
   CategoryId,
+  CreditCardTerms,
   FinanceData,
   Goal,
   RecurrenceDraft,
-  ThemePreference,
   Transaction,
   TransactionDraft,
   TransactionId,
 } from '@/domain/types'
-import { currentMonth, shiftDate, shiftMonth, type MonthKey } from '@/lib/date'
+import { currentMonth, shiftDate, type MonthKey } from '@/lib/date'
 import { createId } from '@/lib/id'
 import type { Cents } from '@/lib/money'
 
@@ -42,6 +43,30 @@ export interface ImportedAccount {
   balanceCents?: Cents | null
   brand?: string | null
   institution?: string | null
+  card?: ImportedCardTerms | null
+}
+
+/**
+ * Os termos do cartão a partir do que o banco informou, sobre os que já
+ * existiam.
+ *
+ * O dia de fechamento e o de vencimento saem das datas da fatura aberta, que
+ * é o que o banco manda; o que ele não mandar fica como estava. Sem nada novo,
+ * devolve os termos anteriores intactos — uma sincronização que não trouxe o
+ * limite não pode apagar o limite que existia.
+ */
+function termosDoBanco(
+  card: ImportedCardTerms | null | undefined,
+  anteriores: CreditCardTerms | null | undefined,
+): CreditCardTerms | null {
+  if (!card) return anteriores ?? null
+  const dia = (data: string | null) => (data ? Number(data.slice(8, 10)) || null : null)
+  return {
+    closingDay: dia(card.closeDate) ?? anteriores?.closingDay ?? null,
+    dueDay: dia(card.dueDate) ?? anteriores?.dueDay ?? null,
+    limitCents: card.limitCents ?? anteriores?.limitCents ?? null,
+    availableCents: card.availableCents ?? anteriores?.availableCents ?? null,
+  }
 }
 
 interface FinanceState {
@@ -60,7 +85,6 @@ interface FinanceState {
   /** Volta ao estado inicial, sem dados em memória — ao trocar ou perder a sessão. */
   reset: () => void
 
-  setTheme: (theme: ThemePreference) => void
   togglePrivacy: () => void
   setProfileName: (name: string) => void
   updateProfile: (patch: Partial<FinanceData['profile']>) => void
@@ -93,8 +117,6 @@ interface FinanceState {
   updateGoal: (id: string, patch: Partial<Goal>) => void
   deleteGoal: (id: string) => void
 
-  setBudget: (month: MonthKey, categoryId: CategoryId, limitCents: Cents) => void
-  copyBudgetsFromPreviousMonth: (month: MonthKey) => void
 
   addAccount: (account: Omit<Account, 'id' | 'createdAt' | 'archived'>) => void
   registerBankConnection: (provider: string, itemId: string) => void
@@ -159,9 +181,6 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
 
     reset: () => set({ data: createEmptyData(), status: 'idle', loadError: null, saveError: null }),
 
-    setTheme: (theme) =>
-      mutate((data) => ({ ...data, settings: { ...data.settings, theme } })),
-
     togglePrivacy: () =>
       mutate((data) => ({
         ...data,
@@ -213,6 +232,7 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
                     balanceUpdatedAt: conta.balanceCents == null ? item.balanceUpdatedAt : now,
                     brand: conta.brand ?? item.brand ?? null,
                     institution: conta.institution ?? item.institution ?? null,
+                    creditCard: termosDoBanco(conta.card, item.creditCard),
                     sync: { ...item.sync!, lastSyncedAt: now },
                   }
                 : item,
@@ -228,7 +248,7 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
                 kind: conta.kind,
                 institution: conta.institution ?? null,
                 last4: conta.number?.slice(-4) ?? null,
-                creditCard: null,
+                creditCard: termosDoBanco(conta.card, null),
                 brand: conta.brand ?? null,
                 balanceCents: conta.balanceCents ?? null,
                 balanceUpdatedAt: conta.balanceCents == null ? null : now,
@@ -540,26 +560,6 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
         ),
       })),
 
-    setBudget: (month, categoryId, limitCents) =>
-      mutate((data) => {
-        const monthBudgets = { ...(data.budgets[month] ?? {}) }
-        if (limitCents > 0) monthBudgets[categoryId] = limitCents
-        else delete monthBudgets[categoryId]
-
-        const budgets = { ...data.budgets }
-        if (Object.keys(monthBudgets).length > 0) budgets[month] = monthBudgets
-        else delete budgets[month]
-
-        return { ...data, budgets }
-      }),
-
-    copyBudgetsFromPreviousMonth: (month) =>
-      mutate((data) => {
-        const previous = data.budgets[shiftMonth(month, -1)]
-        if (!previous || Object.keys(previous).length === 0) return data
-        return { ...data, budgets: { ...data.budgets, [month]: { ...previous } } }
-      }),
-
     addAccount: (account) =>
       mutate((data) => ({
         ...data,
@@ -637,13 +637,9 @@ export const useFinanceStore = create<FinanceState>()((set, get) => {
     loadDemoData: (demo) =>
       mutate((data) => ({ ...demo, profile: data.profile, settings: data.settings })),
 
-    clearAll: () =>
-      mutate((data) => ({
-        ...createEmptyData(),
-        // A preferência visual não é um dado financeiro; zerar a base não
-        // deveria devolver o usuário ao tema errado.
-        settings: { ...createEmptyData().settings, theme: data.settings.theme },
-      })),
+    // Zerar a base devolve tudo ao estado inicial. O tema morava fora dessa
+    // regra, por não ser dado financeiro; com tema único, não sobrou exceção.
+    clearAll: () => mutate(() => createEmptyData()),
   }
 })
 

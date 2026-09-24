@@ -1,31 +1,29 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import type { ReactNode } from 'react'
+import { NavLink } from 'react-router-dom'
 import { Icon } from '@/components/Icon'
+import { Logo } from '@/components/Logo'
 import { Wordmark } from '@/components/Wordmark'
+import { SectionTabs } from './SectionTabs'
 import { cn } from '@/lib/cn'
 import type { NavDestination } from './navigation'
 
 /**
  * A moldura, compartilhada pelo app financeiro e pelo painel de administração.
  *
- * A partir de 1024px, onde a barra lateral substitui a barra inferior, a
- * moldura para de rolar com a página: ganha altura fixa (a do viewport, ou a
- * do viewport menos o respiro de 20px a partir de 1280px) e `overflow-hidden`,
- * e vira o teto de tudo que existe nela. Barra lateral e cabeçalho passam a
- * ser paisagem fixa; só o `<main>` rola, por dentro de si mesmo.
+ * **Quem rola é a página.** A barra de rolagem fica na borda direita da
+ * janela, como a de qualquer site, e não por dentro da moldura — foi pedido
+ * explícito, e a razão é de leitura: uma barra no meio da tela não parece a
+ * barra da página, parece um painel que rola sozinho.
  *
- * Antes era o inverso: a página inteira rolava, e a barra lateral usava
- * `position: sticky` para *parecer* fixa. Um elemento sticky com fundo e
- * canto arredondado próprios tem dois jeitos de sair errado: um bug do
- * Chromium que perde a repintura do recorte no instante em que ele "gruda",
- * e uma conta de altura que nunca fecha exatamente com o fim real da página,
- * deixando a mesa cinza aparecer por baixo da barra no fim da rolagem. A
- * barra fixa de verdade não tem nenhum dos dois problemas: ela não faz nada
- * de especial, porque não precisa.
+ * A moldura já teve altura fixa, com o `<main>` rolando por dentro de si
+ * mesmo. O que aquilo evitava — uma barra lateral `sticky` com conta de
+ * altura que nunca fechava com o fim da página, e um bug de repintura do
+ * Chromium quando ela grudava — está evitado de outro jeito agora: a faixa
+ * da esquerda acompanha a moldura inteira e só o conteúdo dela gruda, com a
+ * altura da **janela**. Não há conta a errar, e nada a repintar.
  *
- * Abaixo de 1024px a moldura é dispensada de novo: a barra vira barra
- * inferior, e a página volta a rolar inteira. Não sobra altura de tela para
- * gastar com um cabeçalho fixo separado do conteúdo.
+ * Abaixo de 1024px a barra lateral vira barra inferior fixa, e a moldura
+ * deixa de existir: não sobra altura de tela para gastar com ela.
  *
  * Administração usa exatamente esta moldura, e não uma parecida. Duas
  * molduras que quase combinam envelhecem em direções diferentes: a primeira
@@ -33,37 +31,39 @@ import type { NavDestination } from './navigation'
  */
 export function Shell({
   nav,
-  footerNav,
+  railNav,
+  railFooter,
   navLabel,
   topBar,
   children,
 }: {
   nav: readonly NavDestination[]
-  /** Destino separado no rodapé da barra, como Ajustes. */
-  footerNav?: NavDestination
+  /**
+   * Os destinos da barra lateral, que **não** são os de seção: a lateral do
+   * produto de referência não navega seções, quem faz isso é a fila de abas.
+   * Aqui ela guarda o que é ferramenta — importar extrato, ajustes.
+   */
+  railNav?: readonly NavDestination[]
+  /** O que fica no pé da barra lateral. É o lugar do avatar, como na referência. */
+  railFooter?: ReactNode
   navLabel: string
   topBar: ReactNode
   children: ReactNode
 }) {
   return (
-    <div className="min-h-dvh bg-desk lg:h-dvh lg:min-h-0 lg:overflow-hidden xl:p-5">
+    <div className="min-h-dvh bg-desk xl:p-5">
       <div
         className={cn(
-          'mx-auto flex min-h-dvh w-full max-w-[1600px] bg-raised',
-          // `min-h-dvh` sem prefixo é o piso para telas estreitas, onde a
-          // moldura fixa não existe e uma tela quase vazia não deve parecer
-          // cortada. A partir de 1024px, `lg:min-h-0` cancela esse piso:
-          // sem ele, `min-height: 100dvh` (900px) vence sobre a altura de
-          // `xl:h-[calc(100dvh-2.5rem)]` (860px) sempre que a segunda for
-          // menor, porque `min-height` sempre tem prioridade sobre `height`
-          // quando os dois entram em conflito. A moldura ficava 40px mais
-          // alta do que a mesa reservava para ela, e o excesso, sem
-          // `overflow-hidden` no invólucro externo para contê-lo, vazava
-          // para a página inteira, que passava a rolar por baixo da moldura.
-          'lg:h-dvh lg:min-h-0 lg:overflow-hidden xl:h-[calc(100dvh-2.5rem)] xl:rounded-xl xl:shadow-[var(--shadow-frame)]',
+          'mx-auto flex w-full max-w-[1600px] bg-desk',
+          // A moldura cresce com o conteúdo, e a janela é só o piso dela: uma
+          // tela de conteúdo curto não pode parecer cortada no meio.
+          // Nenhum `overflow` aqui — recorte neste nível faria da moldura o
+          // contêiner de rolagem, e a barra lateral `sticky` lá dentro
+          // deixaria de grudar.
+          'min-h-dvh xl:min-h-[calc(100dvh-2.5rem)] xl:rounded-xl xl:border xl:border-hairline',
         )}
       >
-        <Sidebar nav={nav} footerNav={footerNav} label={navLabel} />
+        <Rail nav={railNav} footer={railFooter} label={navLabel} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center justify-between gap-4 px-4 pt-5 pb-6 lg:px-7 lg:pt-6">
@@ -72,7 +72,25 @@ export function Shell({
             {topBar}
           </header>
 
-          <main className="flex-1 px-4 pb-28 lg:min-h-0 lg:overflow-y-auto lg:px-7 lg:pb-8">
+          {/*
+            As abas só existem a partir de 1024px. Abaixo disso quem navega é a
+            barra inferior, e ter as duas seria dizer a mesma coisa duas vezes
+            gastando uma faixa de altura que o celular não tem para dar. Não é
+            o que o produto de referência faz — mas lá a fila de abas é a única
+            navegação de seção que existe, e aqui a barra inferior já era um
+            caminho de primeira classe antes desta mudança.
+          */}
+          <div className="hidden px-4 pb-6 lg:block lg:px-7">
+            <SectionTabs destinations={nav} label={navLabel} />
+          </div>
+
+          {/*
+            A folga de baixo cobre dois flutuantes, não um: no celular, a barra
+            de navegação e o botão do assistente acima dela; no desktop, só o
+            botão. Sem ela, a última linha da página fica embaixo dele e não há
+            como rolá-la para fora.
+          */}
+          <main className="flex-1 px-4 pb-44 lg:px-7 lg:pb-24">
             {children}
           </main>
         </div>
@@ -84,213 +102,100 @@ export function Shell({
 }
 
 /**
- * A barra lateral, em tinta cheia.
+ * O rail de ícones.
  *
- * Ela é escura porque o efeito que a define depende disso: o item selecionado
- * assume a cor do papel e avança até a borda direita, virando um pedaço da
- * página que entra na barra. Sem contraste entre barra e conteúdo não há de
- * onde a aba "vir", e o recurso deixa de existir.
+ * Isto já foi uma barra de 232px com os sete destinos e uma pílula que viajava
+ * entre eles. A pílula era um bom componente e mesmo assim saiu, porque estava
+ * respondendo à pergunta errada: no produto de referência a lateral **não
+ * navega seções**. Ela carrega o assistente, os agentes e o histórico de
+ * conversa; quem troca de seção é a fila de abas no topo do conteúdo.
  *
- * É o maior bloco de tinta do sistema, e por isso ele custa a cota: com a
- * barra escura, o painel gasta os outros dois blocos no cartão e na meta em
- * foco, e nada mais.
+ * Então o rail guarda o que é ferramenta — importar extrato, ajustes — e
+ * ganha o assistente quando ele existir. A alternativa era repetir os sete
+ * destinos aqui e nas abas, que é o mesmo caminho oferecido duas vezes na
+ * mesma tela.
+ *
+ * A anatomia é a da referência: a marca no topo, os ícones embaixo dela, e o
+ * avatar no pé. O avatar morava na barra de topo; desceu para cá porque é
+ * "quem é você", e isso pertence à coluna que acompanha a pessoa pelo produto
+ * inteiro, não ao cabeçalho da tela em que ela está. Abaixo de 1024px, onde
+ * não existe rail, ele volta para o cabeçalho.
+ *
+ * São **duas** peças, e isto não é detalhe de implementação: a coluna e o que
+ * gruda nela.
+ *
+ * A coluna é o `<div>` de fora. Ela tem a cor, a borda e o canto arredondado,
+ * e acompanha a moldura de cima a baixo — é ela que faz a faixa da esquerda
+ * existir na página inteira. O `<nav>` de dentro é que é `sticky`, com a
+ * altura da **janela**, e não carrega cor nenhuma.
+ *
+ * A cor já morou no `<nav>`, e o defeito era visível: a faixa só existia onde
+ * o `<nav>` estava. Ao rolar, ele descolava do topo da moldura e a barra
+ * virava uma lousa de 860px boiando no meio da página — canto arredondado
+ * aparecendo na altura do olho, mesa cinza acima e abaixo dela, e a borda da
+ * direita começando e terminando no nada.
+ *
+ * A largura é 56px — `--sidebar-width-icon: 3.5rem` no produto de referência,
+ * lido do atributo de estado da barra colapsada deles.
  */
-function Sidebar({
+function Rail({
   nav,
-  footerNav,
+  footer,
   label,
 }: {
-  nav: readonly NavDestination[]
-  footerNav?: NavDestination
+  nav?: readonly NavDestination[]
+  footer?: ReactNode
   label: string
 }) {
-  const navRef = useRef<HTMLElement>(null)
-  const { pathname } = useLocation()
-  const [tab, setTab] = useState<{ top: number; height: number } | null>(null)
-  // Sem isto a aba deslizaria do topo da barra até o destino no primeiro
-  // desenho: uma animação de entrada que ninguém pediu e que atrapalha.
-  const [animar, setAnimar] = useState(false)
-
-  useLayoutEffect(() => {
-    const elemento = navRef.current
-    if (!elemento) return
-
-    /*
-     * A posição é medida, e não calculada por índice × altura. O item de
-     * Ajustes fica separado no rodapé, então não existe passo constante entre
-     * os itens; medir é o que faz a aba parar no lugar certo em qualquer
-     * arranjo, inclusive com listas de tamanhos diferentes entre as duas
-     * molduras que compartilham este componente.
-     */
-    const medir = () => {
-      // `aria-current="page"` é posto pelo próprio NavLink no item ativo, então
-      // não há um segundo atributo para manter em sincronia com a rota.
-      const alvo = elemento.querySelector<HTMLElement>('[aria-current="page"]')
-      if (!alvo) return setTab(null)
-
-      // Diferença entre retângulos, e não `offsetTop`: este último é medido a
-      // partir do `offsetParent`, cuja identidade muda conforme o que estiver
-      // posicionado na árvore, e a especificação diverge entre navegadores
-      // sobre contar ou não o padding. A diferença de retângulos não tem essa
-      // ambiguidade.
-      const caixaNav = elemento.getBoundingClientRect()
-      const caixaAlvo = alvo.getBoundingClientRect()
-      setTab({ top: caixaAlvo.top - caixaNav.top, height: caixaAlvo.height })
-    }
-
-    medir()
-
-    // A altura da barra muda com a janela e depois que a fonte carrega; sem
-    // observar, a aba fica alguns pixels fora do item até a próxima navegação.
-    const observer = new ResizeObserver(medir)
-    observer.observe(elemento)
-    return () => observer.disconnect()
-  }, [pathname])
-
-  useEffect(() => {
-    const id = window.requestAnimationFrame(() => setAnimar(true))
-    return () => window.cancelAnimationFrame(id)
-  }, [])
-
   return (
-    /*
-     * Um elemento só. Isto já foi duas caixas, um fundo esticado mais uma
-     * `nav` grudada com `position: sticky`, porque a moldura em volta rolava
-     * com a página, e uma barra "fixa" dentro de algo que rola só se consegue
-     * por truque. Agora a moldura tem altura fixa e não rola nunca, então a
-     * barra não precisa fingir nada: `h-full` já a estica pela altura
-     * inteira, sempre, sem cálculo e sem estado de "presa".
-     */
-    <nav
-      ref={navRef}
-      aria-label={label}
-      className="hidden h-full w-[232px] shrink-0 flex-col overflow-hidden bg-block py-6 text-block-ink lg:relative lg:flex xl:rounded-l-xl"
-    >
-      <Wordmark className="px-6" />
+    <div className="hidden w-14 shrink-0 border-r border-hairline bg-sunken lg:block xl:rounded-l-xl">
+      <nav
+        aria-label={label}
+        className={cn(
+          'flex flex-col items-center gap-2 py-5',
+          'sticky top-0 h-dvh xl:top-5 xl:h-[calc(100dvh-2.5rem)]',
+        )}
+      >
+        {/* Só a marca: o nome não cabe em 56px, e o rail é a única
+            superfície do produto onde ele não aparece. */}
+        <Logo decorative size={26} className="mb-4 text-ink" />
+        {nav?.map((destination) => <RailLink key={destination.to} destination={destination} />)}
 
-      {tab ? <ActiveTab top={tab.top} height={tab.height} animar={animar} /> : null}
-
-      <ul className="mt-9 flex flex-1 flex-col gap-1">
-        {nav.map((destination) => (
-          <li key={destination.to}>
-            <SidebarLink destination={destination} />
-          </li>
-        ))}
-      </ul>
-
-      {footerNav ? <SidebarLink destination={footerNav} /> : null}
-    </nav>
-  )
-}
-
-/**
- * A aba ativa, como elemento único que viaja.
- *
- * Antes o fundo pertencia ao próprio link, e trocar de rota fazia a aba sumir
- * de um lugar e aparecer em outro. Com um só elemento posicionado por medida,
- * a mudança de rota vira um deslocamento contínuo: o olho acompanha para onde
- * foi, em vez de reprocurar.
- *
- * O movimento é `transform`, e não `top`: só transform e opacidade são
- * animados pelo compositor, então a viagem não força recálculo de layout a
- * cada quadro.
- */
-function ActiveTab({ top, height, animar }: { top: number; height: number; animar: boolean }) {
-  return (
-    <div
-      aria-hidden="true"
-      className={cn(
-        // `top-0` é obrigatório: sem ele o elemento absoluto assume a posição
-        // estática, onde ele cairia no fluxo normal (logo abaixo da marca),
-        // e a aba nascia deslocada dezenas de pixels para baixo.
-        'pointer-events-none absolute top-0 right-0 left-0 z-0 rounded-l-full bg-raised',
-        // Ease-out exponencial: sai rápido e assenta devagar, que é como a
-        // matéria se move. Linear ou ease-in-out aqui parecem mecânicos.
-        animar && 'transition-[transform,height] duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)]',
-      )}
-      style={{ height, transform: `translateY(${top}px)` }}
-    >
-      <ConcaveCorner position="above" />
-      <ConcaveCorner position="below" />
+        {/* O avatar no pé, empurrado para lá pelo `mt-auto`. */}
+        {footer ? <div className="mt-auto">{footer}</div> : null}
+      </nav>
     </div>
   )
 }
 
 /**
- * Item da barra.
+ * Item do rail: quadrado arredondado, ícone sozinho.
  *
- * O fundo do selecionado não vive aqui: é a `ActiveTab` que viaja por cima.
- * Este elemento só carrega o conteúdo e a cor.
+ * Sem rótulo visível, o nome acessível não é opcional — `title` serve ao
+ * ponteiro e `aria-label` ao leitor de tela, e os dois carregam o mesmo texto
+ * porque são a mesma informação para pessoas diferentes.
  */
-function SidebarLink({ destination }: { destination: NavDestination }) {
+function RailLink({ destination }: { destination: NavDestination }) {
   return (
     <NavLink
       to={destination.to}
       end={destination.end ?? destination.to === '/'}
       data-tour={destination.tour}
+      aria-label={destination.label}
+      title={destination.label}
       className={({ isActive }) =>
         cn(
-          'relative z-10 flex h-[52px] items-center gap-3 rounded-l-full pr-5 pl-6 text-[0.8125rem]',
-          'transition-colors duration-300',
+          'inline-flex size-10 items-center justify-center rounded-xs border transition-colors duration-150',
           isActive
-            ? 'font-semibold text-ink'
-            : 'font-medium text-block-muted hover:bg-block-ink/10 hover:text-block-ink',
+            ? 'border-accent/45 bg-accent/12 text-accent'
+            : 'border-transparent text-faint hover:bg-sunken hover:text-ink',
         )
       }
     >
       {({ isActive }) => (
-        <>
-          <Icon
-            name={destination.icon}
-            size={19}
-            className={cn(
-              'shrink-0 transition-transform duration-[420ms] ease-[cubic-bezier(0.16,1,0.3,1)]',
-              // Um assentar de 4%, não um salto: confirma o toque sem chamar
-              // atenção para si a cada navegação.
-              isActive && 'scale-[1.04]',
-            )}
-          />
-          {destination.label}
-        </>
+        <Icon name={destination.icon} size={18} strokeWidth={isActive ? 2.25 : 1.75} />
       )}
     </NavLink>
-  )
-}
-
-/**
- * Curva côncava no encontro da aba com a barra.
- *
- * O desenho é um quadrado na cor do conteúdo com um quarto de disco na cor da
- * barra recortado por `border-radius`. É o único jeito de obter canto
- * invertido em CSS sem máscara nem SVG, e sobrevive a qualquer mudança de cor
- * porque as duas superfícies vêm dos mesmos tokens.
- *
- * O raio é grande de propósito. Na primeira versão ele era de 16px e a curva
- * saía curta demais para ser lida como curva: virava um degrau, e a aba
- * parecia ter duas orelhas em vez de nascer da barra. Em 26px, praticamente o
- * mesmo raio da lateral arredondada da aba, as três curvas formam uma linha só.
- */
-const RAIO_CONCAVO = 26
-
-function ConcaveCorner({ position }: { position: 'above' | 'below' }) {
-  return (
-    <span
-      aria-hidden="true"
-      style={{
-        width: RAIO_CONCAVO,
-        height: RAIO_CONCAVO,
-        [position === 'above' ? 'top' : 'bottom']: -RAIO_CONCAVO,
-      }}
-      className="pointer-events-none absolute right-0 bg-raised"
-    >
-      <span
-        style={{
-          [position === 'above' ? 'borderBottomRightRadius' : 'borderTopRightRadius']:
-            RAIO_CONCAVO,
-        }}
-        className="absolute inset-0 bg-block"
-      />
-    </span>
   )
 }
 
@@ -302,11 +207,15 @@ function MobileBar({ nav, label }: { nav: readonly NavDestination[]; label: stri
   return (
     <nav
       aria-label={label}
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-sheet pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-hairline bg-sunken pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <ul className="flex items-stretch justify-around">
         {nav.map((destination) => (
-          <li key={destination.to} className="flex-1">
+          // `min-w-0` é o que deixa o `truncate` do rótulo agir. Item de flex
+          // não encolhe abaixo da largura do próprio texto por padrão, então as
+          // reticências nunca apareciam: os sete itens somavam mais que a tela
+          // e o último saía pela borda do mesmo jeito.
+          <li key={destination.to} className="min-w-0 flex-1">
             <NavLink
               to={destination.to}
               end={destination.end ?? destination.to === '/'}
@@ -321,8 +230,26 @@ function MobileBar({ nav, label }: { nav: readonly NavDestination[]; label: stri
             >
               {({ isActive }) => (
                 <>
-                  <Icon name={destination.icon} size={19} strokeWidth={isActive ? 2.25 : 1.75} />
-                  <span className={cn('text-[10px]', isActive && 'font-semibold')}>
+                  <Icon
+                    name={destination.icon}
+                    size={19}
+                    strokeWidth={isActive ? 2.25 : 1.75}
+                    className={isActive ? 'text-accent' : undefined}
+                  />
+                  {/*
+                    `truncate` porque sete destinos em 400px dão 57px por item,
+                    e "Parcelamentos" em 10px pede uns 75px. Sem isto o rótulo
+                    do último item atravessa a borda da tela e some cortado —
+                    era assim antes, e continuava sendo depois que a barra
+                    trocou de cor. Reticências são ruins; rótulo cortado pela
+                    janela é pior, porque não se anuncia.
+                  */}
+                  <span
+                    className={cn(
+                      'w-full truncate text-center text-[10px]',
+                      isActive && 'font-semibold',
+                    )}
+                  >
                     {destination.label}
                   </span>
                 </>

@@ -21,13 +21,25 @@ export interface NavDestination {
 
 /** Destinos principais, na ordem em que aparecem no rail e na barra inferior. */
 export const PRIMARY_NAV: NavDestination[] = [
-  { to: '/', label: 'Painel', icon: 'layout-dashboard', tour: 'nav-painel' },
+  { to: '/', label: 'Visão geral', icon: 'layout-dashboard', tour: 'nav-painel' },
   { to: '/transacoes', label: 'Transações', icon: 'arrow-left-right', tour: 'nav-transacoes' },
   { to: '/parcelamentos', label: 'Parcelamentos', icon: 'credit-card' },
   { to: '/assinaturas', label: 'Assinaturas', icon: 'repeat' },
-  { to: '/orcamento', label: 'Orçamento', icon: 'chart-column', tour: 'nav-orcamento' },
+  { to: '/categorias', label: 'Categorias', icon: 'tags', tour: 'nav-categorias' },
   { to: '/metas', label: 'Metas', icon: 'target', tour: 'nav-metas' },
   { to: '/contas', label: 'Contas', icon: 'credit-card', tour: 'nav-contas' },
+]
+
+/**
+ * Os destinos da barra lateral. Não são seções — são ferramentas, e é isso
+ * que a lateral guarda (ver `Shell`).
+ *
+ * "Importar extrato" só era alcançável por dentro de Ajustes, e é das ações
+ * mais pontuais e mais procuradas do produto: quem acabou de conectar o banco
+ * vem direto para cá.
+ */
+export const RAIL_NAV: NavDestination[] = [
+  { to: '/importar', label: 'Importar extrato', icon: 'upload' },
 ]
 
 export const SETTINGS_NAV: NavDestination = {

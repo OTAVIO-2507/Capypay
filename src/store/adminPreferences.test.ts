@@ -8,7 +8,6 @@ import { useAdminPreferences } from './adminPreferences'
  */
 function comoSeFosseDe(ownerId: string | null, extras: Record<string, unknown> = {}) {
   useAdminPreferences.setState({
-    theme: 'dark',
     name: 'Primeira Pessoa',
     nickname: 'Primeira',
     greeting: true,
@@ -63,14 +62,17 @@ describe('adotarDono', () => {
   })
 
   /*
-   * O tema sobrevive à troca, e é a única coisa que sobrevive: aparência é
-   * preferência de monitor, não de pessoa. Quem senta num computador de tela
-   * escura quer o tema escuro seja qual for a conta.
+   * O tema era a única preferência que sobrevivia à troca de dono, por ser do
+   * monitor e não da pessoa. Com tema único ele deixou de existir, e agora não
+   * sobra nada: a adoção zera o conjunto inteiro, menos o próprio dono.
    */
-  it('preserva o tema, que é do dispositivo e não da conta', () => {
+  it('não guarda nada da pessoa anterior além do novo dono', () => {
     comoSeFosseDe('abc')
     useAdminPreferences.getState().adotarDono('xyz')
 
-    expect(useAdminPreferences.getState().theme).toBe('dark')
+    const estado = useAdminPreferences.getState()
+    expect(estado.ownerId).toBe('xyz')
+    expect(estado.name).toBe('')
+    expect(estado.nickname).toBe('')
   })
 })

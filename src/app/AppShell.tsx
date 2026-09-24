@@ -1,13 +1,14 @@
 import { Outlet } from 'react-router-dom'
 import { Icon } from '@/components/Icon'
+import { AssistantLauncher } from '@/features/assistant/AssistantLauncher'
 import { OnboardingTour } from '@/features/onboarding/OnboardingTour'
 import { TOUR_STEPS, TOUR_TEXTOS } from '@/features/onboarding/tourSteps'
 import { NotificationsMenu } from '@/features/shell/NotificationsMenu'
 import { ProfileMenu } from '@/features/shell/ProfileMenu'
 import { cn } from '@/lib/cn'
 import { useFinanceStore } from '@/store/financeStore'
-import { useProfile, useResolvedTheme, useSettings } from '@/store/hooks'
-import { PRIMARY_NAV, SETTINGS_NAV } from './navigation'
+import { useProfile, useSettings } from '@/store/hooks'
+import { PRIMARY_NAV, RAIL_NAV, SETTINGS_NAV } from './navigation'
 import { StorageWarning } from './Notices'
 import { Shell } from './Shell'
 
@@ -31,13 +32,19 @@ export function AppShell() {
     <>
       <Shell
         nav={PRIMARY_NAV}
-        footerNav={SETTINGS_NAV}
+        railNav={[...RAIL_NAV, SETTINGS_NAV]}
+        // O avatar no pé da barra lateral, como na referência. A partir de
+        // 1024px ele sai do cabeçalho e vem para cá; abaixo disso não existe
+        // barra lateral, e ele continua lá em cima.
+        railFooter={<ProfileMenu placement="top" />}
         navLabel="Navegação principal"
         topBar={<TopBar />}
       >
         <StorageWarning />
         <Outlet />
       </Shell>
+
+      <AssistantLauncher />
 
       {precisaDeTour ? (
         <OnboardingTour
@@ -57,19 +64,23 @@ export function AppShell() {
 /**
  * Controles globais.
  *
- * Quatro campos, na ordem em que se usam: avisos (o que exige atenção), tema e
+ * Três campos, na ordem em que se usam: avisos (o que exige atenção),
  * privacidade (como a tela se apresenta) e perfil (quem é você). O perfil vem
  * por último e separado por um divisor, porque é o único que não muda a tela:
  * ele abre um menu de conta.
+ *
+ * O alternador de tema morava entre avisos e privacidade, e saiu com o tema
+ * único.
  */
 function TopBar() {
   return (
     <div className="flex items-center gap-0.5">
       <NotificationsMenu />
-      <ThemeToggle />
       <PrivacyToggle />
-      <span aria-hidden="true" className="mx-1.5 h-6 w-px bg-hairline" />
-      <ProfileMenu />
+      <span aria-hidden="true" className="mx-1.5 h-6 w-px bg-hairline lg:hidden" />
+      <span className="lg:hidden">
+        <ProfileMenu />
+      </span>
     </div>
   )
 }
@@ -95,32 +106,3 @@ function PrivacyToggle() {
   )
 }
 
-/**
- * Alterna claro e escuro, e nada além disso.
- *
- * O ícone mostra o **tema que está na tela**, não a preferência salva, que
- * pode ser "automático" e não tem desenho próprio. Antes o botão ciclava por
- * três estados e exibia um monitor no terceiro, o que obrigava a decifrar um
- * ícone para descobrir em que modo se estava.
- *
- * "Automático" continua existindo, mas como escolha nomeada em Ajustes: é o
- * padrão de quem abre pela primeira vez, para a tela já chegar no tema do
- * sistema. O primeiro toque aqui transforma isso numa preferência explícita.
- */
-function ThemeToggle() {
-  const resolved = useResolvedTheme()
-  const setTheme = useFinanceStore((state) => state.setTheme)
-  const escuro = resolved === 'dark'
-
-  return (
-    <button
-      type="button"
-      onClick={() => setTheme(escuro ? 'light' : 'dark')}
-      aria-label={escuro ? 'Tema escuro. Mudar para claro.' : 'Tema claro. Mudar para escuro.'}
-      title={escuro ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
-      className="inline-flex size-10 items-center justify-center rounded-sm text-faint transition-colors duration-150 hover:bg-sunken hover:text-ink"
-    >
-      <Icon name={escuro ? 'moon' : 'sun'} size={18} />
-    </button>
-  )
-}

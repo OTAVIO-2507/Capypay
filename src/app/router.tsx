@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { RequireAdmin, RequireUser } from './routeGuards'
 import { AccountsPage } from '@/pages/AccountsPage'
 import { AdminAuditPage } from '@/pages/AdminAuditPage'
@@ -6,7 +6,6 @@ import { AdminDashboardPage } from '@/pages/AdminDashboardPage'
 import { AdminReportsPage } from '@/pages/AdminReportsPage'
 import { AdminSettingsPage } from '@/pages/AdminSettingsPage'
 import { AdminUsersPage } from '@/pages/AdminUsersPage'
-import { BudgetPage } from '@/pages/BudgetPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { ErrorPage } from '@/pages/ErrorPage'
 import { GoalsPage } from '@/pages/GoalsPage'
@@ -17,6 +16,7 @@ import { SettingsPage } from '@/pages/SettingsPage'
 import { TransactionsPage } from '@/pages/TransactionsPage'
 import { InstallmentsPage } from '@/pages/InstallmentsPage'
 import { SubscriptionsPage } from '@/pages/SubscriptionsPage'
+import { CategoriesPage } from '@/pages/CategoriesPage'
 
 /**
  * `BASE_URL` vem do `base` do Vite: em produção o GitHub Pages serve a partir
@@ -45,7 +45,11 @@ export const router = createBrowserRouter(
         { path: 'importar', element: <ImportPage /> },
         { path: 'parcelamentos', element: <InstallmentsPage /> },
         { path: 'assinaturas', element: <SubscriptionsPage /> },
-        { path: 'orcamento', element: <BudgetPage /> },
+        { path: 'categorias', element: <CategoriesPage /> },
+        // Orçamento saiu do produto. O endereço antigo continua existindo para
+        // favorito e link salvo: leva a Categorias, que responde "para onde foi o
+        // dinheiro" — a pergunta que quem abria Orçamento vinha fazer.
+        { path: 'orcamento', element: <Navigate to="/categorias" replace /> },
         { path: 'metas', element: <GoalsPage /> },
         { path: 'contas', element: <AccountsPage /> },
         { path: 'ajustes', element: <SettingsPage /> },

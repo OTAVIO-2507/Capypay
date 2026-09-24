@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { createEmptyData } from '@/data/defaults'
-import type { AvatarImageId, AvatarShape, Profile, ThemePreference } from '@/domain/types'
+import type { AvatarImageId, AvatarShape, Profile } from '@/domain/types'
 
 const STORAGE_KEY = 'capypay/admin-preferences'
 
@@ -23,7 +23,6 @@ const IMAGENS: readonly AvatarImageId[] = [
  * isso.
  */
 interface AdminPreferences {
-  theme: ThemePreference
   name: string
   nickname: string
   greeting: boolean
@@ -61,14 +60,12 @@ type PerfilPatch = Partial<
 >
 
 interface AdminPreferencesState extends AdminPreferences {
-  setTheme: (theme: ThemePreference) => void
   setProfile: (patch: PerfilPatch) => void
   /** Declara de quem é a sessão atual, zerando o que for de outra pessoa. */
   adotarDono: (userId: string) => void
 }
 
 const PADRAO: AdminPreferences = {
-  theme: 'system',
   name: '',
   nickname: '',
   greeting: true,
@@ -88,11 +85,9 @@ function ler(): AdminPreferences {
     if (!bruto) return PADRAO
 
     const salvo = JSON.parse(bruto) as Partial<Record<keyof AdminPreferences, unknown>>
-    const tema = salvo.theme
     const imagem = salvo.avatarImage
 
     return {
-      theme: tema === 'light' || tema === 'dark' || tema === 'system' ? tema : PADRAO.theme,
       name: texto(salvo.name),
       nickname: texto(salvo.nickname),
       greeting: salvo.greeting !== false,
@@ -115,13 +110,11 @@ function ler(): AdminPreferences {
 
 export const useAdminPreferences = create<AdminPreferencesState>()((set, get) => {
   const gravar = () => {
-    const { theme, name, nickname, greeting, avatarImage, avatarShape, onboardedAt, ownerId } =
-      get()
+    const { name, nickname, greeting, avatarImage, avatarShape, onboardedAt, ownerId } = get()
     try {
       window.localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
-          theme,
           name,
           nickname,
           greeting,
@@ -140,11 +133,6 @@ export const useAdminPreferences = create<AdminPreferencesState>()((set, get) =>
   return {
     ...ler(),
 
-    setTheme: (theme) => {
-      set({ theme })
-      gravar()
-    },
-
     setProfile: (patch) => {
       set(patch)
       gravar()
@@ -154,13 +142,8 @@ export const useAdminPreferences = create<AdminPreferencesState>()((set, get) =>
       const dono = get().ownerId
       if (dono === userId) return
 
-      /*
-       * O tema fica de fora do que se apaga, e de propósito: aparência é
-       * preferência de monitor, não de pessoa. Quem senta num computador de
-       * tela escura quer o tema escuro seja qual for a conta.
-       */
       if (dono === null) set({ ownerId: userId })
-      else set({ ...PADRAO, theme: get().theme, ownerId: userId })
+      else set({ ...PADRAO, ownerId: userId })
 
       gravar()
     },

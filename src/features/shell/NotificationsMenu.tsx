@@ -6,8 +6,6 @@ import { buildAlerts, type Alert } from '@/domain/alerts'
 import { cn } from '@/lib/cn'
 import { formatCurrency } from '@/lib/format'
 import {
-  useBudgets,
-  useCategories,
   useGoals,
   usePrivacy,
   useSelectedMonth,
@@ -24,9 +22,7 @@ import {
  */
 export function NotificationsMenu() {
   const transactions = useTransactions()
-  const categories = useCategories()
   const goals = useGoals()
-  const budgets = useBudgets()
   const month = useSelectedMonth()
   const masked = usePrivacy()
 
@@ -34,13 +30,11 @@ export function NotificationsMenu() {
     () =>
       buildAlerts({
         transactions,
-        categories,
         goals,
-        budgets,
         month,
         formatValue: (cents) => formatCurrency(cents, { masked }),
       }),
-    [transactions, categories, goals, budgets, month, masked],
+    [transactions, goals, month, masked],
   )
 
   const urgentes = alerts.filter((alerta) => alerta.severity === 'high').length
@@ -71,10 +65,22 @@ export function NotificationsMenu() {
               className={cn(
                 'absolute top-1 right-1 flex min-w-[18px] items-center justify-center rounded-full px-1',
                 'text-[10px] leading-[18px] font-semibold',
-                // O distintivo muda de preenchimento, não de cor: cheio quando
-                // há algo urgente, contornado quando é só informação.
+                /*
+                  O distintivo mudava de preenchimento e não de cor, porque o
+                  sistema não tinha cor. Agora tem, e urgência é exatamente o
+                  que ela existe para dizer: cheio de despesa quando há algo
+                  urgente, contornado quando é só informação.
+
+                  A contagem continua sendo a leitura principal — apagar a cor
+                  não tira nada, porque o número está escrito dentro.
+
+                  A tinta sobre o vermelho é a da mesa, e não a primária: branco
+                  sobre o vermelho da despesa dá 3,61:1, abaixo do piso, e este
+                  número tem dez pixels. Quase-preto sobre o mesmo vermelho dá
+                  5,29:1.
+                */
                 urgentes > 0
-                  ? 'bg-block text-block-ink'
+                  ? 'bg-expense text-desk'
                   : 'border border-hairline-strong bg-sheet text-muted',
               )}
             >
@@ -119,7 +125,7 @@ function AlertList({ alerts, onNavigate }: { alerts: Alert[]; onNavigate: () => 
                   className={cn(
                     'mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-sm',
                     alerta.severity === 'high'
-                      ? 'bg-block text-block-ink'
+                      ? 'bg-expense/15 text-expense'
                       : 'bg-sunken text-muted',
                   )}
                 >
