@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Icon } from '@/components/Icon'
+import { Icon, type IconName } from '@/components/Icon'
 import { cn } from '@/lib/cn'
 
 /**
@@ -34,6 +34,14 @@ interface SelectProps {
   disabled?: boolean
   placeholder?: string
   className?: string
+  /**
+   * `md` é o campo de formulário, 56px. `sm` é o filtro de barra de
+   * ferramentas: 40px, contornado e sem fundo, para uma fileira de cinco
+   * filtros não pesar mais que a tabela que eles recortam.
+   */
+  size?: 'md' | 'sm'
+  /** Ícone à esquerda do rótulo, só no tamanho `sm`. */
+  icon?: IconName
 }
 
 /** Por quanto tempo a digitação continua contando como a mesma busca. */
@@ -51,6 +59,8 @@ export function Select({
   disabled,
   placeholder = 'Selecione',
   className,
+  size = 'md',
+  icon,
   ...aria
 }: SelectProps) {
   const [aberto, setAberto] = useState(false)
@@ -201,16 +211,24 @@ export function Select({
         onClick={() => (aberto ? fechar(false) : abrir())}
         onKeyDown={aoTeclar}
         className={cn(
-          'flex h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-sm border border-transparent bg-sunken px-4 text-left text-[0.8125rem] text-ink',
-          'transition-colors duration-150 hover:border-hairline-strong',
+          'flex w-full cursor-pointer items-center justify-between gap-2 rounded-full border text-left text-[0.8125rem] text-ink',
+          'transition-colors duration-150',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          aberto && 'border-hairline-strong bg-sheet',
+          size === 'md'
+            ? 'h-14 border-transparent bg-sunken px-5 hover:border-hairline-strong'
+            : 'h-10 border-hairline bg-transparent px-4 hover:bg-sunken',
+          aberto && (size === 'md' ? 'border-hairline-strong bg-sheet' : 'bg-sunken'),
           invalid && 'border-ink',
           className,
         )}
       >
-        <span className={cn('truncate', !selecionada && 'text-faint')}>
-          {selecionada?.label ?? placeholder}
+        <span className="flex min-w-0 items-center gap-2">
+          {icon && size === 'sm' ? (
+            <Icon name={icon} size={15} className="shrink-0 text-muted" />
+          ) : null}
+          <span className={cn('truncate', !selecionada && 'text-faint')}>
+            {selecionada?.label ?? placeholder}
+          </span>
         </span>
         <Icon
           name="chevron-down"
@@ -234,7 +252,14 @@ export function Select({
             // respiro da lista: sem isso a opção que entra em foco encosta na
             // borda e a de cima aparece cortada ao meio, com cara de erro de
             // renderização.
-            'absolute z-30 max-h-60 w-full scroll-py-1 overflow-y-auto rounded-md border border-hairline bg-raised p-1 shadow-float',
+            'absolute z-30 max-h-60 scroll-py-1 overflow-y-auto rounded-md border border-hairline bg-raised p-1 shadow-float',
+            // No filtro compacto, pelo menos a largura do gatilho e mais quando
+            // o rótulo pedir: o gatilho tem a largura do texto escolhido, e
+            // uma opção mais longa que ele não pode sair cortada. No campo de
+            // formulário, a largura do campo e nada além: ele vive dentro de
+            // janela com rolagem, e uma lista mais larga que ela abria uma
+            // barra de rolagem horizontal no formulário inteiro.
+            size === 'sm' ? 'w-max max-w-[min(20rem,calc(100vw-2rem))] min-w-full' : 'w-full',
             paraCima ? 'bottom-full mb-1.5' : 'top-full mt-1.5',
           )}
         >

@@ -16,7 +16,7 @@ interface DonutProps {
   /** Percentual real, que pode passar de 100. Usado no rótulo. */
   rawValue?: number
   label: string
-  /** Inverte as cores para uso dentro de um bloco de tinta. */
+  /** Inverte as cores para uso sobre a pílula clara, onde a tinta normal sumiria. */
   onBlock?: boolean
   /**
    * Veste o arco (e o número) na identidade de fluxo, para status positivo

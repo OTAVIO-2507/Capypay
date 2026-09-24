@@ -14,6 +14,19 @@ interface PopoverProps {
   /** Largura do painel. */
   width?: number
   label: string
+  /**
+   * De que lado do gatilho o painel se alinha. `end` (padrão) abre para a
+   * esquerda, que é o certo para menu no canto direito da tela; `start` abre
+   * para a direita, para gatilho na borda esquerda, onde `end` jogaria o
+   * painel para fora da janela.
+   */
+  align?: 'start' | 'end'
+  /**
+   * De que lado do gatilho o painel abre. `bottom` é o padrão; `top` existe
+   * para o gatilho que mora no pé da tela — o avatar no fim da barra lateral,
+   * cujo menu abriria fora da janela se descesse.
+   */
+  placement?: 'bottom' | 'top'
 }
 
 /**
@@ -27,7 +40,14 @@ interface PopoverProps {
  * superior, porque nenhum ancestral da barra de topo recorta o conteúdo. Se um
  * dia recortar, isto vira `<dialog>` ou a API de popover.
  */
-export function Popover({ trigger, children, width = 300, label }: PopoverProps) {
+export function Popover({
+  trigger,
+  children,
+  width = 300,
+  label,
+  align = 'end',
+  placement = 'bottom',
+}: PopoverProps) {
   const [open, setOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLElement | null>(null)
@@ -78,9 +98,20 @@ export function Popover({ trigger, children, width = 300, label }: PopoverProps)
           id={panelId}
           role="dialog"
           aria-label={label}
-          style={{ width }}
+          // O teto de largura segura o painel dentro da janela no celular,
+          // onde 320px de painel e 16px de margem não cabem em 360px de tela.
+          style={{ width, maxWidth: 'calc(100vw - 2rem)' }}
           className={cn(
-            'absolute top-full right-0 z-50 mt-2 origin-top-right overflow-hidden',
+            'absolute z-50 overflow-hidden',
+            placement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
+            align === 'end' ? 'right-0' : 'left-0',
+            placement === 'top'
+              ? align === 'end'
+                ? 'origin-bottom-right'
+                : 'origin-bottom-left'
+              : align === 'end'
+                ? 'origin-top-right'
+                : 'origin-top-left',
             'rounded-md border border-hairline bg-sheet shadow-[var(--shadow-float)]',
             'motion-safe:animate-[popover_160ms_cubic-bezier(0.16,1,0.3,1)]',
           )}

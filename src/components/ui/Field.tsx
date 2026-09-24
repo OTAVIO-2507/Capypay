@@ -2,10 +2,18 @@ import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttribu
 import { Icon } from '@/components/Icon'
 import { cn } from '@/lib/cn'
 
+/*
+ * O campo é uma pílula, como todo controle do sistema.
+ *
+ * O foco clareia a superfície em vez de escurecê-la: enquanto o fundo era
+ * papel, `focus:bg-sheet` levava o campo do cinza para o branco e isso lia
+ * como "acendeu". Em fundo preto a mesma regra levava o campo de #0F0F11 para
+ * #0A0A0A, ou seja, apagava. `--sheet-raised` é o degrau para cima.
+ */
 const CONTROL_BASE =
-  'w-full rounded-sm bg-sunken px-4 text-[0.8125rem] text-ink border border-transparent ' +
+  'w-full rounded-full bg-sunken px-5 text-[0.8125rem] text-ink border border-transparent ' +
   'placeholder:text-faint transition-colors duration-150 ' +
-  'focus:bg-sheet focus:border-hairline-strong ' +
+  'focus:bg-raised focus:border-hairline-strong ' +
   'disabled:cursor-not-allowed disabled:opacity-50'
 
 interface FieldProps {
@@ -59,7 +67,7 @@ export function TextInput({ invalid, className, ...props }: TextInputProps) {
   return (
     <input
       aria-invalid={invalid || undefined}
-      className={cn(CONTROL_BASE, 'h-11', invalid && 'border-ink bg-sheet', className)}
+      className={cn(CONTROL_BASE, 'h-14', invalid && 'border-expense bg-raised', className)}
       {...props}
     />
   )
@@ -82,8 +90,8 @@ export function MoneyInput({ invalid, className, ...props }: TextInputProps) {
         aria-invalid={invalid || undefined}
         className={cn(
           CONTROL_BASE,
-          'tnum h-11 pr-4 pl-11 text-right font-mono',
-          invalid && 'border-ink bg-sheet',
+          'tnum h-14 pr-4 pl-11 text-right',
+          invalid && 'border-expense bg-raised',
           className,
         )}
         {...props}
@@ -116,7 +124,7 @@ export function SelectInput({ invalid, className, children, ...props }: SelectIn
         aria-invalid={invalid || undefined}
         className={cn(
           CONTROL_BASE,
-          'h-11 cursor-pointer appearance-none pr-10',
+          'h-14 cursor-pointer appearance-none pr-10',
           // Só a borda muda no hover, e não o fundo: no tema escuro o
           // Erguido é mais **escuro** que o Rebaixado, então clarear no claro e
           // escurecer no escuro faria o campo sumir contra a folha justamente
@@ -160,7 +168,7 @@ export function SearchInput({ label, className, ...props }: SearchInputProps) {
       <input
         type="search"
         aria-label={label}
-        className={cn(CONTROL_BASE, 'h-11 pl-11', className)}
+        className={cn(CONTROL_BASE, 'h-14 pl-11', className)}
         {...props}
       />
     </div>

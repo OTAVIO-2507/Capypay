@@ -1,277 +1,283 @@
 @import 'tailwindcss';
 
 /*
- * O tema escuro é comandado por classe no <html>, não por media query sozinha:
- * a preferência do usuário precisa vencer a do sistema operacional nos dois
- * sentidos, e `ThemeProvider` resolve 'system' antes de aplicar a classe.
- */
-@custom-variant dark (&:where(.dark, .dark *));
-
-/*
- * "Papel sobre papel": uma mesa cinza, folhas brancas apoiadas nela, tinta
- * preta e nada mais. Não existe matiz em nenhum token — a ausência de cor é o
- * sistema, e o único acento é o inverso: um bloco de tinta cheia.
+ * Tema único escuro.
+ *
+ * O sistema anterior ("papel sobre papel") era claro por natureza e tinha o
+ * escuro como espelho. Agora há um tema só: página quase preta, cards da mesma
+ * cor separados só por hairline, um degrau de superfície para o que é
+ * receptáculo, tinta quase branca, e um acento menta que ocupa o lugar que
+ * antes era do bloco de tinta.
+ *
+ * Os nomes dos tokens sobrevivem à mudança de propósito. `--sheet` continua
+ * sendo "a superfície de um painel" mesmo que a folha branca não exista mais,
+ * e `--block` continua sendo "a mancha de contraste máximo" mesmo que agora
+ * ela seja clara em vez de preta. Renomear tudo obrigaria a tocar cada
+ * componente do produto para trocar `bg-sheet` por `bg-surface` sem que uma
+ * única pixel mudasse de lugar — custo alto, risco alto, ganho nenhum.
  */
 :root {
-  color-scheme: light;
-
-  --desk: #e9ebee;
-  --sheet: #ffffff;
-  --sheet-raised: #fcfcfd;
-  --sunken: #f1f2f4;
-  --hairline: #e4e6ea;
-  --hairline-strong: #d3d6dc;
-
-  --ink: #101114;
-  --ink-secondary: #5f646c;
-  /*
-   * A terciária é cor de ícone em repouso, não de texto: a exigência dela é a
-   * de componente de interface (3:1), e não a de texto (4.5:1). Aferida em
-   * 3.36:1 contra a superfície rebaixada, que é a pior em que ela aparece.
-   */
-  --ink-tertiary: #7e848d;
-
-  /* O bloco de tinta: retângulo preenchido, o único acento do sistema. */
-  --block: #16171a;
-  --block-hover: #2a2c31;
-  --block-ink: #ffffff;
-  --block-ink-secondary: #9da2ab;
-
-  /* Curva de resultado mensal: um matiz só, em Tinta. */
-  --series-1: #101114;
-  --chart-grid: #e4e6ea;
-
-  /*
-   * Rampa ordinal de quatro degraus, para parte-do-todo sem cor: as faixas de
-   * atividade de conta no painel de administração, que são ordenadas (mais
-   * recente → nunca). Não é paleta categórica: os degraus não têm identidade,
-   * só posição, e por isso um matiz só basta.
-   *
-   * Aprovada no validador da skill de dataviz contra `--sheet` nos dois temas:
-   * luminosidade monótona, salto adjacente ≥ 0.06, ponta clara em 2.35:1
-   * (claro) e 3.15:1 (escuro) contra a superfície, e dispersão de matiz de 15°
-   * e 9° — dentro do limite de 40° que separa "uma rampa" de "cores
-   * diferentes".
-   */
-  --ramp-1: #101114;
-  --ramp-2: #3a3f47;
-  --ramp-3: #6b727c;
-  --ramp-4: #a2aab5;
-
-  /*
-   * A identidade de fluxo — a segunda exceção de cor do sistema, e a única
-   * que o próprio sistema escolhe (o avatar é a que a pessoa escolhe). Três
-   * matizes fixos para receita, despesa e aporte: nunca escolhidos por
-   * usuário, nunca aplicados a mais nada. Validados como paleta categórica
-   * contra `--sheet` e `--sunken` nos dois temas — separação por daltonismo
-   * (ΔE ≥ 8 em todos os pares) e piso de visão normal (ΔE ≥ 15) OK; contraste
-   * ≥ 3:1, suficiente para ícone e marca de gráfico, não para texto — por
-   * isso a cor nunca é a única leitura nem veste o algarismo pequeno.
-   */
-  --income: #009970;
-  --expense: #db0606;
-  --contribution: #7b4dea;
-
-  /*
-   * A cor de categoria — a quarta exceção, e a primeira que existe para
-   * **identidade** e não para leitura de valor.
-   *
-   * Orçamento é a tela onde a pessoa procura uma categoria específica no meio
-   * de oito, e o ícone monocromático não ajuda nessa busca: todos têm o mesmo
-   * peso e a mesma cor, então achar "Transporte" exige ler oito rótulos. Com
-   * a pastilha colorida, achar vira reconhecer.
-   *
-   * Oito matizes fixos, um por categoria nativa, nunca reordenados e nunca
-   * reciclados. Categoria criada pelo usuário **não ganha matiz gerado**: cai
-   * em Tinta, que é o neutro do sistema. Uma cor inventada em tempo de
-   * execução não passa por validador nenhum e quebraria as duas garantias
-   * abaixo na primeira categoria nova.
-   *
-   * Escolhidos por busca sobre o validador da skill de dataviz, não a olho:
-   * banda de luminosidade, piso de croma e contraste ≥ 3:1 contra a folha nos
-   * dois temas, com a saturação máxima que ainda passa em tudo. A separação
-   * por daltonismo fica em ΔE 6.1 — dentro da faixa de piso, que só é legal
-   * com codificação secundária. Ela existe e é obrigatória aqui: **toda
-   * categoria aparece sempre com ícone e rótulo**, nunca só com a cor. Apague
-   * a cor e nada se perde, exatamente como manda a Regra do Sinal Sem Cor.
-   *
-   * A pastilha leva o glifo em branco, com contraste mínimo de 3.07:1 sobre a
-   * cor mais clara da paleta.
-   */
-  --cat-alimentacao: #ec6618;
-  --cat-moradia: #1065c6;
-  --cat-transporte: #0f9cb8;
-  --cat-saude: #dc185a;
-  --cat-educacao: #7018ec;
-  --cat-lazer: #ec18ec;
-  --cat-compras: #0eaa42;
-  --cat-assinaturas: #8a6b0f;
-
-  /*
-   * A mesma identidade, calibrada para o bloco de tinta — a superfície do
-   * balão de gráfico, que inverte de escura para clara entre os temas. As
-   * três cores acima já passam 3:1 contra os dois blocos (validado contra
-   * #16171A e #F4F5F6), então um só trio serve às duas direções: não precisa
-   * repetir em `.dark`.
-   */
-  --income-on-block: #009970;
-  --expense-on-block: #db0606;
-  --contribution-on-block: #7b4dea;
-  --chart-axis: #8a9099;
-
-  /*
-   * O fundo das telas que ocupam a janela inteira sem nenhuma folha em cena:
-   * carregamento e erro. Não é a folha, é o extremo absoluto da escala —
-   * branco puro no claro, preto puro no escuro.
-   *
-   * A folha do escuro é #0A0B0D, quase preto mas não preto. Três pontos são
-   * invisíveis ao lado de outra superfície e visíveis quando ocupam a tela
-   * toda: viram um cinza muito escuro chapado, sem nada com que se comparar.
-   * É a única superfície do sistema que não tem vizinha, e por isso a única
-   * que pode ir ao extremo.
-   */
-  --void: #ffffff;
-
-  /*
-   * O véu das camadas modais — fundo de diálogo e do tour de boas-vindas.
-   * Não é um cinza da escala: é preto translúcido, para escurecer o que está
-   * atrás em vez de cobrir com uma superfície. Mesmo valor nos dois temas.
-   */
-  --scrim: rgba(0, 0, 0, 0.5);
-  /* A abertura do tour, onde a cena precisa apagar o painel de trás. */
-  --scrim-forte: rgba(0, 0, 0, 0.78);
-  /*
-   * Tinta do que é desenhado direto sobre o véu, sem cartão por baixo.
-   * O véu é o mesmo preto nos dois temas, então esta clara também é: usar
-   * `--ink` deixava a capivara escura sobre fundo escuro no tema claro, e ela
-   * simplesmente sumia. Não é exceção de cor, é o neutro do outro lado.
-   */
-  --scrim-ink: #f4f5f6;
-
-  --shadow-sheet: 0 2px 4px rgba(16, 17, 20, 0.03), 0 8px 24px -8px rgba(16, 17, 20, 0.07);
-  --shadow-frame: 0 24px 64px -24px rgba(16, 17, 20, 0.16);
-  --shadow-float: 0 16px 40px -12px rgba(16, 17, 20, 0.22);
-  --shadow-block: 0 12px 28px -12px rgba(16, 17, 20, 0.45);
-}
-
-.dark {
   color-scheme: dark;
 
   /*
-   * A escada do escuro é o espelho da do claro, e não a mesma escada mais
-   * apagada.
+   * As superfícies, em escada ascendente a partir do preto.
    *
-   * No claro a folha é o extremo da escala (`#ffffff`) e a mesa recua dela.
-   * Aqui a folha é o extremo preto e a mesa recua na outra direção. A versão
-   * anterior fazia o contrário — mesa no extremo, folha subindo para um cinza
-   * — e como a folha ocupa quase toda a tela, o tema inteiro lia cinza.
+   * Os quatro valores foram lidos do `.dark` do produto de referência, e não
+   * estimados. Lá eles se chamam `--background`, `--surface`, `--muted` e
+   * `--border`; aqui mantêm os nomes que o resto do código já usa.
    *
-   * Espelhar também é o que devolve o destaque: a tinta sobe de 16,26:1 para
-   * 18,04:1 contra a folha — o patamar do claro, que é 18,3:1 — e a distância
-   * entre mesa e folha cresce de 1,13:1 para 1,32:1. Essa distância não é
-   * detalhe: com a Regra do Escuro sem Sombra, ela é a única profundidade que
-   * sobra. A hairline acompanha, de 1,20:1 para 1,45:1.
+   * A mesa **não é preto absoluto**: é #09090B. Foi o meu erro na primeira
+   * passada, por ler `--heroui-background: 0 0% 0%` do bundle da tela de
+   * login e supor que valia para o app. O app usa outro sistema de tokens, e
+   * nele a página é zinc-950. A diferença é de três pontos e ninguém nomeia,
+   * mas ela existe para o preto absoluto sobrar para o que de fato precisa
+   * dele.
    *
-   * Os degraus são os do claro medidos a partir do extremo (3, 14, 22, 27, 44
-   * em código sRGB), multiplicados por 1,25. sRGB já é perceptualmente
-   * uniforme, então um espelho puro bastaria; a folga a mais cobre o brilho
-   * ambiente, que come separação no escuro e não no claro.
+   * **O card tem a cor da página.** Isso foi lido errado uma vez e custou o
+   * visual inteiro: eu mapeei o card para `--surface` (#18181B) e a tela saiu
+   * acinzentada, quando a referência é preta com contornos flutuando por cima.
+   * O token que os cards usam lá é `--card`, e ele é idêntico a
+   * `--background`. Quem separa o painel do fundo é a hairline de 1px, e só
+   * ela.
+   *
+   * Isso muda o que a superfície significa. Um card não é um degrau acima do
+   * chão — é uma **região demarcada** do mesmo chão. O degrau acima existe uma
+   * vez só, em `--sunken`, e serve a tudo que é receptáculo dentro do card:
+   * campo, pastilha, trilho, barra lateral.
+   *
+   * `--sunken` é mais **claro** que o card, não mais escuro. Em fundo escuro,
+   * um receptáculo afundado desaparece; o que lê como campo é um retângulo um
+   * degrau acima da superfície que o contém.
    */
-  --desk: #26272c;
-  --sheet: #0a0b0d;
-  --sheet-raised: #0e0f12;
-  --sunken: #1c1d21;
-  --hairline: #2c2e33;
-  --hairline-strong: #41444b;
-
-  --ink: #f4f5f6;
-  --ink-secondary: #9aa0a8;
-  --ink-tertiary: #787e86;
+  --desk: #09090b;
+  --sheet: #09090b;
+  --sunken: #18181b;
+  --sheet-raised: #18181b;
+  --hairline: #27272a;
+  --hairline-strong: #3f3f46;
 
   /*
-   * O bloco inverte junto com o papel. No escuro, a mancha de contraste máximo
-   * é clara — manter um retângulo preto sobre fundo preto anularia o acento.
+   * A tinta. A primária não é branco puro: #FAFAFA em fundo preto lê como
+   * branco e não vibra na borda das hastes finas, que é o que o branco puro
+   * faz em corpo pequeno.
    */
-  --block: #f4f5f6;
+  --ink: #fafafa;
+  --ink-secondary: #a1a1aa;
+  /*
+   * Terciária: ícone em repouso, NUNCA texto. A exigência dela é a de
+   * componente de interface (3:1), não a de texto (4.5:1). Aferida em 5.2:1
+   * contra `--sunken`, a pior superfície em que aparece.
+   */
+  --ink-tertiary: #8a8a93;
+
+  /*
+   * O bloco deixou de ser um retângulo de tinta preta e passou a ser a ação
+   * principal: pílula branca com texto quase preto. Em fundo claro, inverter
+   * era o evento mais alto disponível; em fundo preto, inverter é o estado
+   * normal da tela, então o acento precisa vir de outro lugar.
+   */
+  --block: #fafafa;
   --block-hover: #ffffff;
-  --block-ink: #101114;
-  --block-ink-secondary: #5f646c;
+  --block-ink: #18181b;
+  --block-ink-secondary: #52525b;
 
-  --void: #000000;
+  /*
+   * O acento — a novidade do sistema, e o que o antigo monocromático não
+   * tinha. É `emerald-400` do Tailwind, que é o verde que o produto de
+   * referência usa na interface inteira: título, aba ativa, link de seção.
+   *
+   * Não é o lima da marca deles. Eles têm os dois: um token `--pierre`, em
+   * lima, batizado com o nome do produto, e este verde de sistema aplicado
+   * por classe utilitária. O lima ficou de fora aqui de propósito — copiar o
+   * hex de um token de marca alheio é copiar identidade, não sistema, e a
+   * marca deste produto é uma capivara.
+   *
+   * Aferido em 10.3:1 contra a mesa, 9.2:1 contra o card e 7.7:1 contra a
+   * pastilha. Texto sobre o acento é sempre PRETO — 10.9:1.
+   *
+   * `--accent-ink` é preto, e apesar do nome não serve só ao acento: é a tinta
+   * de **qualquer** superfície saturada e clara do sistema — o acento, a
+   * pastilha de categoria, a marca de instituição. Todas foram derivadas para
+   * suportá-lo, e nenhuma suporta branco.
+   *
+   * Esse erro já aconteceu: três pastilhas continuaram desenhando o glifo em
+   * `text-white` depois que a paleta de categoria foi re-derivada para tinta
+   * preta. Branco sobre a lima de Compras dá 1.44:1 — não é contraste ruim, é
+   * o glifo não existir. O erro é fácil de cometer porque todo o resto do
+   * sistema escreve claro sobre escuro.
+   */
+  --accent: #34d399;
+  --accent-soft: #6ee7b7;
+  --accent-ink: #000000;
 
-  --series-1: #f4f5f6;
-  /* Acompanha a hairline, como no claro. */
-  --chart-grid: #2c2e33;
+  /*
+   * Curva de resultado mensal: uma série só, em tinta. Não é categoria de
+   * fluxo — é o resultado do mês, já decodificado por posição (acima ou
+   * abaixo do zero) e pela forma da curva.
+   */
+  --series-1: #fafafa;
+  --chart-grid: #27272a;
+  --chart-axis: #8a8a93;
 
-  /* A mesma rampa, invertida e revalidada contra a superfície escura. */
-  --ramp-1: #f4f5f6;
+  /*
+   * Rampa ordinal de quatro degraus, para parte-do-todo sem cor (o disco de
+   * atividade de contas do painel de administração). Não é paleta categórica:
+   * os degraus têm posição, não identidade.
+   */
+  --ramp-1: #fafafa;
   --ramp-2: #c3c8cf;
   --ramp-3: #8b929c;
   --ramp-4: #5a616b;
 
-  /* Mesma identidade, passo escuro — validada de novo contra as superfícies escuras. */
-  --income: #00ad85;
-  --expense: #e50606;
-  --contribution: #9070e0;
+  /*
+   * A identidade de fluxo, re-derivada para fundo preto.
+   *
+   * Os valores anteriores foram calibrados contra papel branco: contra preto
+   * eles passavam no piso de contraste mas liam apagados, porque matiz escuro
+   * e saturado sobre preto perde energia. Estes são de alta luminosidade.
+   *
+   * Contraste medido contra `--sheet` (#09090B) e `--sunken` (#18181B):
+   *   receita      10.4:1 /  9.2:1
+   *   despesa       5.3:1 /  4.7:1   (4.6:1 na pastilha tingida a 15%)
+   *   aporte        8.6:1 /  7.7:1
+   * Todos acima de 4.5:1, ou seja: estas cores podem vestir texto, e não só
+   * ícone — o que o sistema anterior não permitia.
+   *
+   * A despesa é o #EF4444 exato do produto de referência. Ela já foi #FF5A52,
+   * mais clara, porque contra a pastilha antiga (#27272A) o vermelho deles
+   * dava 3.96:1 e reprovava. Quando a pastilha desceu para #18181B, o motivo
+   * caiu: o mesmo vermelho passou a dar 4.7:1. A margem no pior caso é
+   * estreita — 4.6:1 contra 4.5 de piso —, e é por isso que ela está escrita
+   * aqui: qualquer superfície nova mais clara que #18181B reprova este
+   * vermelho como texto.
+   *
+   * Verde/vermelho é o par que falha em deuteranopia POR MATIZ, e o que
+   * sobra é o salto de luminosidade entre os dois: 1.96:1. Ele já foi 2.44:1,
+   * com o acento lima, e caiu para 1.60:1 quando o acento virou menta; trocar
+   * a despesa pelo vermelho mais escuro do produto de referência devolveu
+   * parte dessa distância.
+   *
+   * Continua apertado, e isso transfere peso para a Regra das Quatro Leituras,
+   * que passa a ser o que sustenta a distinção e não mais o reforço dela.
+   * Seta, sinal e peso da tinta não são opcionais aqui.
+   *
+   * PENDENTE: a separação ΔE por daltonismo entre os três pares ainda não
+   * passou pelo validador da skill de dataviz. Os números de contraste acima
+   * foram calculados; o ΔE não.
+   */
+  /*
+   * Atenção — a quinta exceção de cor, e a primeira que não codifica nem
+   * direção de dinheiro nem identidade de categoria.
+   *
+   * Ela existe porque o produto de referência tem três estados de valor e o
+   * sistema só tinha dois. "Restante a pagar" num parcelamento, "projeção
+   * anual" de assinaturas e "fatura estimada" num cartão não são despesa
+   * (o dinheiro ainda não saiu) nem receita (ele vai sair). São compromisso
+   * assumido: algo a acompanhar, que ainda não é erro.
+   *
+   * Vestir isso de vermelho seria mentir sobre a gravidade, e de cinza seria
+   * esconder que existe. Âmbar é o terceiro estado que faltava.
+   *
+   * `amber-400` do Tailwind. Aferido em 10.6:1 contra o card e 8.9:1 contra
+   * a pastilha; texto preto sobre ele dá 12.6:1.
+   */
+  --attention: #fbbf24;
+
+  --income: #34d399;
+  --expense: #ef4444;
+  --contribution: #b49bff;
 
   /*
-   * A mesma paleta de categoria, repassada pelo validador contra a folha
-   * preta. Cinco matizes servem aos dois temas; três precisaram de um passo
-   * próprio para caber na banda de luminosidade do escuro, que é mais estreita
-   * que a do claro.
+   * O limite tomado de um cartão, na barra de duas cores da tela de Contas —
+   * a outra metade é o acento, o disponível. Azul como na referência, e não o
+   * azul de uma categoria: a barra fala de limite, e pegar a cor de Moradia
+   * emprestada faria o olho procurar uma moradia que não está ali.
+   * `blue-400` do Tailwind; 6.9:1 contra a superfície rebaixada do trilho.
    */
-  --cat-alimentacao: #ec6618;
-  --cat-moradia: #116cd4;
-  --cat-transporte: #0f9cb8;
-  --cat-saude: #dc185a;
-  --cat-educacao: #a571ef;
-  --cat-lazer: #c610c6;
-  --cat-compras: #0eaa42;
-  --cat-assinaturas: #8a6b0f;
-  --chart-axis: #787e86;
+  --limit-used: #60a5fa;
 
-  /* No escuro a sombra não é lida; a profundidade vira luminosidade. */
+  /*
+   * A mesma identidade sobre o bloco, que agora é claro. Sobre #FAFAFA as
+   * cores acima falham (a lima cai para 1.3:1), então esta variante é escura:
+   * é a paleta do sistema antigo, que foi calibrada contra papel branco e
+   * serve exatamente para isto.
+   */
+  --income-on-block: #00694f;
+  --expense-on-block: #b8492e;
+  --contribution-on-block: #5b3fa8;
+
+  /*
+   * A cor de categoria, re-derivada para fundo preto.
+   *
+   * Oito matizes de alta luminosidade, distribuídos pelo círculo e mantidos
+   * fora da faixa do acento: uma categoria que parecesse o verde de "positivo"
+   * trocaria identidade por valor toda vez que aparecesse ao lado de um
+   * número.
+   *
+   * A faixa proibida mudou de lugar no meio do caminho, e isso já custou um
+   * erro. A paleta foi derivada quando o acento era lima (matiz 95), então o
+   * vão aberto ficou em 80–110. O acento depois virou menta (matiz 160) e a
+   * paleta não foi refeita: `--cat-compras` estava em 152, a oito graus do
+   * acento, e a pastilha de Compras lia como "isto é positivo". Ela foi para
+   * 82, que é justamente a faixa que a troca de acento liberou.
+   *
+   * O glifo na pastilha passa a ser PRETO, não branco. Todas passam de 8:1
+   * com texto preto por cima (a pior é #AE8CFF, em 8.0:1), e todas passam
+   * folgado de 3:1 contra a folha.
+   *
+   * O par mais apertado em matiz é alimentação (22°) e assinaturas (45°), a
+   * 23° um do outro. A codificação secundária cobre — toda categoria aparece
+   * sempre com ícone e rótulo, nunca só com a cor.
+   *
+   * PENDENTE, e agora com um motivo concreto: falta rodar o validador de ΔE
+   * por daltonismo sobre os 28 pares, **e** sobre os pares entre categoria e
+   * identidade de fluxo. Transporte (187°) está a 27° do acento e saúde (338°)
+   * a 32° da despesa — nenhum dos dois é o erro que Compras era, mas nenhum
+   * dos dois passou por medição.
+   */
+  --cat-alimentacao: #ff8a3d;
+  --cat-assinaturas: #e8c547;
+  --cat-compras: #a3e635;
+  --cat-transporte: #4fd8e8;
+  --cat-moradia: #7ea6ff;
+  --cat-educacao: #ae8cff;
+  --cat-lazer: #f07bff;
+  --cat-saude: #ff6fa5;
+
+  /*
+   * As telas que ocupam a janela inteira sem nenhum painel em cena —
+   * carregamento e erro. Agora é o mesmo preto da mesa: com o tema único, não
+   * existe mais a distinção entre "o extremo da escala" e "o fundo da página".
+   */
+  --void: #09090b;
+
+  /*
+   * O véu das camadas modais. Continua preto translúcido mesmo com a página
+   * já preta: quem escurece não é o fundo, é o conteúdo — os painéis em
+   * #0A0A0A e a tinta em #FAFAFA é que recuam atrás dele.
+   */
+  --scrim: rgba(0, 0, 0, 0.6);
+  --scrim-forte: rgba(0, 0, 0, 0.85);
+  --scrim-ink: #fafafa;
+
+  /*
+   * Em fundo preto a sombra não é lida: não existe luz para ela bloquear.
+   * Profundidade vira hairline e degrau de superfície. Só o que de fato
+   * flutua sobre outro conteúdo — diálogo, popover, balão de gráfico — ganha
+   * uma sombra, e mesmo essa serve para descolar, não para elevar.
+   */
   --shadow-sheet: none;
   --shadow-frame: none;
-  --shadow-float: 0 16px 40px -12px rgba(0, 0, 0, 0.7);
+  --shadow-float: 0 16px 40px -12px rgba(0, 0, 0, 0.8);
   --shadow-block: none;
 }
 
 /*
- * `LoginPage` é a única tela que nunca segue o tema — é a primeira
- * impressão do produto, antes de qualquer sessão ou preferência salva, e o
- * painel de ilustração (a terceira exceção de cor, ver DESIGN.md) só lê bem
- * contra um fundo claro. Redeclara os mesmos tokens do claro; por estar mais
- * perto na árvore que `.dark` (que fica só em `<html>`), vence a cascata
- * para tudo dentro da tela de login, sem tocar no resto do app.
- *
- * Os valores são copiados de propósito, não herdados — não existe operador
- * CSS para "volte ao valor de :root, ignorando .dark no meio do caminho".
- * Se a paleta clara mudar, este bloco precisa mudar junto.
- */
-.force-light {
-  color-scheme: light;
-
-  --desk: #e9ebee;
-  --sheet: #ffffff;
-  --sheet-raised: #fcfcfd;
-  --sunken: #f1f2f4;
-  --hairline: #e4e6ea;
-  --hairline-strong: #d3d6dc;
-
-  --ink: #101114;
-  --ink-secondary: #5f646c;
-  --ink-tertiary: #7e848d;
-
-  --block: #16171a;
-  --block-hover: #2a2c31;
-  --block-ink: #ffffff;
-  --block-ink-secondary: #9da2ab;
-}
-
-/*
- * `inline` faz o utilitário apontar para a variável em vez de copiar o valor,
- * que é o que permite ao tema escuro trocar tudo pela cascata.
+ * `inline` faz o utilitário apontar para a variável em vez de copiar o valor.
+ * Com um tema só isso deixou de ser necessário para a cascata, mas continua
+ * sendo o que permite ler o token pelo nome semântico dentro de um
+ * componente (`var(--sheet)`) e pela classe do Tailwind (`bg-sheet`) sem que
+ * os dois saiam de sincronia.
  */
 @theme inline {
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -294,20 +300,35 @@
   --color-block-ink: var(--block-ink);
   --color-block-muted: var(--block-ink-secondary);
 
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+
   --color-ramp-1: var(--ramp-1);
   --color-ramp-2: var(--ramp-2);
   --color-ramp-3: var(--ramp-3);
   --color-ramp-4: var(--ramp-4);
 
+  --color-attention: var(--attention);
   --color-income: var(--income);
   --color-expense: var(--expense);
   --color-contribution: var(--contribution);
 
-  --radius-xs: 6px;
+  /*
+   * Pílula para tudo que é controle, e 16px para tudo que é superfície.
+   *
+   * O card já esteve em 24px, herdado do sistema de papel, onde o canto largo
+   * era parte da metáfora da folha. Medido contra a referência ele é 16 — e a
+   * diferença não é sutil numa tela cheia de painéis: 24px arredonda o card a
+   * ponto de ele parecer uma pastilha grande, e o conjunto perde o aspecto de
+   * documento.
+   */
+  --radius-xs: 8px;
   --radius-sm: 12px;
-  --radius-md: 18px;
-  --radius-lg: 24px;
-  --radius-xl: 32px;
+  --radius-md: 14px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
 
   --shadow-sheet: var(--shadow-sheet);
   --shadow-frame: var(--shadow-frame);
@@ -335,39 +356,51 @@
   }
 
   /*
-   * A partir de 1024px, quem rola é o `<main>`, não a página. Sem isto, o
-   * documento continua rolável mesmo com a moldura corretamente contida em
-   * `overflow: hidden`: o cálculo de `scrollHeight` do elemento raiz, no
-   * Chromium, não se limita à caixa medida de `<body>` — ele soma a extensão
-   * de conteúdo que existiria sem nenhum recorte, mesmo quando esse recorte
-   * já existe várias camadas abaixo. O sintoma era rolar a página e cair
-   * numa Mesa vazia, sem moldura nenhuma, com a barra lateral e o cabeçalho
-   * já fora de vista havia muito. Travar o scroll aqui, na única superfície
-   * que o CSSOM trata como fonte de verdade para a rolagem do documento,
-   * fecha a última rota de vazamento.
+   * Quem rola é a página, em qualquer largura — e por isso a barra de rolagem
+   * fica na borda direita da janela, e não por dentro da moldura.
+   *
+   * Isto já foi o contrário: a moldura tinha altura fixa, o `<main>` rolava
+   * por dentro de si mesmo, e `html, body` ficavam travados aqui para o
+   * documento não rolar junto. O motivo de voltar é de leitura, e foi pedido:
+   * uma barra de rolagem no meio da tela não parece a barra da página, parece
+   * um painel que rola sozinho.
+   *
+   * O que a moldura fixa resolvia continua resolvido de outro jeito: a barra
+   * lateral é `sticky` com a altura da janela, e não um elemento de altura
+   * calculada — nenhuma conta de altura para errar, e nada para repintar
+   * quando ela "gruda".
    */
-  @media (width >= 64rem) {
-    html,
-    body {
-      height: 100%;
-      overflow: hidden;
-    }
+
+  /*
+   * Um único anel de foco para todo controle, agora no acento.
+   *
+   * Enquanto o sistema não tinha cor, o anel era a própria tinta. Com o acento
+   * lima em cena ele passa a ser a escolha melhor por duas razões: dá 16.6:1
+   * contra o fundo preto — mais que a tinta contra qualquer superfície — e
+   * não se confunde com a borda clara de um controle que já está em foco de
+   * mouse.
+   *
+   * O anel segue o raio do próprio elemento — o navegador já desenha o
+   * contorno pela curva da borda —, e por isso esta regra não declara raio.
+   * Ela já declarou `border-radius: 9999px`, para o anel de um botão pílula não
+   * cortar canto; mas o raio vale para o elemento, e não só para o anel: todo
+   * elemento retangular que recebia foco virava pílula. Um contêiner que rola
+   * — a lista de parcelas, o painel lateral — ganha foco por teclado, e aí o
+   * conteúdo dele era recortado numa elipse.
+   */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 
   /*
-   * Um único anel de foco para todo controle. Sem cor de acento no sistema, o
-   * anel é a própria tinta — o que na prática é o contraste mais alto possível
-   * contra qualquer superfície clara.
+   * A seleção veste o acento, com tinta preta por cima. `--ink` sobre `--sheet`
+   * daria texto quase branco sobre quase preto, que é exatamente o que já
+   * estava na tela: uma seleção invisível.
    */
-  :focus-visible {
-    outline: 2px solid var(--ink);
-    outline-offset: 2px;
-    border-radius: 6px;
-  }
-
   ::selection {
-    background-color: var(--ink);
-    color: var(--sheet);
+    background-color: var(--accent);
+    color: var(--accent-ink);
   }
 
   /* Remove as setas do input numérico: valor monetário não se ajusta de 1 em 1. */
@@ -382,14 +415,50 @@
     -moz-appearance: textfield;
   }
 
-  /* O ícone nativo do seletor de data some no tema escuro sem esta inversão. */
-  .dark input[type='date']::-webkit-calendar-picker-indicator,
-  .dark input[type='month']::-webkit-calendar-picker-indicator {
+  /*
+   * O ícone nativo do seletor de data é desenhado escuro pelo navegador e
+   * sumiria contra a superfície. Com tema único, a inversão deixou de ser
+   * condicional.
+   */
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='month']::-webkit-calendar-picker-indicator {
     filter: invert(1) opacity(0.6);
   }
 }
 
 @layer utilities {
+  /*
+   * O anel do assistente — a sexta exceção de cor, e a única decorativa.
+   *
+   * Um contorno iridescente em volta de um único elemento: o botão que abre o
+   * assistente. É a assinatura visual dessa entrada no produto de referência,
+   * e ela precisa ser reconhecível de longe, em qualquer aba, sem texto.
+   *
+   * As regras que a mantêm fechada:
+   *
+   * 1. **Um elemento só.** Nenhum outro componente veste este anel. No dia em
+   *    que dois elementos usarem, ele deixa de apontar para o assistente e vira
+   *    enfeite.
+   * 2. **Nunca carrega significado.** Os matizes vêm da paleta — acento, duas
+   *    categorias, aporte, atenção — e aqui nenhum deles quer dizer o que quer
+   *    dizer em outro lugar. Por isso eles giram num degradê contínuo e nunca
+   *    aparecem como faixa isolada, que é quando uma cor começa a ser lida como
+   *    rótulo.
+   * 3. **Parado.** Anel girando seria o único movimento contínuo da tela
+   *    inteira, fora do tour, e chamaria o olho para o canto a cada segundo.
+   */
+  .anel-assistente {
+    background: conic-gradient(
+      from 200deg,
+      var(--accent),
+      var(--cat-moradia),
+      var(--contribution),
+      var(--cat-saude),
+      var(--attention),
+      var(--accent)
+    );
+  }
+
   /*
    * Alinhamento por casa decimal. Obrigatório em coluna de valores; um número
    * que muda de largura ao ser atualizado faz a tabela inteira tremer.
@@ -422,6 +491,59 @@
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+/*
+ * O ponto que marca "hoje" na curva de ritmo, esperando a linha chegar até
+ * ele. O atraso é a duração da linha (900ms) mais o começo dela (120ms).
+ */
+@keyframes ponto-do-ritmo {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ponto-do-ritmo {
+  animation: ponto-do-ritmo 200ms ease-out 1s backwards;
+}
+
+/*
+ * O balão do mapa de calor. Só opacidade, e curta.
+ *
+ * Ele reaparece a cada célula que o ponteiro cruza — dezenas de vezes num
+ * arrastar de mouse pela grade — e é por isso que não desliza nem escala:
+ * deslocamento a cada célula viraria uma caixa tremendo no meio do painel. O
+ * que precisa acontecer é a caixa nova se anunciar, e 120ms de opacidade
+ * bastam para isso sem custar tempo a quem já achou o dia que queria.
+ */
+@keyframes balao-do-mapa {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.balao-do-mapa {
+  animation: balao-do-mapa 120ms ease-out;
+}
+
+/*
+ * Entrada do painel lateral. Ele vem da borda de onde mora — a direita —, e
+ * não surge no lugar: um painel de 500px que aparece sem origem lê como a
+ * página ter trocado, e não como algo que se abriu por cima dela.
+ */
+@keyframes drawer-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }
 

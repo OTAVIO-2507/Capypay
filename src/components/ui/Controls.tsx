@@ -31,15 +31,19 @@ export function Toggle({ checked, onChange, label, description, icon }: TogglePr
           aria-hidden="true"
           className={cn(
             'block h-6 w-11 rounded-full transition-colors duration-150',
-            'peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-ink',
-            checked ? 'bg-block' : 'bg-hairline-strong',
+            'peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent',
+            // Ligado veste o acento, e é um dos poucos lugares onde ele aparece
+            // sem ser a ação principal da tela. Um interruptor é exatamente o
+            // que a lima faz melhor: dizer "isto está valendo" de longe, sem
+            // texto. Desligado fica no trilho neutro, sem cor nenhuma.
+            checked ? 'bg-accent' : 'bg-hairline-strong',
           )}
         />
         <span
           aria-hidden="true"
           className={cn(
             'pointer-events-none absolute top-0.5 left-0.5 size-5 rounded-full transition-transform duration-150',
-            checked ? 'translate-x-5 bg-block-ink' : 'bg-sheet',
+            checked ? 'translate-x-5 bg-accent-ink' : 'bg-sheet',
           )}
         />
       </span>
@@ -59,12 +63,28 @@ interface SegmentedProps<T extends string> {
   onChange: (value: T) => void
   label: string
   size?: 'sm' | 'md'
+  /**
+   * `solid` é a escolha dentro de um formulário: Despesa, Receita, Aporte.
+   * `tint` é o filtro de uma lista — "Em andamento (2)" — e segue o produto de
+   * referência: sem trilho, e a aba escolhida tingida de acento.
+   */
+  variant?: 'solid' | 'tint'
   className?: string
 }
 
 /**
- * Abas segmentadas. O selecionado é um bloco de tinta — que num sistema sem cor
- * é a única forma de dizer "este" sem ambiguidade.
+ * Abas segmentadas. O selecionado veste a pílula clara de contraste máximo —
+ * a mesma da ação principal.
+ *
+ * Não veste o acento, e isso é decisão: o acento diz "positivo" ou "ativo", e
+ * uma aba selecionada não é nenhuma das duas — é só onde você está. Gastar a
+ * cor aqui a esvaziaria nos lugares onde ela significa algo.
+ *
+ * A exceção é `variant="tint"`, e ela é a mesma das abas de seção no topo: o
+ * produto de referência marca com acento o lugar onde se está na navegação e
+ * nos filtros de lista, e a tela seguir a referência foi pedido explícito. O
+ * acento aí vai tingido a 12%, nunca sólido, e a escolha dentro de formulário
+ * continua na pílula clara.
  */
 export function Segmented<T extends string>({
   options,
@@ -72,13 +92,16 @@ export function Segmented<T extends string>({
   onChange,
   label,
   size = 'md',
+  variant = 'solid',
   className,
 }: SegmentedProps<T>) {
+  const tint = variant === 'tint'
+
   return (
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn('flex gap-1 rounded-full bg-sunken p-1', className)}
+      className={cn('flex gap-1 rounded-full', !tint && 'bg-sunken p-1', className)}
     >
       {options.map((option) => {
         const selected = option.value === value
@@ -92,8 +115,16 @@ export function Segmented<T extends string>({
             className={cn(
               'inline-flex flex-1 items-center justify-center gap-1.5 rounded-full font-semibold whitespace-nowrap',
               'transition-colors duration-150',
-              size === 'sm' ? 'h-7 px-3 text-xs' : 'h-9 px-4 text-[0.8125rem]',
-              selected ? 'bg-block text-block-ink' : 'text-muted hover:text-ink',
+              tint
+                ? 'h-11 px-5 text-[0.8125rem]'
+                : size === 'sm'
+                  ? 'h-7 px-3 text-xs'
+                  : 'h-9 px-4 text-[0.8125rem]',
+              selected
+                ? tint
+                  ? 'bg-accent/12 text-accent'
+                  : 'bg-block text-block-ink'
+                : 'text-muted hover:text-ink',
             )}
           >
             {option.icon ? <Icon name={option.icon} size={14} /> : null}
@@ -106,13 +137,23 @@ export function Segmented<T extends string>({
 }
 
 /**
- * Ênfase de um distintivo, sem recorrer a matiz.
- * `strong` é o bloco de tinta, reservado ao alerta; `quiet` é o padrão.
+ * Ênfase de um distintivo.
+ *
+ * `quiet` é o padrão e não carrega estado nenhum — é só uma etiqueta.
+ * `accent` diz "isto está valendo": assinatura ativa, parcelamento em
+ * andamento. `attention` diz "isto pede acompanhamento", e `strong` é a
+ * pastilha de contraste máximo, reservada ao alerta.
+ *
+ * Os três tingidos usam a cor a 15% no fundo e cheia no texto, como o resto
+ * do sistema — nunca a cor sólida com tinta por cima, que num distintivo de
+ * doze pixels vira uma mancha antes de virar uma palavra.
  */
-type BadgeTone = 'quiet' | 'strong' | 'outline'
+type BadgeTone = 'quiet' | 'accent' | 'attention' | 'strong' | 'outline'
 
 const BADGE_TONE: Record<BadgeTone, string> = {
   quiet: 'bg-sunken text-muted',
+  accent: 'bg-accent/15 text-accent',
+  attention: 'bg-attention/15 text-attention',
   strong: 'bg-block text-block-ink',
   outline: 'border border-hairline-strong text-ink',
 }
@@ -155,7 +196,7 @@ interface ProgressProps {
   label: string
   /** Percentual real quando passa de 100. Desenha o transbordo hachurado. */
   overflow?: number
-  /** Inverte para uso dentro de um bloco de tinta. */
+  /** Inverte para uso sobre a pílula clara, onde a tinta normal sumiria. */
   onBlock?: boolean
   /**
    * Veste o preenchimento na identidade de fluxo, para status positivo ou

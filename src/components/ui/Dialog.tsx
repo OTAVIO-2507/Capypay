@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useId, useEffect, useRef, type ReactNode } from 'react'
 import { IconButton } from './Button'
 import { cn } from '@/lib/cn'
 
@@ -16,6 +16,26 @@ interface DialogProps {
    * que a pessoa está procurando.
    */
   size?: 'sm' | 'md' | 'lg'
+  /** Ação ao lado do título, antes do fechar — o "Editar" de um detalhe. */
+  headerAction?: ReactNode
+  /**
+   * Onde o foco pousa ao abrir.
+   *
+   * `auto`, o padrão, deixa valer a regra do navegador — e, com ela, o
+   * `autoFocus` que um formulário tenha declarado num campo.
+   *
+   * `dialog` põe o foco no próprio diálogo, e existe para o **detalhe**: ali o
+   * primeiro elemento focável é o "Editar" do cabeçalho, e a janela abria com
+   * um anel verde em volta de uma ação que ninguém pediu. Com o foco no
+   * contêiner, o leitor de tela anuncia o título e o Tab segue dali para
+   * dentro, sem nada destacado antes de a pessoa escolher.
+   *
+   * Isto já foi incondicional, e a conta chegou: `dialog.focus()` logo depois
+   * de `showModal()` atropela o `autoFocus` que o React acabou de aplicar, e
+   * os dois formulários de perfil do produto abriam com o campo do nome
+   * **sem** foco.
+   */
+  initialFocus?: 'auto' | 'dialog'
 }
 
 const LARGURAS: Record<NonNullable<DialogProps['size']>, string> = {
@@ -40,15 +60,27 @@ export function Dialog({
   children,
   footer,
   size = 'md',
+  headerAction,
+  initialFocus = 'auto',
 }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null)
+  // Um id por diálogo. Era o texto fixo "dialog-title", e uma tela com quatro
+  // diálogos montados — Transações tem novo, editar, detalhe e excluir —
+  // tinha quatro títulos com o mesmo id: o leitor de tela anunciava o
+  // primeiro deles, qualquer que fosse o diálogo aberto.
+  const tituloId = useId()
 
   useEffect(() => {
     const dialog = ref.current
     if (!dialog) return
-    if (open && !dialog.open) dialog.showModal()
-    else if (!open && dialog.open) dialog.close()
-  }, [open])
+    if (open && !dialog.open) {
+      dialog.showModal()
+      // Ver `initialFocus`: só o detalhe pede o foco no contêiner.
+      if (initialFocus === 'dialog') dialog.focus()
+    } else if (!open && dialog.open) {
+      dialog.close()
+    }
+  }, [open, initialFocus])
 
   useEffect(() => {
     const dialog = ref.current
@@ -63,24 +95,32 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      aria-labelledby="dialog-title"
+      // Focável por código, nunca pelo Tab: é o alvo do foco na abertura.
+      tabIndex={-1}
+      aria-labelledby={tituloId}
       onClick={(event) => {
         if (event.target === ref.current) onClose()
       }}
       className={cn(
         'm-auto w-[calc(100vw-2rem)] rounded-lg border border-hairline bg-sheet p-0 text-ink',
         'shadow-[var(--shadow-float)] backdrop:bg-[var(--scrim)]',
+        // Sem anel no próprio diálogo: ele recebe o foco na abertura, e um
+        // contorno em volta da janela inteira não orienta ninguém.
+        'focus:outline-none',
         LARGURAS[size],
       )}
     >
       <div className="flex items-start justify-between gap-4 p-6 pb-0">
         <div>
-          <h2 id="dialog-title" className="text-base font-semibold tracking-[-0.02em]">
+          <h2 id={tituloId} className="text-base font-semibold tracking-[-0.02em]">
             {title}
           </h2>
           {description ? <p className="mt-1 text-xs text-muted">{description}</p> : null}
         </div>
-        <IconButton icon="x" label="Fechar" size="sm" onClick={onClose} />
+        <div className="flex shrink-0 items-center gap-1">
+          {headerAction}
+          <IconButton icon="x" label="Fechar" size="sm" onClick={onClose} />
+        </div>
       </div>
 
       <div className="p-6">{children}</div>
@@ -103,8 +143,16 @@ interface ConfirmDialogProps {
 /**
  * Confirmação de ação destrutiva.
  *
- * Sem vermelho disponível, a gravidade vem do peso: o botão de confirmar é o
- * bloco de tinta cheia, e a mensagem nomeia exatamente o que desaparece.
+ * A gravidade vinha só do peso, porque não havia vermelho no sistema. Agora
+ * há: o botão de confirmar veste a despesa, e a mensagem continua nomeando
+ * exatamente o que desaparece.
+ *
+ * A cor entra aqui e não vira regra geral de botão. Ela é o **último** aviso
+ * antes de um apagamento sem volta, e um vermelho que aparecesse em qualquer
+ * botão secundário não teria peso nenhum neste.
+ *
+ * Tinta quase-preta sobre o vermelho, como no distintivo de urgência: branco
+ * sobre `--expense` dá 3,61:1.
  */
 export function ConfirmDialog({
   open,
@@ -131,7 +179,7 @@ export function ConfirmDialog({
             onConfirm()
             onClose()
           }}
-          className="inline-flex h-11 items-center rounded-full bg-block px-5 text-[0.8125rem] font-semibold text-block-ink transition-colors duration-150 hover:bg-block-hover"
+          className="inline-flex h-11 items-center rounded-full bg-expense px-5 text-[0.8125rem] font-semibold text-desk transition-colors duration-150 hover:opacity-90"
         >
           {confirmLabel}
         </button>
