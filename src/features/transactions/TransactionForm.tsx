@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import { Segmented, Toggle, type SegmentOption } from '@/components/ui/Controls'
 import { Field, MoneyInput, TextInput } from '@/components/ui/Field'
 import { Select } from '@/components/ui/Select'
-import { categoriesFor, CONTRIBUTION_CATEGORY_ID } from '@/domain/categories'
+import { categoriesFor, CONTRIBUTION_CATEGORY_ID, groupIdOf, groupsFor } from '@/domain/categories'
 import type {
   Account,
   Category,
@@ -62,6 +62,12 @@ interface TransactionFormProps {
   accounts: readonly Account[]
   /** Preenchido para edição; ausente para criação. */
   initial?: Transaction
+  /**
+   * Abre já como série: "Adicionar" em Assinaturas chega aqui com a repetição
+   * ligada e o tipo escolhido, em vez de pedir que a pessoa ache o interruptor
+   * no fim do formulário para fazer o que ela já disse que queria.
+   */
+  preset?: { seriesKind: SeriesKind; categoryId?: string }
   onSubmit: (draft: TransactionDraft, recurrence: RecurrenceDraft | null) => void
   onCancel?: () => void
   submitLabel?: string
@@ -80,6 +86,7 @@ export function TransactionForm({
   goals,
   accounts,
   initial,
+  preset,
   onSubmit,
   onCancel,
   submitLabel = 'Registrar lançamento',
@@ -91,16 +98,21 @@ export function TransactionForm({
   const [description, setDescription] = useState(initial?.description ?? '')
   const [amount, setAmount] = useState(initial ? toInputValue(initial.amountCents) : '')
   const [date, setDate] = useState(initial?.date ?? todayIso())
-  const [categoryId, setCategoryId] = useState(initial?.categoryId ?? 'alimentacao')
+  const [categoryId, setCategoryId] = useState(
+    initial?.categoryId ?? preset?.categoryId ?? 'alimentacao',
+  )
   const [goalId, setGoalId] = useState(initial?.goalId ?? activeGoals[0]?.id ?? '')
   const [accountId, setAccountId] = useState(initial?.accountId ?? '')
-  const [recurring, setRecurring] = useState(false)
+  const [recurring, setRecurring] = useState(Boolean(preset))
   const [occurrences, setOccurrences] = useState('12')
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly')
-  const [seriesKind, setSeriesKind] = useState<SeriesKind>('installment')
+  const [seriesKind, setSeriesKind] = useState<SeriesKind>(preset?.seriesKind ?? 'installment')
   const [errors, setErrors] = useState<FormErrors>({})
 
   const availableCategories = categoriesFor(categories, kind)
+  const availableGroups = groupsFor(categories, kind)
+  const groupId = groupIdOf(categoryId, categories)
+  const leavesOfGroup = availableCategories.filter((category) => category.group === groupId)
 
   /**
    * Trocar o tipo pode invalidar a categoria escolhida — "Salário" não existe
@@ -178,7 +190,7 @@ export function TransactionForm({
     if (!isEditing) {
       setDescription('')
       setAmount('')
-      setRecurring(false)
+      setRecurring(Boolean(preset))
       setErrors({})
     }
   }
@@ -256,20 +268,50 @@ export function TransactionForm({
         </Field>
       </div>
 
+      {/*
+        Categoria em dois passos: o grupo, depois a subcategoria dentro dele.
+        Uma lista só teria noventa linhas, e achar "Estacionamentos" nela é
+        rolar; em dois passos são no máximo vinte e poucos grupos e dezesseis
+        subcategorias, e cada lista cabe na tela.
+
+        Trocar o grupo aponta para a primeira subcategoria dele, que é sempre
+        a de mesmo nome — escolher "Transporte" e não descer mais é uma
+        resposta válida, e é a que fica.
+
+        Um sobre o outro, e não lado a lado: "Hospitais, clínicas e
+        laboratórios" não cabe em meia janela, e subcategoria cortada em
+        reticências é exatamente o que a pessoa precisa ler para escolher.
+      */}
       {!isContribution ? (
-        <Field label="Categoria">
-          {({ id }) => (
-            <Select
-              id={id}
-              value={categoryId}
-              onChange={setCategoryId}
-              options={availableCategories.map((category) => ({
-                value: category.id,
-                label: category.label,
-              }))}
-            />
-          )}
-        </Field>
+        <div className="grid gap-4">
+          <Field label="Categoria">
+            {({ id }) => (
+              <Select
+                id={id}
+                value={groupId}
+                onChange={(grupo) => {
+                  const primeira = availableCategories.find((category) => category.group === grupo)
+                  if (primeira) setCategoryId(primeira.id)
+                }}
+                options={availableGroups.map((group) => ({ value: group.id, label: group.label }))}
+              />
+            )}
+          </Field>
+          <Field label="Subcategoria">
+            {({ id }) => (
+              <Select
+                id={id}
+                value={categoryId}
+                onChange={setCategoryId}
+                disabled={leavesOfGroup.length <= 1}
+                options={leavesOfGroup.map((category) => ({
+                  value: category.id,
+                  label: category.label,
+                }))}
+              />
+            )}
+          </Field>
+        </div>
       ) : null}
 
       {accounts.length > 0 ? (

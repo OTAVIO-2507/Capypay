@@ -84,3 +84,44 @@ export function presentTransaction(
     kindLabel: 'Despesa',
   }
 }
+
+/**
+ * Como o valor de um lançamento é escrito, na tabela e no detalhe.
+ *
+ * Como no produto de referência: despesa sai sem sinal e na tinta do texto,
+ * receita sai com "+" e em verde, aporte sai sem sinal na cor dele. A despesa
+ * é o caso comum de uma lista de extrato — quatro de cada cinco linhas —, e um
+ * "−" e uma seta em cada uma delas eram ruído repetido; o que se procura de
+ * relance é a exceção, e a exceção é o que entra.
+ *
+ * Isto substitui a Regra das Quatro Leituras (seta, sinal, peso e cor em toda
+ * linha), por pedido explícito. A distinção entre entrada e saída continua sem
+ * depender só de matiz: o "+" está escrito, e o leitor de tela ouve o tipo
+ * antes do número. Aporte se distingue pela pílula "Meta:" e pela pastilha
+ * tracejada ao lado.
+ */
+export const AMOUNT_CLASS: Record<TransactionKind, string> = {
+  income: 'text-income',
+  expense: 'text-ink',
+  contribution: 'text-contribution',
+}
+
+/** O valor sem sinal, e se ele leva "+". Ver `AMOUNT_CLASS`. */
+export function amountDisplay(view: TransactionPresentation): { cents: number; signed: boolean } {
+  return { cents: Math.abs(view.signedCents), signed: view.tone === 'income' }
+}
+
+/**
+ * O sinal do valor no detalhe de um lançamento: os dois sentidos levam sinal,
+ * separado do valor por um espaço, como na referência — "− R$ 580,00" e
+ * "+ R$ 0,06".
+ *
+ * Na tabela a despesa vai sem sinal (ver `AMOUNT_CLASS`) porque a coluna
+ * inteira ao redor já diz que o normal é saída. No detalhe o valor está
+ * sozinho, sem essa coluna, e o sinal volta a ser informação. Aporte leva o
+ * "−": é dinheiro que sai da conta para a meta.
+ */
+export function detailSign(view: TransactionPresentation): '+' | '−' | '' {
+  if (view.signedCents === 0) return ''
+  return view.tone === 'income' ? '+' : '−'
+}
