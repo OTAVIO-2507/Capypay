@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { buildAlerts } from './alerts'
-import { DEFAULT_CATEGORIES } from './categories'
 import type { Goal, Transaction } from './types'
 import { shiftDate, todayIso } from '@/lib/date'
 
@@ -37,9 +36,7 @@ const META: Goal = {
 function construir(over: Partial<Parameters<typeof buildAlerts>[0]> = {}) {
   return buildAlerts({
     transactions: [],
-    categories: DEFAULT_CATEGORIES,
     goals: [],
-    budgets: {},
     month: MES,
     formatValue: (cents) => `R$ ${(cents / 100).toFixed(2)}`,
     ...over,
@@ -54,27 +51,6 @@ function construir(over: Partial<Parameters<typeof buildAlerts>[0]> = {}) {
 describe('buildAlerts', () => {
   it('não inventa aviso quando não há nada pendente', () => {
     expect(construir()).toEqual([])
-  })
-
-  it('avisa quando um limite estoura, dizendo o quanto passou', () => {
-    const alerts = construir({
-      budgets: { [MES]: { alimentacao: 100000 } },
-      transactions: [tx({ kind: 'expense', amountCents: 130000, date: `${MES}-05`, categoryId: 'alimentacao' })],
-    })
-
-    const estouro = alerts.find((a) => a.id === 'budget-exceeded-alimentacao')
-    expect(estouro?.severity).toBe('high')
-    expect(estouro?.description).toContain('R$ 300.00')
-    expect(estouro?.to).toBe('/orcamento')
-  })
-
-  it('avisa a partir de 85% do limite, com peso menor que o estouro', () => {
-    const alerts = construir({
-      budgets: { [MES]: { lazer: 100000 } },
-      transactions: [tx({ kind: 'expense', amountCents: 90000, date: `${MES}-05`, categoryId: 'lazer' })],
-    })
-
-    expect(alerts.find((a) => a.id === 'budget-warning-lazer')?.severity).toBe('medium')
   })
 
   it('avisa quando o mês fecha negativo', () => {
@@ -125,7 +101,6 @@ describe('buildAlerts', () => {
   it('ordena do mais grave para o menos grave', () => {
     const alerts = construir({
       goals: [META],
-      budgets: { [MES]: { alimentacao: 100000, lazer: 100000 } },
       transactions: [
         tx({ kind: 'contribution', amountCents: 120000, date: `${MES}-10`, goalId: 'g1' }),
         tx({ kind: 'expense', amountCents: 90000, date: `${MES}-05`, categoryId: 'lazer' }),

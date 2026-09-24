@@ -136,16 +136,16 @@ describe('suggestCategory', () => {
   const paraDespesa = (texto: string) => suggestCategory(texto, 'expense', DEFAULT_CATEGORIES)
 
   it('reconhece os estabelecimentos comuns do extrato', () => {
-    expect(paraDespesa('IFOOD *RESTAURANTE')).toBe('alimentacao')
-    expect(paraDespesa('UBER   *TRIP')).toBe('transporte')
-    expect(paraDespesa('DROGARIA SAO PAULO')).toBe('saude')
-    expect(paraDespesa('NETFLIX.COM')).toBe('assinaturas')
-    expect(paraDespesa('ALUGUEL AGOSTO')).toBe('moradia')
+    expect(paraDespesa('IFOOD *RESTAURANTE')).toBe('delivery')
+    expect(paraDespesa('UBER   *TRIP')).toBe('taxi')
+    expect(paraDespesa('DROGARIA SAO PAULO')).toBe('farmacia')
+    expect(paraDespesa('NETFLIX.COM')).toBe('streaming-de-video')
+    expect(paraDespesa('ALUGUEL AGOSTO')).toBe('aluguel')
   })
 
   it('ignora acento e caixa', () => {
-    expect(paraDespesa('Farmácia Popular')).toBe('saude')
-    expect(paraDespesa('PEDÁGIO AUTOBAN')).toBe('transporte')
+    expect(paraDespesa('Farmácia Popular')).toBe('farmacia')
+    expect(paraDespesa('PEDÁGIO AUTOBAN')).toBe('pedagio')
   })
 
   /*
@@ -155,7 +155,7 @@ describe('suggestCategory', () => {
    * preenchida, com cara de sugestão pensada.
    */
   it('não casa por pedaço de palavra', () => {
-    expect(paraDespesa('LOJA 1999 CONFECCOES')).not.toBe('transporte')
+    expect(paraDespesa('LOJA 1999 CONFECCOES')).not.toBe('taxi')
     expect(paraDespesa('MAX BURGER')).not.toBe('assinaturas')
     expect(paraDespesa('MULTIMARCAS MODA')).not.toBe('moradia')
     expect(paraDespesa('PRIMEIRA IGREJA')).not.toBe('assinaturas')
@@ -421,7 +421,7 @@ describe('categoria aprendida do histórico', () => {
     const memoria = learnCategories([gravado('AMAZON BR', 'assinaturas')])
 
     expect(suggestCategory('AMAZON BR', 'expense', DEFAULT_CATEGORIES, memoria)).toBe('assinaturas')
-    expect(suggestCategory('AMAZON BR', 'expense', DEFAULT_CATEGORIES)).toBe('compras')
+    expect(suggestCategory('AMAZON BR', 'expense', DEFAULT_CATEGORIES)).toBe('compras-online')
   })
 
   it('não aplica memória a uma categoria que o tipo não aceita', () => {
@@ -437,10 +437,78 @@ describe('catálogo de categorias mais largo', () => {
   it('reconhece os nomes que o extrato realmente traz', () => {
     // Todos estes caíam em Outros: a lista exigia "mercado " com espaço, e não
     // conhecia rede de farmácia nem supermercado brasileiro.
-    expect(paraDespesa('Compra no débito - Mercadinho Aruja Bra')).toBe('alimentacao')
-    expect(paraDespesa('Compra no débito - Sonda Aruja Sao Jose Dos Bra')).toBe('alimentacao')
-    expect(paraDespesa('Compra no débito - Raia3087 Aruja Bra')).toBe('saude')
+    expect(paraDespesa('Compra no débito - Mercadinho Aruja Bra')).toBe('supermercado')
+    expect(paraDespesa('Compra no débito - Sonda Aruja Sao Jose Dos Bra')).toBe('supermercado')
+    expect(paraDespesa('Compra no débito - Raia3087 Aruja Bra')).toBe('farmacia')
     expect(paraDespesa('DM HOSTINGERCOMB SAO PAULO BRA')).toBe('assinaturas')
-    expect(paraDespesa('ALURA SAO PAULO BRA')).toBe('educacao')
+    expect(paraDespesa('ALURA SAO PAULO BRA')).toBe('cursos-online')
+  })
+})
+
+describe('categoria do agregador', () => {
+  const gravado = (description: string, categoryId: string): Transaction =>
+    existente({ id: `t-${description}`, description, categoryId, updatedAt: 1 })
+
+  it('usa a subcategoria que o Pluggy atribuiu, pelo nome em inglês', () => {
+    expect(
+      suggestCategory('COMPRA 4471 AUTO POSTO', 'expense', DEFAULT_CATEGORIES, undefined, 'Gas stations'),
+    ).toBe('combustivel')
+    expect(
+      suggestCategory('PAGTO 99', 'expense', DEFAULT_CATEGORIES, undefined, 'Tolls and in vehicle payment'),
+    ).toBe('pedagio')
+  })
+
+  it('casa também pelo nome em português', () => {
+    expect(
+      suggestCategory('X', 'expense', DEFAULT_CATEGORIES, undefined, 'Streaming de música'),
+    ).toBe('streaming-de-musica')
+  })
+
+  it('a memória da pessoa vence o agregador', () => {
+    const memoria = learnCategories([gravado('LOJA DO BAIRRO', 'compras')])
+    expect(
+      suggestCategory('LOJA DO BAIRRO', 'expense', DEFAULT_CATEGORIES, memoria, 'Groceries'),
+    ).toBe('compras')
+  })
+
+  it('o agregador vence as regras de texto', () => {
+    // "mercad" mandaria para Supermercado; o Pluggy sabe que é delivery.
+    expect(
+      suggestCategory('MERCADO DO ZE', 'expense', DEFAULT_CATEGORIES, undefined, 'Food delivery'),
+    ).toBe('delivery')
+  })
+
+  it('não aceita subcategoria que não cabe no tipo', () => {
+    // Um estorno de farmácia é receita; "Farmácia" é só de despesa.
+    expect(
+      suggestCategory('ESTORNO', 'income', DEFAULT_CATEGORIES, undefined, 'Pharmacy'),
+    ).toBe('outros')
+  })
+
+  it('nome desconhecido cai nas regras de texto', () => {
+    expect(
+      suggestCategory('NETFLIX.COM', 'expense', DEFAULT_CATEGORIES, undefined, 'Categoria que não existe'),
+    ).toBe('streaming-de-video')
+  })
+
+  it('o nome atravessa a montagem dos candidatos', () => {
+    const [candidato] = buildImportCandidates(
+      {
+        accountKey: 'c1',
+        accountLabel: 'Conta',
+        entries: [
+          {
+            key: 'a',
+            date: '2026-09-10',
+            amountCents: -1500,
+            description: 'PAGAMENTO QUALQUER',
+            aggregatorCategory: 'Parking',
+          },
+        ],
+      },
+      [],
+      DEFAULT_CATEGORIES,
+    )
+    expect(candidato.categoryId).toBe('estacionamento')
   })
 })

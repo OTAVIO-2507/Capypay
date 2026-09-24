@@ -51,6 +51,12 @@ export interface Subscription {
    * compra não pode ter menos parcelas que os lançamentos que ela já tem.
    */
   occurrences: number
+  /**
+   * A conta ou o cartão que cobra, pela cobrança mais recente. É o que a
+   * pessoa precisa saber para cancelar: a assinatura sai de uma fatura
+   * específica, e "qual cartão é esse" é a primeira pergunta do atendimento.
+   */
+  accountId: string | null
 }
 
 /** O "(3/12)" que a expansão anexa à descrição. */
@@ -131,6 +137,7 @@ export function activeSubscriptions(
       cadence,
       charged: ocorrencias.length - futuras.length,
       occurrences: ocorrencias.length,
+      accountId: ultima.accountId ?? null,
     })
   }
 

@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
+  formatDayGroup,
   formatDayMonth,
   formatDayMonthYear,
   formatDayNumber,
   formatFullDate,
   formatMonthLong,
   formatMonthShort,
+  formatNumericDate,
+  formatWeekdayLong,
   formatWeekdayShort,
   fromIsoDate,
   isValidIsoDate,
@@ -105,6 +108,11 @@ describe('formatadores nunca lançam', () => {
     expect(formatWeekdayShort(entrada)).toBe('—')
   })
 
+  it.each(lixo)('formatWeekdayLong(%j) devolve traço em vez de lançar', (entrada) => {
+    expect(() => formatWeekdayLong(entrada)).not.toThrow()
+    expect(formatWeekdayLong(entrada)).toBe('—')
+  })
+
   it.each(lixo)('formatDayNumber(%j) devolve traços em vez de lançar', (entrada) => {
     expect(() => formatDayNumber(entrada)).not.toThrow()
     expect(formatDayNumber(entrada)).toBe('--')
@@ -117,6 +125,8 @@ describe('formatadores nunca lançam', () => {
     // 15/03/2024 foi uma sexta-feira. O ponto da abreviação sai fora, e o zero
     // à esquerda entra: a folha de calendário tem largura fixa.
     expect(formatWeekdayShort('2024-03-15')).toBe('sex')
+    // Por extenso, e sem maiúscula: quem capitaliza é o título que a usa.
+    expect(formatWeekdayLong('2024-03-15')).toBe('sexta-feira')
     expect(formatDayNumber('2024-03-15')).toBe('15')
     expect(formatDayNumber('2024-03-05')).toBe('05')
   })
@@ -199,5 +209,39 @@ describe('formatDayMonthYear', () => {
    */
   it('não devolve vazio', () => {
     expect(formatDayMonthYear('2026-12-01')).toBe('01 dez 2026')
+  })
+})
+
+describe('formatDayGroup', () => {
+  const hoje = '2026-09-18'
+
+  it('chama hoje de "Hoje" e ontem de "Ontem"', () => {
+    expect(formatDayGroup('2026-09-18', hoje)).toBe('Hoje')
+    expect(formatDayGroup('2026-09-17', hoje)).toBe('Ontem')
+  })
+
+  it('volta à data, com o dia da semana, a partir de anteontem', () => {
+    // 15 de setembro de 2026 é uma terça-feira.
+    expect(formatDayGroup('2026-09-15', hoje)).toBe('ter, 15 de set')
+  })
+
+  it('reconhece "ontem" na virada do mês', () => {
+    expect(formatDayGroup('2026-08-31', '2026-09-01')).toBe('Ontem')
+  })
+
+  it('não lança com data inválida', () => {
+    expect(formatDayGroup('2026-13-40', hoje)).toBe('Data inválida')
+  })
+})
+
+describe('formatNumericDate', () => {
+  it('escreve dia, mês e ano com zero à esquerda', () => {
+    expect(formatNumericDate('2026-09-16')).toBe('16/09/2026')
+    expect(formatNumericDate('2026-01-05')).toBe('05/01/2026')
+  })
+
+  it('não lança com data inválida', () => {
+    expect(formatNumericDate('2024-02-31')).toBe(INVALID_DATE_LABEL)
+    expect(formatNumericDate('')).toBe(INVALID_DATE_LABEL)
   })
 })

@@ -1,4 +1,4 @@
-import { categoriesFor } from './categories'
+import { categoriesFor, matchAggregatorCategory } from './categories'
 import { detectSeries, type SeriesHint } from './detectSeries'
 import type { AccountKind, Category, Transaction, TransactionKind } from './types'
 import type { OfxStatement } from '@/lib/ofx'
@@ -34,6 +34,11 @@ export interface ImportEntry {
   amountCents: Cents
   description: string
   /**
+   * A subcategoria que o agregador bancário atribuiu, pelo nome. Extrato de
+   * arquivo (OFX) não tem, e aí a sugestão cai nas regras de texto.
+   */
+  aggregatorCategory?: string | null
+  /**
    * Parcelamento **declarado** pela origem, em campo próprio.
    *
    * A Pluggy entrega isto em `creditCardMetadata`, e é evidência de primeira
@@ -51,6 +56,18 @@ export interface ImportEntry {
     totalAmountCents?: Cents | null
   } | null
 }
+
+/** O que a instituição informa sobre um cartão, na forma em que chega. */
+export interface ImportedCardTerms {
+    /** Limite total do cartão, em centavos. */
+    limitCents: number | null
+    /** Limite disponível agora, já descontadas as parcelas futuras. */
+    availableCents: number | null
+    /** Data do fechamento da fatura aberta, `YYYY-MM-DD`. */
+    closeDate: string | null
+    /** Data do vencimento dela, `YYYY-MM-DD`. */
+    dueDate: string | null
+  }
 
 /** Um lote de lançamentos de uma conta só. */
 export interface ImportBatch {
@@ -80,6 +97,7 @@ export interface ImportBatch {
     balanceCents?: Cents | null
     brand?: string | null
     institution?: string | null
+    card?: ImportedCardTerms | null
   }
 }
 
@@ -188,21 +206,94 @@ const REGRAS: readonly (readonly [string, readonly string[]])[] = [
    * 1999", "max" com "MAX BURGER" e "tim" com "ULTIMO" e "MULTIMARCAS": num
    * catálogo de palavras soltas, quanto mais curto o pedaço, mais silencioso o
    * erro. Marca ambígua entra com o nome inteiro ou não entra.
+   *
+   * As regras apontam para **subcategorias**, e por isso ficaram mais
+   * numerosas, mas não mais soltas: cada palavra é a mesma de antes, só que
+   * agora diz "Postos de gasolina" em vez de "Transporte". Quando a palavra
+   * não sabe descer — "curso", "passagem" —, ela aponta para a subcategoria
+   * que tem o nome do grupo, que é o que ela sempre soube dizer.
    */
-  ['assinaturas', ['netflix', 'spotify', 'disney', 'hbo max', 'amazon prime', 'prime video', 'youtube premium', 'icloud', 'google one', 'dropbox', 'adobe', 'hostinger', 'hospedagem', 'openai', 'chatgpt', 'canva', 'microsoft 365', 'office 365', 'deezer', 'globoplay', 'paramount', 'crunchyroll', 'apple.com/bill']],
+
+  // Serviços digitais. O streaming vem antes de "amazon" e de "mercado" pelo
+  // mesmo motivo de sempre: o específico ganha do genérico.
+  ['streaming-de-video', ['netflix', 'disney', 'hbo max', 'amazon prime', 'prime video', 'globoplay', 'paramount', 'crunchyroll', 'youtube premium']],
+  ['streaming-de-musica', ['spotify', 'deezer', 'tidal']],
+  ['jogos', ['steam', 'playstation', 'xbox', 'nintendo', 'epic games']],
+  ['assinaturas', ['icloud', 'google one', 'dropbox', 'adobe', 'hostinger', 'hospedagem', 'openai', 'chatgpt', 'canva', 'microsoft 365', 'office 365', 'apple.com/bill']],
+
+  // Compra online antes de "mercad": "Mercado Livre" caía em alimentação
+  // quando a regra de mercado vinha primeiro, porque "mercad" é o começo das
+  // duas.
+  ['compras-online', ['mercado livre', 'mercadolivre', 'amazon', 'shopee', 'aliexpress', 'shein', 'temu']],
+
+  // Alimentação. "uber eats" vem antes de "uber", que é transporte.
+  ['delivery', ['ifood', 'rappi', 'uber eats', 'ze delivery', 'aiqfome']],
   // "mercad" sem espaço no fim, e é o que faltava para "Mercadinho" cair aqui:
   // a lista anterior exigia a palavra inteira seguida de espaço, então acertava
   // "mercado central" e errava tudo que o banco escreve grudado ou no
   // diminutivo, que é a maioria das mercearias de bairro.
-  ['alimentacao', ['ifood', 'rappi', 'mercad', 'supermerc', 'padaria', 'restaurante', 'lanchonete', 'pizza', 'burger', 'cafe', 'hortifruti', 'acougue', 'atacad', 'sonda', 'assai', 'carrefour', 'pao de acucar', 'tenda atacado', 'sacolao', 'emporio', 'delicatessen', 'confeitaria', 'churrascaria', 'sushi', 'lanches', 'burguer', 'doceria', 'dorinhos', 'subway', 'mcdonald', 'bk ', 'habib', 'outback', 'divino fogao', 'coco bambu']],
-  ['transporte', ['uber', '99app', '99 pop', 'combustivel', 'gasolina', 'posto ', 'auto posto', 'ipiranga', 'shell', 'petrobras', 'br mania', 'estacionamento', 'pedagio', 'onibus', 'passagem', 'cabify', 'indriver', 'localiza', 'movida', 'unidas', 'sem parar', 'conectcar', 'veloe', 'detran', 'ipva']],
-  ['saude', ['farmacia', 'drogaria', 'drogasil', 'raia', 'pacheco', 'pague menos', 'nissei', 'panvel', 'hospital', 'clinica', 'laboratorio', 'unimed', 'amil ', 'hapvida', 'dentista', 'odonto', 'psicolog', 'terapia', 'fisioterapia', 'oftalmo', 'exame']],
-  ['moradia', ['aluguel', 'condominio', 'energia eletrica', 'eletropaulo', 'enel', 'cemig', 'copel', 'cpfl', 'light servicos', 'sabesp', 'saneamento', 'sanepar', 'copasa', 'comgas', 'gas natural', 'internet', 'vivo fibra', 'claro ', 'oi fibra', 'net servicos', 'iptu', 'imobiliaria', 'leroy merlin', 'telhanorte', 'obramax']],
-  ['educacao', ['faculdade', 'universidade', 'curso ', 'escola', 'colegio', 'alura', 'udemy', 'coursera', 'rocketseat', 'livraria', 'papelaria', 'kumon', 'wizard', 'cna ', 'fisk', 'estacio', 'anhanguera', 'unip ', 'senai', 'sebrae']],
-  ['lazer', ['cinema', 'cinemark', 'teatro', 'ingresso', 'ticket', 'sympla', 'academia', 'smartfit', 'bluefit', 'hotel', 'airbnb', 'booking', 'decolar', 'latam', 'gol linhas', 'azul linhas', 'parque', 'clube', 'bar e ', 'pub ', 'boliche']],
-  ['compras', ['mercado livre', 'mercadolivre', 'amazon', 'shopee', 'aliexpress', 'magalu', 'magazine luiza', 'americanas', 'casas bahia', 'renner', 'riachuelo', 'shopping', 'c&a', 'marisa', 'centauro', 'netshoes', 'decathlon', 'kalunga', 'fast shop', 'ponto frio', 'extra ', 'shein', 'temu']],
+  ['supermercado', ['mercad', 'supermerc', 'hortifruti', 'acougue', 'atacad', 'sonda', 'assai', 'carrefour', 'pao de acucar', 'tenda atacado', 'sacolao', 'emporio']],
+  ['restaurantes', ['restaurante', 'lanchonete', 'pizza', 'burger', 'burguer', 'lanches', 'churrascaria', 'sushi', 'subway', 'mcdonald', 'bk ', 'habib', 'outback', 'divino fogao', 'coco bambu', 'bar e ', 'pub ']],
+  ['alimentacao', ['padaria', 'cafe', 'confeitaria', 'doceria', 'dorinhos', 'delicatessen']],
+
+  // Transporte.
+  ['taxi', ['uber', '99app', '99 pop', 'cabify', 'indriver']],
+  ['combustivel', ['combustivel', 'gasolina', 'posto ', 'auto posto', 'ipiranga', 'shell', 'petrobras', 'br mania']],
+  ['estacionamento', ['estacionamento']],
+  ['pedagio', ['pedagio', 'sem parar', 'conectcar', 'veloe']],
+  ['aluguel-de-veiculos', ['localiza', 'movida', 'unidas']],
+  ['impostos-do-veiculo', ['detran', 'ipva', 'licenciamento']],
+  ['transporte-publico', ['onibus', 'bilhete unico', 'sptrans', 'cptm']],
+  ['transporte', ['passagem']],
+
+  // Saúde e bem-estar. Plano de saúde é seguro na árvore de origem, e vai
+  // para lá: é o que ele é, e é onde a referência o mostra.
+  ['plano-de-saude', ['unimed', 'amil ', 'hapvida', 'sulamerica']],
+  ['farmacia', ['farmacia', 'drogaria', 'drogasil', 'raia', 'pacheco', 'pague menos', 'nissei', 'panvel']],
+  ['dentista', ['dentista', 'odonto']],
+  ['otica', ['otica']],
+  ['hospitais', ['hospital', 'clinica', 'laboratorio', 'exame', 'oftalmo']],
+  ['academias', ['academia', 'smartfit', 'bluefit', 'totalpass', 'gympass', 'wellhub']],
+  ['saude', ['psicolog', 'terapia', 'fisioterapia']],
+
+  // Moradia e contas da casa.
+  ['aluguel', ['aluguel', 'imobiliaria']],
+  ['moradia', ['condominio']],
+  ['eletricidade', ['energia eletrica', 'eletropaulo', 'enel', 'cemig', 'copel', 'cpfl', 'light servicos']],
+  ['agua', ['sabesp', 'saneamento', 'sanepar', 'copasa']],
+  ['gas', ['comgas', 'gas natural']],
+  ['iptu', ['iptu']],
+  ['utilidades-domesticas', ['leroy merlin', 'telhanorte', 'obramax']],
+  ['internet', ['internet', 'vivo fibra', 'oi fibra', 'net servicos']],
+  ['telecomunicacoes', ['claro ']],
+
+  // Educação.
+  ['cursos-online', ['alura', 'udemy', 'coursera', 'rocketseat']],
+  ['universidade', ['faculdade', 'universidade', 'estacio', 'anhanguera', 'unip ']],
+  ['escola', ['escola', 'colegio', 'kumon']],
+  ['educacao', ['curso ', 'wizard', 'cna ', 'fisk', 'senai', 'sebrae']],
+  ['livraria', ['livraria']],
+  ['papelaria', ['papelaria', 'kalunga']],
+
+  // Lazer e viagens.
+  ['cinema-e-shows', ['cinema', 'cinemark', 'teatro']],
+  ['ingressos', ['ingresso', 'ticket', 'sympla']],
+  ['hospedagem', ['hotel', 'airbnb', 'booking']],
+  ['aereas', ['latam', 'gol linhas', 'azul linhas']],
+  ['viagens', ['decolar', '123milhas', 'hurb']],
+  ['lazer', ['parque', 'clube', 'boliche']],
+
+  // Compras.
+  ['eletronicos', ['fast shop', 'kabum', 'pichau']],
+  ['vestuario', ['renner', 'riachuelo', 'c&a', 'marisa', 'zara', 'hering']],
+  ['artigos-esportivos', ['centauro', 'netshoes', 'decathlon']],
+  ['pet', ['petz', 'cobasi', 'pet shop', 'petshop', 'veterinari']],
+  ['compras', ['magalu', 'magazine luiza', 'americanas', 'casas bahia', 'shopping', 'ponto frio', 'extra ']],
+
+  // Receitas.
   ['salario', ['salario', 'folha de pagamento', 'proventos', 'remuneracao', 'pagamento de salario', 'pro labore', 'ferias', 'decimo terceiro']],
-  ['investimentos', ['rendimento', 'dividendo', 'resgate', 'cdb', 'tesouro', 'poupanca', 'juros sobre capital', 'jcp', 'renda fixa', 'b3 ', 'corretora', 'clear', 'rico invest', 'nuinvest', 'btg pactual']],
+  ['dividendos', ['rendimento', 'dividendo', 'juros sobre capital', 'jcp']],
+  ['investimentos', ['resgate', 'cdb', 'tesouro', 'poupanca', 'renda fixa', 'b3 ', 'corretora', 'clear', 'rico invest', 'nuinvest', 'btg pactual']],
 ]
 
 /** Sem acento e em minúsculas: "Alimentação" e "ALIMENTACAO" viram a mesma coisa. */
@@ -236,6 +327,15 @@ export function suggestCategory(
    * alguém desistir de categorizar.
    */
   aprendidas?: ReadonlyMap<string, string>,
+  /**
+   * A subcategoria que o agregador bancário deu ao lançamento.
+   *
+   * Vem depois do que a pessoa já corrigiu e antes das regras de texto. A
+   * pessoa conhece o estabelecimento melhor que qualquer classificador; o
+   * classificador do agregador conhece o código do estabelecimento na
+   * maquininha, que é bem mais do que a descrição do extrato diz.
+   */
+  aggregatorCategory?: string | null,
 ): string {
   const permitidas = new Set(categoriesFor(categories, kind).map((item) => item.id))
   const texto = normalizar(description)
@@ -245,12 +345,25 @@ export function suggestCategory(
   const aprendida = aprendidas?.get(chaveDeEstabelecimento(texto))
   if (aprendida && permitidas.has(aprendida)) return aprendida
 
+  const doAgregador = matchAggregatorCategory(aggregatorCategory, kind, categories)
+  if (doAgregador) return doAgregador
+
   for (const [categoryId, palavras] of REGRAS) {
     if (!permitidas.has(categoryId)) continue
     if (palavras.some((palavra) => texto.includes(palavra))) return categoryId
   }
 
   return permitidas.has('outros') ? 'outros' : (categoriesFor(categories, kind)[0]?.id ?? 'outros')
+}
+
+/**
+ * A chave do estabelecimento a partir da descrição crua, como o extrato a
+ * escreve. É o que reconhece que dois lançamentos são do mesmo lugar — a
+ * memória de categorias usa, e o detalhe da transação usa para listar as
+ * semelhantes.
+ */
+export function merchantKey(description: string): string {
+  return chaveDeEstabelecimento(normalizar(description))
 }
 
 /**
@@ -264,6 +377,10 @@ export function suggestCategory(
 function chaveDeEstabelecimento(textoNormalizado: string): string {
   return textoNormalizado
     .replace(/compra no debito|compra no credito|compra com cartao|pagamento de|pix (enviado|recebido)|debito automatico|tarifa/g, ' ')
+    // A operação sozinha não é lugar. Sem isto, "PIX 0293" virava a chave
+    // "pix", e corrigir a categoria de um PIX sem nome ensinava a mesma
+    // categoria para todo PIX sem nome que viesse depois.
+    .replace(/\b(pix|ted|doc)\b/g, ' ')
     .replace(/\d+/g, ' ')
     .replace(/[^a-z\s]/g, ' ')
     .replace(/\s{2,}/g, ' ')
@@ -355,7 +472,13 @@ export function buildImportCandidates(
       description: lancamento.description,
       amountCents,
       date: lancamento.date,
-      categoryId: suggestCategory(lancamento.description, kind, categories, aprendidas),
+      categoryId: suggestCategory(
+        lancamento.description,
+        kind,
+        categories,
+        aprendidas,
+        lancamento.aggregatorCategory,
+      ),
       duplicate: exato ? 'exact' : parecido ? 'possible' : null,
       duplicateOf: exato?.id ?? parecido?.id ?? null,
       series: serie,

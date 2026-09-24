@@ -1,8 +1,8 @@
 import type { IconName } from '@/components/Icon'
 import { formatMonthLong, monthOf, todayIso, type MonthKey } from '@/lib/date'
 import type { Cents } from '@/lib/money'
-import { budgetStatuses, goalProgress, totalsForMonth } from './selectors'
-import type { BudgetsByMonth, Category, Goal, Transaction } from './types'
+import { goalProgress, totalsForMonth } from './selectors'
+import type { Goal, Transaction } from './types'
 
 /**
  * Avisos derivados dos dados.
@@ -12,8 +12,13 @@ import type { BudgetsByMonth, Category, Goal, Transaction } from './types'
  * a ignorar o sino — e aí o aviso que importava passa despercebido junto.
  *
  * Por isso também não existe estado de "lido": o aviso desaparece quando a
- * condição que o gerou deixa de valer, e não quando alguém o dispensa. Um
- * limite estourado continua estourado depois de fechar o menu.
+ * condição que o gerou deixa de valer, e não quando alguém o dispensa. Um mês
+ * no vermelho continua no vermelho depois de fechar o menu.
+ *
+ * Os avisos de limite de orçamento moravam aqui e saíram junto com a tela de
+ * Orçamento. Sem a tela, ninguém consegue mudar nem apagar um limite, e o
+ * aviso de um teto antigo ficaria aceso para sempre, apontando para lugar
+ * nenhum.
  */
 export type AlertSeverity = 'high' | 'medium' | 'low'
 
@@ -29,9 +34,7 @@ export interface Alert {
 
 interface AlertInput {
   transactions: readonly Transaction[]
-  categories: readonly Category[]
   goals: readonly Goal[]
-  budgets: BudgetsByMonth
   month: MonthKey
   formatValue: (cents: Cents) => string
 }
@@ -40,37 +43,11 @@ const ORDEM: Record<AlertSeverity, number> = { high: 0, medium: 1, low: 2 }
 
 export function buildAlerts({
   transactions,
-  categories,
   goals,
-  budgets,
   month,
   formatValue,
 }: AlertInput): Alert[] {
   const alerts: Alert[] = []
-  const orcamentos = budgetStatuses(budgets, transactions, categories, month)
-
-  for (const linha of orcamentos) {
-    if (linha.state === 'exceeded') {
-      alerts.push({
-        id: `budget-exceeded-${linha.categoryId}`,
-        severity: 'high',
-        icon: 'triangle-alert',
-        title: `${linha.label} passou do limite`,
-        description: `${formatValue(Math.abs(linha.remainingCents))} acima do teto de ${formatValue(linha.limitCents)}.`,
-        to: '/orcamento',
-      })
-    } else if (linha.state === 'warning') {
-      alerts.push({
-        id: `budget-warning-${linha.categoryId}`,
-        severity: 'medium',
-        icon: 'circle-alert',
-        title: `${linha.label} está perto do limite`,
-        description: `Restam ${formatValue(linha.remainingCents)} de ${formatValue(linha.limitCents)}.`,
-        to: '/orcamento',
-      })
-    }
-  }
-
   const totais = totalsForMonth(transactions, month)
   if (totais.net < 0) {
     alerts.push({

@@ -48,6 +48,13 @@ export interface Installment {
   categoryName: string
   /** Quanto a compra custa somando todas as parcelas. */
   totalCents: Cents
+  /**
+   * O total é conta nossa, e não soma de lançamentos: faltam parcelas no
+   * histórico, e o total saiu do valor da parcela vezes a contagem declarada.
+   * A tela diz "estimado" nesse caso, porque a primeira parcela costuma
+   * diferir das outras e o número real pode não bater no centavo.
+   */
+  estimated: boolean
   paidCents: Cents
   remainingCents: Cents
   /** Valor de uma parcela, pela próxima em aberto ou pela última paga. */
@@ -71,6 +78,8 @@ export interface Installment {
    * das outras por causa de entrada ou arredondamento.
    */
   parcels: InstallmentParcel[]
+  /** A conta ou o cartão da compra, pela parcela de referência. */
+  accountId: string | null
 }
 
 const SUFIXO_DE_PARCELA = /\s*\(\d+\/\d+\)\s*$/
@@ -181,6 +190,7 @@ export function installmentPurchases(
       categoryId: referencia.categoryId,
       categoryName: categoryLabel(categories, referencia.categoryId),
       totalCents,
+      estimated: faltando,
       paidCents,
       remainingCents: totalCents - paidCents,
       installmentCents: valorDaParcela,
@@ -191,6 +201,7 @@ export function installmentPurchases(
       lastDate: parcels[parcels.length - 1]?.date ?? parcelas[parcelas.length - 1].date,
       done: emAberto.length === 0,
       parcels,
+      accountId: referencia.accountId ?? null,
     })
   }
 

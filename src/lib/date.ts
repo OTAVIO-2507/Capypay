@@ -136,6 +136,7 @@ const DAY_MONTH = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'sho
 const FULL_DATE = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'long' })
 const DAY_MONTH_YEAR = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 const WEEKDAY_SHORT = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' })
+const WEEKDAY_LONG = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' })
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1)
@@ -193,6 +194,24 @@ export function formatDayMonthYear(iso: IsoDate): string {
   return `${pegar('day')} ${pegar('month')} ${pegar('year')}`
 }
 
+/**
+ * "16/09/2026" — coluna de data da tela de Transações.
+ *
+ * Numérica porque ali a lista atravessa meses e anos, e a coluna precisa ter a
+ * mesma largura em toda linha para os valores ao lado ficarem alinhados. É
+ * também o formato do extrato bancário, que é o que a pessoa vai conferir
+ * contra esta tabela.
+ *
+ * Montada pelos componentes da data validada, sem `Intl`: não há nada a
+ * localizar em dia, mês e ano com zero à esquerda.
+ */
+export function formatNumericDate(iso: IsoDate): string {
+  const date = fromIsoDate(iso)
+  if (!date) return INVALID_DATE_LABEL
+  const dois = (n: number) => String(n).padStart(2, '0')
+  return `${dois(date.getDate())}/${dois(date.getMonth() + 1)}/${date.getFullYear()}`
+}
+
 /** "15 de março de 2024" — título acessível e tooltip. */
 export function formatFullDate(iso: IsoDate): string {
   const date = fromIsoDate(iso)
@@ -203,6 +222,41 @@ export function formatFullDate(iso: IsoDate): string {
 export function formatWeekdayShort(iso: IsoDate): string {
   const date = fromIsoDate(iso)
   return date ? WEEKDAY_SHORT.format(date).replace('.', '') : '—'
+}
+
+/**
+ * "sábado" — o dia da semana por extenso.
+ *
+ * Existe ao lado da forma curta porque serve a outro lugar: a curta é rótulo
+ * de coluna e de folha de calendário, onde o espaço manda; esta é frase, e
+ * aparece no balão do mapa de calor, onde "sáb, 12 de set" lê como abreviação
+ * de tabela e "sábado, 12 de set" lê como a resposta a uma pergunta.
+ */
+export function formatWeekdayLong(iso: IsoDate): string {
+  const date = fromIsoDate(iso)
+  return date ? WEEKDAY_LONG.format(date) : '—'
+}
+
+/**
+ * O cabeçalho de um grupo de lançamentos: "Hoje", "Ontem", ou "ter, 15 set".
+ *
+ * Os dois primeiros são palavra e não data porque são o que a pessoa procura
+ * de fato — "o que eu gastei ontem" é uma pergunta, "o que eu gastei em 17 de
+ * setembro" quase nunca. Daí para trás a data volta, com o dia da semana na
+ * frente: numa lista que atravessa uma semana, "sáb" é o que faz a pessoa
+ * lembrar do que foi aquela compra. O formato da data é o de `formatDayMonth`
+ * ("15 de set"), o mesmo da coluna de data da tabela.
+ *
+ * `hoje` é parâmetro, e não `todayIso()` lido por dentro, para que o teste
+ * não dependa do relógio da máquina onde roda.
+ */
+export function formatDayGroup(iso: IsoDate, hoje: IsoDate = todayIso()): string {
+  if (iso === hoje) return 'Hoje'
+  if (iso === shiftDate(hoje, -1, 'day')) return 'Ontem'
+
+  const date = fromIsoDate(iso)
+  if (!date) return INVALID_DATE_LABEL
+  return `${formatWeekdayShort(iso)}, ${formatDayMonth(iso)}`
 }
 
 /** "08" — o número do dia, com zero à esquerda, para a folha de calendário. */

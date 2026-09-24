@@ -88,11 +88,23 @@ export interface Transaction {
 export type AccountKind = 'checking' | 'credit_card' | 'cash' | 'investment'
 
 export interface CreditCardTerms {
-  /** Dia do mês em que a fatura fecha. */
-  closingDay: number
-  /** Dia do mês do vencimento. */
-  dueDay: number
+  /**
+   * Dia do mês em que a fatura fecha. Nulo quando ninguém disse: o banco nem
+   * sempre informa, e um "dia 28" inventado faria a fatura estimada somar o
+   * mês errado.
+   */
+  closingDay: number | null
+  /** Dia do mês do vencimento. Nulo pelo mesmo motivo. */
+  dueDay: number | null
   limitCents: Cents | null
+  /**
+   * O limite disponível que o banco informou na última sincronização.
+   *
+   * É a única leitura exata do limite usado: ele já desconta as parcelas
+   * futuras, que o histórico importado não tem. Sem ele, o usado é estimado
+   * pelos lançamentos do cartão.
+   */
+  availableCents?: Cents | null
 }
 
 /** Vínculo entre uma conta local e a conta correspondente no agregador. */
@@ -168,6 +180,34 @@ export interface Goal {
   createdAt: number
 }
 
+export type CategoryGroupId = string
+
+/**
+ * O grupo que junta subcategorias: "Transporte" reúne táxi, combustível,
+ * pedágio e mais nove.
+ *
+ * Grupo não é lançável. Um lançamento sempre aponta para uma subcategoria
+ * (`Category`), e o grupo é o nível em que o produto **soma**: orçamento,
+ * gráfico de composição, comparação com o mês anterior. Somar pela
+ * subcategoria espalharia o mês por noventa fatias de um real.
+ *
+ * O catálogo de grupos é fixo e mora em `domain/categories.ts`; não é gravado
+ * com os dados da pessoa.
+ */
+export interface CategoryGroup {
+  id: CategoryGroupId
+  label: string
+  icon: string
+}
+
+/**
+ * A subcategoria — o que o lançamento carrega em `categoryId`.
+ *
+ * O nome do tipo continua `Category` porque todo lançamento já gravado aponta
+ * para um destes ids, e as treze categorias da versão de um nível viraram
+ * subcategorias com o mesmo id: "transporte" continua existindo, agora como a
+ * subcategoria "Transporte" dentro do grupo "Transporte".
+ */
 export interface Category {
   id: CategoryId
   label: string
@@ -176,15 +216,39 @@ export interface Category {
   appliesTo: TransactionKind[]
   /** Categorias nativas não podem ser excluídas, só ocultadas. */
   builtin: boolean
+  group: CategoryGroupId
+  /**
+   * Os nomes que o agregador bancário usa para esta subcategoria.
+   *
+   * O Pluggy classifica cada lançamento numa árvore própria e manda o nome da
+   * folha. Casar pelo nome, e não por um código numérico, é deliberado: o nome
+   * está publicado na documentação e pode ser conferido; o código não.
+   */
+  aggregatorNames?: readonly string[]
 }
 
-/** Limites de gasto por mês e por categoria, em centavos. */
-export type BudgetsByMonth = Record<MonthKey, Record<CategoryId, Cents>>
+/**
+ * Limites de gasto por mês, em centavos.
+ *
+ * A chave é o **grupo**, não a subcategoria: ninguém põe teto separado em
+ * "Postos de gasolina" e em "Estacionamentos", põe em "Transporte". Base
+ * gravada quando havia um nível só guarda ids de categoria aqui, e a
+ * reconciliação muda cada um para o grupo dele.
+ *
+ * A tela de Orçamento saiu do produto, e nada mais lê nem escreve aqui. O
+ * campo continua de propósito: tirá-lo do modelo faria a reconciliação
+ * descartá-lo, e o próximo salvamento apagaria da base os limites que a pessoa
+ * definiu — uma perda que ninguém pediu, por uma tela que pode voltar.
+ */
+export type BudgetsByMonth = Record<MonthKey, Record<CategoryGroupId, Cents>>
 
-export type ThemePreference = 'light' | 'dark' | 'system'
-
+/**
+ * O tema já morou aqui, como `theme: 'light' | 'dark' | 'system'`. O produto
+ * passou a ter um tema só — escuro — e a preferência deixou de existir: não há
+ * escolha a guardar. Base gravada antes disso continua trazendo o campo, e
+ * `reconcileData` simplesmente o descarta.
+ */
 export interface Settings {
-  theme: ThemePreference
   /** Mascara todo valor monetário na tela. */
   privacyMode: boolean
 }
