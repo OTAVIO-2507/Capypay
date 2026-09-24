@@ -4,7 +4,7 @@ import { Avatar, avatarRadius } from '@/components/Avatar'
 import { Icon, type IconName } from '@/components/Icon'
 import { Popover } from '@/components/ui/Popover'
 import { cn } from '@/lib/cn'
-import { useAdminProfile, useAdminPreferences } from '@/store/adminPreferences'
+import { useAdminProfile } from '@/store/adminPreferences'
 import { useAuthStore } from '@/store/authStore'
 import { AdminProfileDialog } from './AdminProfileDialog'
 import { buildAdminAlerts, type AdminAlert } from './adminAlerts'
@@ -13,7 +13,7 @@ import { useAdminUsers } from './useAdminUsers'
 /**
  * Os controles globais do painel de administração.
  *
- * Mesma composição da barra de topo do app financeiro: avisos, tema, e o
+ * Mesma composição da barra de topo do app financeiro: avisos e o
  * perfil por último, separado por um divisor, porque é o único que não muda a
  * tela.
  *
@@ -25,7 +25,6 @@ export function AdminTopBar() {
   return (
     <div className="flex items-center gap-0.5">
       <AdminNotifications />
-      <AdminThemeToggle />
       <span aria-hidden="true" className="mx-1.5 h-6 w-px bg-hairline" />
       <AdminProfileMenu />
     </div>
@@ -63,10 +62,22 @@ function AdminNotifications() {
               className={cn(
                 'absolute top-1 right-1 flex min-w-[18px] items-center justify-center rounded-full px-1',
                 'text-[10px] leading-[18px] font-semibold',
-                // O distintivo muda de preenchimento, não de cor: cheio quando
-                // há algo urgente, contornado quando é só informação.
+                /*
+                  O distintivo mudava de preenchimento e não de cor, porque o
+                  sistema não tinha cor. Agora tem, e urgência é exatamente o
+                  que ela existe para dizer: cheio de despesa quando há algo
+                  urgente, contornado quando é só informação.
+
+                  A contagem continua sendo a leitura principal — apagar a cor
+                  não tira nada, porque o número está escrito dentro.
+
+                  A tinta sobre o vermelho é a da mesa, e não a primária: branco
+                  sobre o vermelho da despesa dá 3,61:1, abaixo do piso, e este
+                  número tem dez pixels. Quase-preto sobre o mesmo vermelho dá
+                  5,29:1.
+                */
                 urgentes > 0
-                  ? 'bg-block text-block-ink'
+                  ? 'bg-expense text-desk'
                   : 'border border-hairline-strong bg-sheet text-muted',
               )}
             >
@@ -106,7 +117,9 @@ function ListaDeAvisos({ avisos }: { avisos: AdminAlert[] }) {
                 <span
                   className={cn(
                     'mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-sm',
-                    aviso.severity === 'high' ? 'bg-block text-block-ink' : 'bg-sunken text-muted',
+                    aviso.severity === 'high'
+                      ? 'bg-expense/15 text-expense'
+                      : 'bg-sunken text-muted',
                   )}
                 >
                   <Icon name={aviso.icon} size={14} />
@@ -123,34 +136,6 @@ function ListaDeAvisos({ avisos }: { avisos: AdminAlert[] }) {
         </ul>
       )}
     </>
-  )
-}
-
-/**
- * Alterna claro e escuro. O ícone mostra o tema que está na tela, não a
- * preferência salva, que pode ser "automático" e não tem desenho próprio.
- * "Automático" continua existindo como escolha nomeada em Ajustes.
- */
-function AdminThemeToggle() {
-  const theme = useAdminPreferences((state) => state.theme)
-  const setTheme = useAdminPreferences((state) => state.setTheme)
-
-  const escuro =
-    theme === 'dark' ||
-    (theme === 'system' &&
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches)
-
-  return (
-    <button
-      type="button"
-      onClick={() => setTheme(escuro ? 'light' : 'dark')}
-      aria-label={escuro ? 'Tema escuro. Mudar para claro.' : 'Tema claro. Mudar para escuro.'}
-      title={escuro ? 'Mudar para o tema claro' : 'Mudar para o tema escuro'}
-      className="inline-flex size-10 items-center justify-center rounded-sm text-faint transition-colors duration-150 hover:bg-sunken hover:text-ink"
-    >
-      <Icon name={escuro ? 'moon' : 'sun'} size={18} />
-    </button>
   )
 }
 

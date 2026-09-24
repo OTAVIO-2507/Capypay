@@ -1,3 +1,4 @@
+import { Figure } from '@/components/ui/Money'
 import { useState } from 'react'
 import { cn } from '@/lib/cn'
 
@@ -100,14 +101,15 @@ export function DonutChart({ slices, total }: { slices: DonutSlice[]; total: num
           próprio gráfico, o miolo do disco já é espaço vazio e troca de
           conteúdo. Sem foco, mostra o total.
         */}
-        <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
-          <span className="text-[1.75rem] leading-none font-semibold tracking-[-0.03em] text-ink">
-            {emFoco ? emFoco.count : total}
-          </span>
+        {/* `div` e não `span`: a Figura é um parágrafo, e conteúdo de fluxo
+            dentro de conteúdo de frase é aninhamento inválido — o navegador
+            perdoa, o validador não, e um dia o React deixa de perdoar. */}
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-8 text-center">
+          <Figure value={emFoco ? emFoco.count : total} size="sm" />
           <span className="mt-1 text-xs leading-tight text-muted">
             {emFoco ? emFoco.label : total === 1 ? 'conta' : 'contas'}
           </span>
-        </span>
+        </div>
       </div>
 
       {/*

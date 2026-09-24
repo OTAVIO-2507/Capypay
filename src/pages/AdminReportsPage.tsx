@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Figure } from '@/components/ui/Money'
 import { ColumnChart } from '@/features/admin/ColumnChart'
 import { DonutChart } from '@/features/admin/DonutChart'
 import { HeatmapChart } from '@/features/admin/HeatmapChart'
@@ -273,9 +274,7 @@ function Numero({
         <p className="text-xs text-muted">{rotulo}</p>
         <Icon name={icon} size={16} className="text-faint" />
       </div>
-      <p className="mt-2 text-[1.75rem] leading-none font-semibold tracking-[-0.03em] text-ink">
-        {loading ? '·' : valor}
-      </p>
+      <Figure value={loading ? '·' : valor} size="sm" className="mt-2" />
       <p className="mt-2.5 text-xs text-faint">{loading ? 'Carregando…' : detalhe}</p>
     </Card>
   )

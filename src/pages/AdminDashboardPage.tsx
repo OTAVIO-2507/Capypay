@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Controls'
 import { Card, CardHeader } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Figure } from '@/components/ui/Money'
 import { ActivityChart } from '@/features/admin/ActivityChart'
 import { DonutChart } from '@/features/admin/DonutChart'
 import { useAdminUsers } from '@/features/admin/useAdminUsers'
@@ -281,9 +282,7 @@ function Metrica({
         buracos entre os dígitos. É a mesma regra que a Figura do painel
         financeiro já segue.
       */}
-      <p className="mt-2 text-[1.75rem] leading-none font-semibold tracking-[-0.03em] text-ink">
-        {loading ? '·' : value}
-      </p>
+      <Figure value={loading ? '·' : value} size="sm" className="mt-2" />
       <p className="mt-2.5 text-xs text-faint">{loading ? 'Carregando…' : detail}</p>
     </Card>
   )

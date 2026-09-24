@@ -25,15 +25,20 @@ import { useAuthStore } from '@/store/authStore'
  * mim" — a sessão do Supabase já persiste por padrão; um checkbox que não
  * muda nada seria enfeite, não controle.
  *
- * Três exceções ao sistema monocromático, restritas a esta tela: a
- * ilustração (fornecida pelo usuário, plena cor de propósito), a borda
- * ondulada do painel que a molda (o único lugar do sistema com forma
- * orgânica, sempre cantos retos em todo o resto), e o tema — `.force-light`
- * (`styles.css`) prende esta tela ao claro, sempre, porque é a primeira
- * impressão do produto e o painel de ilustração só lê bem contra fundo
- * claro. Os campos usam a mesma `TextInput`/`Field` do resto do app — só o
- * `className` muda aqui, então o resto do sistema não herda o formato
- * pílula nem o tema fixo.
+ * Duas licenças restritas a esta tela: a ilustração, fornecida pelo usuário e
+ * em plena cor de propósito, e a borda ondulada do painel que a molda — o
+ * único lugar do sistema com forma orgânica, cantos de raio constante em todo
+ * o resto.
+ *
+ * Havia uma terceira, e ela morreu: `.force-light` prendia esta tela ao tema
+ * claro, sempre, porque a ilustração só lia bem contra fundo claro. Com tema
+ * único escuro não há o que prender, e a ilustração passou a pousar sobre o
+ * preto como qualquer outra coisa — o painel dela tem fundo próprio, então o
+ * que a emoldura é a curva, não o tema.
+ *
+ * Os campos são os mesmos `TextInput`/`Field` do resto do app, sem
+ * `className` de exceção: o formato pílula deixou de ser privilégio desta
+ * tela quando virou a forma de todo controle do sistema.
  */
 export function LoginPage() {
   const status = useAuthStore((state) => state.status)
@@ -136,7 +141,7 @@ export function LoginPage() {
       mesa cinza aqui, essa faixa aparecia como uma tira cinza vertical
       separando a ilustração do formulário.
     */
-    <div className="force-light flex h-dvh bg-sheet">
+    <div className="flex h-dvh bg-desk">
       {/* Ponta a ponta nas bordas superior, inferior e esquerda — só a direita
           é recortada pela onda, então não sobra nenhum canto reto para
           arredondar. */}
@@ -243,7 +248,7 @@ export function LoginPage() {
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
                       required
-                      className="h-12 rounded-full border-hairline-strong bg-sunken pl-11"
+                      className="pl-12"
                     />
                   </div>
                 )}
@@ -267,7 +272,7 @@ export function LoginPage() {
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
                       required
-                      className="h-12 rounded-full border-hairline-strong bg-sunken pr-11 pl-11"
+                      className="pr-12 pl-12"
                     />
                     <button
                       type="button"

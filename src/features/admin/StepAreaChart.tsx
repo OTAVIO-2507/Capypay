@@ -1,3 +1,4 @@
+import { Figure } from '@/components/ui/Money'
 import { useState } from 'react'
 import { cn } from '@/lib/cn'
 
@@ -70,15 +71,15 @@ export function StepAreaChart({
     <div className="flex flex-col">
       <div className="flex items-baseline gap-2.5">
         {/*
-          Display prosa (2,125rem), e não a Figura de 2,75rem em Figtree: a
-          Figura veste a face da marca e é reservada ao número que a tela
-          inteira existe para mostrar. Aqui é o número de um cartão entre
-          outros, e o painel de administração não tem nenhuma outra figura com
-          que dividir esse peso.
+          A Figura em tamanho pequeno, e não um tamanho escrito à mão.
+
+          O texto que estava aqui justificava não usar a Figura porque ela
+          vestia Figtree, a face da marca, reservada ao número principal da
+          tela. Isso deixou de valer: a Figura passou a usar a face de
+          interface, e ganhou um tamanho `sm` justamente para o número que
+          divide a tela com outros.
         */}
-        <p className="text-[2.125rem] leading-none font-semibold tracking-[-0.03em] text-ink">
-          {atual.count}
-        </p>
+        <Figure value={atual.count} size="sm" />
         <p className="text-xs text-muted">
           {atual.count === 1 ? unidade.singular : unidade.plural} até {atual.label}
         </p>

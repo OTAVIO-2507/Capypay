@@ -288,6 +288,7 @@ export function ImportPage() {
           balanceCents: item.account!.balanceCents,
           brand: item.account!.brand,
           institution: bancoDaConexao ?? item.account!.institution,
+          card: item.account!.card ?? null,
         })),
     )
 
@@ -343,6 +344,7 @@ export function ImportPage() {
                     balanceCents: extrato.balanceCents,
                     brand: extrato.brand,
                     institution: extrato.institution,
+                    card: extrato.card ?? null,
                   },
                 })),
                 'pluggy',

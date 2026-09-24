@@ -30,7 +30,7 @@ import {
  * digite, porque é exatamente essa a ordem obrigatória da tarefa: sem o
  * aplicativo cadastrado não existe código para digitar. Cada etapa é um
  * agrupamento em Rebaixado com raio de 18px, que é o que o sistema usa para
- * agrupar por dentro de uma folha, e não uma segunda folha branca por cima da
+ * agrupar por dentro de um painel, e não um segundo painel por cima do
  * primeira.
  */
 export function TwoFactorSetup({ onDone, onSkip }: { onDone: () => void; onSkip: () => void }) {

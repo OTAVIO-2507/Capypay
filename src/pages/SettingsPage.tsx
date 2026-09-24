@@ -4,7 +4,7 @@ import { Avatar } from '@/components/Avatar'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader } from '@/components/ui/Card'
-import { Segmented, Toggle, type SegmentOption } from '@/components/ui/Controls'
+import { Toggle } from '@/components/ui/Controls'
 import { ConfirmDialog } from '@/components/ui/Dialog'
 import { createDemoData } from '@/data/demoData'
 import { TwoFactorCard } from '@/features/security/TwoFactorCard'
@@ -14,7 +14,6 @@ import { RecategorizeCard } from '@/features/settings/RecategorizeCard'
 import { SeriesReviewCard } from '@/features/settings/SeriesReviewCard'
 import { exportTransactionsCsv } from '@/features/settings/exportCsv'
 import { EditProfileDialog } from '@/features/shell/EditProfileDialog'
-import type { ThemePreference } from '@/domain/types'
 import { useFinanceStore } from '@/store/financeStore'
 import {
   useCategories,
@@ -24,12 +23,6 @@ import {
   useTransactions,
 } from '@/store/hooks'
 
-const THEME_OPTIONS: readonly SegmentOption<ThemePreference>[] = [
-  { value: 'light', label: 'Claro', icon: 'sun' },
-  { value: 'dark', label: 'Escuro', icon: 'moon' },
-  { value: 'system', label: 'Automático', icon: 'monitor' },
-]
-
 export function SettingsPage() {
   const profile = useProfile()
   const settings = useSettings()
@@ -37,7 +30,6 @@ export function SettingsPage() {
   const categories = useCategories()
   const goals = useGoals()
 
-  const setTheme = useFinanceStore((state) => state.setTheme)
   const togglePrivacy = useFinanceStore((state) => state.togglePrivacy)
   const loadDemoData = useFinanceStore((state) => state.loadDemoData)
   const clearAll = useFinanceStore((state) => state.clearAll)
@@ -90,29 +82,19 @@ export function SettingsPage() {
           </div>
         </Card>
 
+        {/*
+          Já se chamou "Aparência" e trazia o seletor de tema junto. Com um
+          tema só, sobrou uma opção — e ela nunca foi de aparência.
+        */}
         <Card>
-          <CardHeader title="Aparência" />
-          <div className="flex flex-col gap-5">
-            <div>
-              <p className="mb-2 text-xs font-medium text-muted">Tema</p>
-              <Segmented
-                label="Tema da interface"
-                options={THEME_OPTIONS}
-                value={settings.theme}
-                onChange={setTheme}
-              />
-            </div>
-
-            <div className="border-t border-hairline pt-4">
-              <Toggle
-                checked={settings.privacyMode}
-                onChange={togglePrivacy}
-                label="Modo privacidade"
-                description="Mascara todos os valores na tela, para usar em lugar público."
-                icon="eye-off"
-              />
-            </div>
-          </div>
+          <CardHeader title="Privacidade" />
+          <Toggle
+            checked={settings.privacyMode}
+            onChange={togglePrivacy}
+            label="Modo privacidade"
+            description="Mascara todos os valores na tela, para usar em lugar público."
+            icon="eye-off"
+          />
         </Card>
 
         {/* Ocupa a linha inteira: com ele numa das colunas, a grade de cinco
@@ -124,7 +106,7 @@ export function SettingsPage() {
           da grade.
           
           Em linha, os cartões vizinhos esticam até a altura do mais alto, e a
-          sobra aparece **dentro** da folha branca — um vão do tamanho de meia
+          sobra aparece **dentro** do painel — um vão do tamanho de meia
           tela em Ajustes. Empilhando por coluna, a que termina antes
           simplesmente termina, e o respiro fica na mesa, onde ele lê como
           espaço e não como falha.

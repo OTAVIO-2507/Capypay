@@ -45,7 +45,7 @@ export function SecondFactorForm() {
       noValidate
     >
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-sm bg-block text-block-ink">
+        <span className="mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-sm bg-accent/15 text-accent">
           <Icon name="shield" size={17} />
         </span>
         <p className="text-xs leading-relaxed text-muted">

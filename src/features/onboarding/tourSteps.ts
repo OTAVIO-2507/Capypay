@@ -74,10 +74,10 @@ export const TOUR_STEPS: readonly TourStep[] = [
     body: 'A lista completa, com busca e filtros. Dá para corrigir um valor, trocar a categoria ou apagar o que entrou errado, um a um.',
   },
   {
-    targets: ['nav-orcamento'],
-    icon: 'chart-column',
-    title: 'Um teto para cada categoria',
-    body: 'Você diz quanto pretende gastar com mercado, transporte, lazer. O painel avisa enquanto o mês corre, não depois que ele acabou.',
+    targets: ['nav-categorias'],
+    icon: 'tags',
+    title: 'Para onde o dinheiro foi',
+    body: 'Cada categoria com o que saiu no mês, aberta nas subcategorias: não só quanto foi em transporte, mas quanto disso foi combustível.',
   },
   {
     targets: ['nav-metas'],

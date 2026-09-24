@@ -13,8 +13,8 @@ import type { FaixaDeAtividade } from './adminMetrics'
  * **Uma cor só, e não uma rampa.** As faixas são ordenadas e rotuladas, então
  * a posição e o texto já carregam a recência; tingir cada barra de um tom
  * diferente codificaria pela segunda vez o que a lista já diz, gastando o
- * único canal livre. Toda barra é Tinta sobre trilho Rebaixado, nos dois
- * temas, sem cor nenhuma envolvida.
+ * único canal livre. Toda barra é Tinta sobre trilho Rebaixado — nenhuma cor
+ * envolvida, e não por falta de paleta: aqui ela não teria o que dizer.
  *
  * Cada valor aparece escrito ao lado da barra: nada aqui depende de passar o
  * mouse para ser lido.

@@ -1,45 +1,42 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Icon } from '@/components/Icon'
+import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/Button'
-import { Card, CardHeader } from '@/components/ui/Card'
-import { Badge, Progress } from '@/components/ui/Controls'
+import { Card, CardFooter, CardHeader, CardLink } from '@/components/ui/Card'
 import { Dialog } from '@/components/ui/Dialog'
-import { Donut } from '@/components/ui/Donut'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { QuietLink } from '@/components/ui/QuietLink'
-import { Delta, Figure, FlowIndicator, Money } from '@/components/ui/Money'
+import { DeltaBadge, Figure, Money } from '@/components/ui/Money'
 import {
-  budgetStatuses,
-  compareWithPreviousMonth,
-  goalProgress,
-  monthlyFlow,
   sortByDateDesc,
-  spendingByCategory,
+  categoryComparison,
+  monthInsight,
+  dailySpending,
   spendingPace,
   transactionsInMonth,
-  type BudgetStatus,
-  type GoalProgress,
 } from '@/domain/selectors'
+import { cardSummary } from '@/domain/invoices'
 import { activeSubscriptions } from '@/domain/subscriptions'
-import type { TransactionKind } from '@/domain/types'
-import { FlowChart, SpendingPaceChart } from '@/features/charts/LazyCharts'
+import { SpendingPaceChart } from '@/features/charts/LazyCharts'
 import { CategoryBreakdown } from '@/features/charts/CategoryBreakdown'
-import { dueTodayText, greetingTextFor } from '@/features/dashboard/Greeting'
+import { HeatmapLegend, SpendingHeatmap } from '@/features/charts/SpendingHeatmap'
+import { AccountsPanel } from '@/features/dashboard/AccountsPanel'
+import { findBankBrand } from '@/features/dashboard/bankBrand'
+import { callNameOf, dueTodayText, useGreeting } from '@/features/dashboard/Greeting'
 import { TodayLeaf } from '@/features/dashboard/TodayLeaf'
 import { SubscriptionsPanel } from '@/features/dashboard/SubscriptionsPanel'
-import { findBankBrand } from '@/features/dashboard/bankBrand'
-import { PaymentCard } from '@/features/dashboard/PaymentCard'
+import { CreditLimitPanel } from '@/features/dashboard/CreditLimitPanel'
+import { InsightPanel } from '@/features/dashboard/InsightPanel'
+import { useEntrance } from '@/features/motion/useEntrance'
 import { WelcomePanel } from '@/features/dashboard/WelcomePanel'
+import { SubscriptionDetails } from '@/features/subscriptions/SubscriptionDetails'
+import { TransactionDetails } from '@/features/transactions/TransactionDetails'
 import { TransactionForm } from '@/features/transactions/TransactionForm'
 import { TransactionList } from '@/features/transactions/TransactionList'
+import type { Transaction } from '@/domain/types'
 import { formatMonthLong, todayIso } from '@/lib/date'
-import type { Cents } from '@/lib/money'
 import { useFinanceStore } from '@/store/financeStore'
 import {
   useAccounts,
-  useBudgets,
   useCategories,
   useGoals,
   useIsEmpty,
@@ -54,19 +51,22 @@ export function DashboardPage() {
   const categories = useCategories()
   const goals = useGoals()
   const accounts = useAccounts()
-  const budgets = useBudgets()
   const profile = useProfile()
   const isEmpty = useIsEmpty()
   const addTransaction = useFinanceStore((state) => state.addTransaction)
+  const updateTransaction = useFinanceStore((state) => state.updateTransaction)
+  const navigate = useNavigate()
 
   const [composing, setComposing] = useState(false)
+  const [editing, setEditing] = useState<Transaction | null>(null)
+  // Os três detalhes que abrem desta tela. Todos guardam o identificador, e
+  // não uma cópia: lidos do histórico a cada renderização, mostram a versão
+  // editada e se fecham sozinhos se o que abriram deixar de existir.
+  const [viewingId, setViewingId] = useState<string | null>(null)
+  const [viewingSeries, setViewingSeries] = useState<string | null>(null)
 
-  const comparison = useMemo(
-    () => compareWithPreviousMonth(transactions, month),
-    [transactions, month],
-  )
   const categorySpend = useMemo(
-    () => spendingByCategory(transactions, categories, month),
+    () => categoryComparison(transactions, categories, month),
     [transactions, categories, month],
   )
   // Sem `month`: assinatura fala do presente para a frente, e não do mês
@@ -75,64 +75,68 @@ export function DashboardPage() {
     () => activeSubscriptions(transactions, categories),
     [transactions, categories],
   )
-  const flow = useMemo(() => monthlyFlow(transactions, month, 6), [transactions, month])
   const pace = useMemo(() => spendingPace(transactions, month), [transactions, month])
-  const budgetRows = useMemo(
-    () => budgetStatuses(budgets, transactions, categories, month),
-    [budgets, transactions, categories, month],
+  const diario = useMemo(() => dailySpending(transactions, month), [transactions, month])
+  // Hook no corpo do componente, e não dentro do JSX: chamar hook numa
+  // expressão de render funciona hoje e quebra no dia em que alguém envolver
+  // a linha num condicional.
+  const chamada = `${useGreeting()}, que tal dar uma olhada no seu mês?`
+  const insight = useMemo(
+    () => monthInsight(transactions, categories, month, callNameOf(profile)),
+    [transactions, categories, month, profile],
   )
-  const goalRows = useMemo(() => goalProgress(goals, transactions), [goals, transactions])
+  // Cinco, como no produto de referência. Com os lançamentos agrupados por
+  // dia, cada dia diferente acrescenta um cabeçalho, e seis linhas em seis dias
+  // faziam o painel ficar bem mais alto que o de assinaturas ao lado dele.
   const recent = useMemo(
-    () => sortByDateDesc(transactionsInMonth(transactions, month)).slice(0, 6),
+    () => sortByDateDesc(transactionsInMonth(transactions, month)).slice(0, 5),
     [transactions, month],
   )
 
-  /*
-   * O cartão vem primeiro, mas conta corrente serve.
-   *
-   * Procurar só por `credit_card` fazia o painel pedir "cadastre um cartão" a
-   * quem tinha acabado de sincronizar o banco inteiro: a conta existia, e o
-   * espaço continuava vazio como se nada tivesse sido importado.
-   */
-  const ativas = accounts.filter((account) => !account.archived)
-  const primaryCard =
-    ativas.find((account) => account.kind === 'credit_card') ?? ativas[0]
-  /*
-   * O banco reconhecido em qualquer conta serve para todas.
-   *
-   * O cartão importado se chama "GOLD" e a instituição chega como "MeuPluggy",
-   * que é o proxy da conexão e não o banco. A conta corrente da mesma conexão
-   * vem como "BANCO INTER", e é dela que sai a cor — sem isso o cartão fica
-   * genérico mesmo com o banco inteiro sincronizado.
-   */
-  const bancoDasContas =
-    ativas.map((account) => findBankBrand(account.name, account.institution)).find(Boolean) ?? null
-  const leadGoal = goalRows.find((row) => !row.reached) ?? goalRows[0]
-  // A saudação toma o lugar do título. Desligada, o painel volta a se chamar
-  // "Painel" — o cabeçalho nunca fica sem nome.
-  const saudacao = greetingTextFor(profile, new Date().getHours())
+  // Os painéis entram uma vez, quando a tela abre e quando o mês troca — que
+  // é quando todos eles mudam de conteúdo ao mesmo tempo.
+  const grade = useEntrance<HTMLDivElement>(month)
+
   const hoje = todayIso()
   const briefing = useMemo(() => dueTodayText(transactions, hoje), [transactions, hoje])
+
+  const viewing = viewingId ? (transactions.find((item) => item.id === viewingId) ?? null) : null
+  const viewingSubscription = viewingSeries
+    ? (subscriptions.find((item) => item.seriesId === viewingSeries) ?? null)
+    : null
+
+  // O mesmo resumo de cartão da tela de Contas, para as duas telas dizerem o
+  // mesmo disponível sobre o mesmo cartão.
+  const resumosDeCartao = useMemo(
+    () =>
+      accounts
+        .filter((account) => !account.archived && account.kind === 'credit_card')
+        .map((account) => cardSummary(account, transactions, hoje)),
+    [accounts, transactions, hoje],
+  )
+  const bancoDasContas = useMemo(
+    () => accounts.map((account) => findBankBrand(account.name, account.institution)).find(Boolean) ?? null,
+    [accounts],
+  )
 
   if (isEmpty) return <WelcomePanel />
 
   return (
     <>
+      {/*
+        A saudação saiu daqui e foi para dentro do painel de insight, que é
+        onde ela conversa com alguma coisa: solta no topo ela era uma linha
+        sem função acima de uma tela cheia de painéis. O que fica é o nome da
+        rota e o seletor de mês, que governa tudo abaixo.
+      */}
       <PageHeader
-        title={saudacao || 'Painel'}
-        large
-        /*
-         * A folha de calendário à esquerda e o que hoje cobra embaixo.
-         * Sozinha, a saudação era uma linha solta no topo de uma tela cheia de
-         * painéis. O avatar já ocupou este lugar e saiu: ele vive na barra de
-         * topo, e a mesma marca duas vezes na mesma tela não acrescenta nada.
-         */
+        title="Visão geral"
         leading={<TodayLeaf date={hoje} />}
         description={briefing}
         showMonth
         actions={
           <Button icon="plus" data-tour="new-transaction" onClick={() => setComposing(true)}>
-            Novo lançamento
+            Nova transação
           </Button>
         }
       />
@@ -143,136 +147,161 @@ export function DashboardPage() {
         uma sobra aberta no meio da tela — e sobra entre painéis lê como falha,
         enquanto um painel um pouco mais alto lê como respiro.
       */}
-      <div className="grid gap-5 lg:grid-cols-12">
-        <div className="flex flex-col gap-5 lg:col-span-4">
-          <PaymentCard
-            account={primaryCard}
-            holder={profile.name}
-            fallbackBank={bancoDasContas}
-          />
-          <GoalSpotlight goal={leadGoal} />
+      {/*
+        Quatro linhas, na ordem e na proporção do produto de referência:
+        leitura e ritmo; contas e limite; mapa e categorias; transações e
+        assinaturas.
 
-          <Card className="flex flex-1 flex-col">
-            {/*
-              A saída leva a Orçamento, e não a Transações: o painel mostra onde
-              o dinheiro foi, e a pergunta seguinte de quem olha isso é quanto
-              devia ter ido. Categoria é a unidade das duas telas.
-            */}
-            <CardHeader
-              title="Principais categorias"
-              description={`Onde você mais gastou em ${formatMonthLong(month).toLowerCase()}`}
-              action={<QuietLink to="/orcamento">Ver todas</QuietLink>}
-            />
-            <CategoryBreakdown data={categorySpend} limit={5} className="flex-1" />
-          </Card>
-        </div>
+        Resultado do mês, meta em foco e orçamento do mês já estiveram aqui e
+        saíram por decisão explícita, para a tela seguir a referência. Nenhum
+        dos três se perdeu: o resultado está no resumo de Transações, e meta e
+        orçamento têm aba própria. O gráfico de fluxo dos últimos seis meses
+        saiu junto e não tem outra casa ainda — o componente continua em
+        `features/charts/FlowChart.tsx`.
 
-        <div className="flex flex-col gap-5 lg:col-span-8">
-          <Card>
-            <div className="mb-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
-              <div>
-                <p className="text-xs text-muted">Resultado de {formatMonthLong(month)}</p>
-                <Figure cents={comparison.current.net} tone="auto" className="mt-2" />
-                <Delta cents={comparison.netDelta} since="que o mês anterior" className="mt-3" />
-              </div>
-
-              {/*
-                Sem "Acumulado". Ele somava o histórico inteiro até o mês, e com
-                extrato importado esse número não é o saldo de lugar nenhum: só
-                o que foi trazido entra na conta, então ele responde "quanto
-                sobrou no pedaço que você importou" — uma pergunta que ninguém
-                fez. O saldo de verdade vive em Contas, com o valor que o banco
-                informa.
-              */}
-              <dl className="flex gap-7">
-                <SummaryStat label="Receitas" cents={comparison.current.income} tone="income" />
-                <SummaryStat label="Despesas" cents={comparison.current.expense} tone="expense" />
-              </dl>
-            </div>
-
-            {/*
-              O ritmo do mês no lugar da curva do ano.
-              
-              A curva anual respondia "como foram os últimos doze meses", uma
-              pergunta de retrospectiva: cada ponto dela só fica pronto quando o
-              mês fecha, e aí não há mais decisão a tomar sobre ele. O ritmo
-              mostra no dia 10 que este mês está mais caro que o passado, que é
-              quando ainda dá para fazer alguma coisa a respeito.
-            */}
-            <div className="border-t border-hairline pt-5">
-              <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-                <div>
-                  <p className="text-xs text-muted">Ritmo de gastos</p>
-                  <p className="mt-1.5 flex flex-wrap items-baseline gap-2">
-                    <Money
-                      cents={Math.abs(pace.deltaCents)}
-                      emphasis="strong"
-                      className="text-xl tracking-[-0.02em]"
-                    />
-                    <span className="text-xs text-muted">
-                      {pace.deltaCents === 0
-                        ? 'no mesmo ritmo do mês passado'
-                        : pace.deltaCents > 0
-                          ? 'acima do mês passado, no mesmo dia'
-                          : 'abaixo do mês passado, no mesmo dia'}
-                    </span>
-                  </p>
-                </div>
-
-                {/*
-                  A legenda fica no cabeçalho e não sob o gráfico: com duas
-                  linhas de pesos diferentes, saber qual é qual é pré-requisito
-                  para ler a curva, não nota de rodapé.
-                */}
-                <dl className="flex items-center gap-4 text-xs text-muted">
-                  <div className="flex items-center gap-2">
-                    <span className="h-0.5 w-5 rounded-full bg-ink" />
-                    <dt>Este mês</dt>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-0.5 w-5 rounded-full border-t border-dashed border-faint" />
-                    <dt>Mês passado</dt>
-                  </div>
-                </dl>
-              </div>
-
-              <SpendingPaceChart pace={pace} />
-            </div>
-          </Card>
-
-          <Card>
-            <CardHeader
-              title="Orçamento do mês"
-              description={
-                budgetRows.length > 0
-                  ? `${budgetRows.length} ${budgetRows.length === 1 ? 'limite definido' : 'limites definidos'}`
-                  : undefined
-              }
-              action={<QuietLink to="/orcamento">Definir</QuietLink>}
-            />
-            <BudgetSummary rows={budgetRows} />
-          </Card>
-
-          <Card className="flex flex-1 flex-col">
-            <CardHeader title="Entrou, saiu e guardou" description="Últimos seis meses" />
-            <FlowChart data={flow} className="flex-1" />
-          </Card>
-        </div>
+        Cada linha junta painéis de altura parecida. A grade já foi duas colunas
+        de alturas livres, e o painel da esquerda esticava até a altura da pilha
+        da direita: a leitura do mês ficava com um vazio de meia tela no meio.
+      */}
+      <div ref={grade} className="grid gap-5 lg:grid-cols-12">
+        <InsightPanel
+          insight={insight}
+          today={hoje}
+          chamada={chamada}
+          className="lg:col-span-6"
+        />
 
         {/*
-          A linha de baixo fecha as duas colunas juntas. O que se repete todo
-          mês fica ao lado do que acabou de acontecer, e a largura de cada um
-          segue o peso: a lista é tabela, a assinatura é resumo.
+          O ritmo sozinho, no formato do produto de referência: o quanto o mês
+          está acima ou abaixo do anterior no mesmo dia, a variação em pastilha,
+          e a curva. Ele já dividia o painel com o resultado do mês, e os dois
+          juntos faziam um painel alto demais para ficar ao lado da leitura.
         */}
-        <div className="flex lg:col-span-4">
-          <SubscriptionsPanel subscriptions={subscriptions} />
+        <Card className="flex flex-col lg:col-span-6">
+          <CardHeader
+            title="Ritmo de gastos"
+            action={<CardLink to="/transacoes">ver todas</CardLink>}
+          />
+          <Figure
+            cents={Math.abs(pace.deltaCents)}
+            size="sm"
+            suffix={
+              pace.deltaCents === 0 ? 'no mesmo ritmo' : pace.deltaCents > 0 ? 'acima' : 'abaixo'
+            }
+          />
+          <div className="mt-3 flex flex-wrap items-center gap-2.5">
+            {/* Sem pastilha quando a variação é zero: "−0%" é um sinal sem
+                número. Sem mês anterior também não há variação a mostrar. */}
+            {pace.ratio !== null && pace.ratio !== 0 ? (
+              <DeltaBadge percent={pace.ratio * 100} tone={pace.ratio > 0 ? 'bad' : 'good'} />
+            ) : null}
+            <span className="text-xs text-muted">
+              vs <Money cents={pace.previousCents} className="text-xs text-muted" /> no mesmo dia
+              do mês anterior
+            </span>
+          </div>
+
+          <div className="mt-5 flex-1">
+            <SpendingPaceChart pace={pace} />
+          </div>
+
+          {/*
+            A legenda desce para baixo da curva, como no produto de referência.
+            Ela ficava no cabeçalho com o argumento de que saber qual linha é
+            qual é pré-requisito para ler — e continua sendo: por isso as
+            marcas repetem o traço exato de cada linha, sólido e tracejado, e
+            não um quadradinho de cor que exigiria consultar a legenda.
+          */}
+          <dl className="mt-4 flex items-center gap-5 text-xs text-muted">
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-0.5 w-5 rounded-full bg-ink" />
+              <dt>Este mês</dt>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                aria-hidden="true"
+                className="h-0.5 w-5 rounded-full border-t border-dashed border-faint"
+              />
+              <dt>Mês passado</dt>
+            </div>
+          </dl>
+        </Card>
+
+        <div className="flex lg:col-span-6">
+          <AccountsPanel accounts={accounts} />
         </div>
 
-        <Card className="lg:col-span-8">
+        <div className="flex lg:col-span-6">
+          <CreditLimitPanel resumos={resumosDeCartao} fallbackBank={bancoDasContas} className="flex-1" />
+        </div>
+
+        <Card className="flex flex-col lg:col-span-5">
           <CardHeader
-            title="Últimos lançamentos"
-            description={formatMonthLong(month)}
-            action={<QuietLink to="/transacoes">Ver tudo</QuietLink>}
+            title="Mapa de calor"
+            description={`Gasto por dia em ${formatMonthLong(month).toLowerCase()}`}
+          />
+          {diario.peak === null ? (
+            <EmptyState
+              icon="calendar"
+              size="sm"
+              title="Nenhuma despesa neste mês"
+              description="Assim que houver gastos lançados, o mapa mostra em que dias eles se concentraram."
+            />
+          ) : (
+            <>
+              <p className="text-xs text-muted">
+                Média diária: <Money cents={diario.dailyAverageCents} emphasis="strong" />
+              </p>
+              <SpendingHeatmap
+                dias={diario.days}
+                month={month}
+                primeiroDiaDaSemana={diario.firstWeekday}
+                /*
+                  O dia abre em Transações, filtrado. Já foi uma janela aqui
+                  mesmo, e o motivo de sair é que a janela era um beco: listava
+                  o dia e acabava ali, enquanto a tela de Transações lista o
+                  mesmo dia e ainda deixa afrouxar o recorte, ordenar, buscar e
+                  exportar. `tipo=expense` acompanha porque o mapa fala de
+                  despesa — sem ele, uma receita do mesmo dia entraria na lista
+                  e o total da tela não bateria com o da célula clicada.
+                */
+                onSelecionar={(dia) =>
+                  navigate(
+                    `/transacoes?dia=${month}-${String(dia.day).padStart(2, '0')}&tipo=expense`,
+                  )
+                }
+                className="mt-5"
+              />
+              <HeatmapLegend className="mt-4" />
+              <CardFooter>
+                <span>Maior gasto</span>
+                <span>
+                  <Money cents={diario.peak.cents} emphasis="strong" className="text-expense" /> no dia{' '}
+                  {diario.peak.day}
+                </span>
+              </CardFooter>
+            </>
+          )}
+        </Card>
+
+        {/*
+          A tabela de categorias tem cinco colunas e precisa da largura. O mapa
+          de calor ao lado responde "quando", que é a pergunta que nenhum outro
+          painel responde.
+        */}
+        <Card className="flex flex-col lg:col-span-7">
+          <CardHeader
+            title="Principais categorias"
+            description={`Onde você mais gastou em ${formatMonthLong(month).toLowerCase()}, e o que mudou`}
+            action={<CardLink to="/categorias">ver todas</CardLink>}
+          />
+          <CategoryBreakdown data={categorySpend} limit={5} className="flex-1" />
+        </Card>
+
+        <Card className="lg:col-span-6">
+          <CardHeader
+            title="Transações recentes"
+            action={<CardLink to="/transacoes">ver todas</CardLink>}
           />
           {recent.length === 0 ? (
             <EmptyState
@@ -282,7 +311,7 @@ export function DashboardPage() {
               description="Registre a primeira movimentação e ela aparece aqui, na composição por categoria e no resultado."
               action={
                 <Button size="sm" variant="quiet" icon="plus" onClick={() => setComposing(true)}>
-                  Novo lançamento
+                  Nova transação
                 </Button>
               }
             />
@@ -292,15 +321,79 @@ export function DashboardPage() {
               categories={categories}
               goals={goals}
               readOnly
+              groupByDay
+              onOpen={(transaction) => setViewingId(transaction.id)}
             />
           )}
         </Card>
+
+        <div className="flex lg:col-span-6">
+          <SubscriptionsPanel
+            subscriptions={subscriptions}
+            onAbrir={(subscription) => setViewingSeries(subscription.seriesId)}
+          />
+        </div>
       </div>
+
+      <TransactionDetails
+        transaction={viewing}
+        transactions={transactions}
+        categories={categories}
+        goals={goals}
+        accounts={accounts}
+        onClose={() => setViewingId(null)}
+        onOpen={(transaction) => setViewingId(transaction.id)}
+        onEdit={(transaction) => {
+          setViewingId(null)
+          setEditing(transaction)
+        }}
+      />
+
+      <SubscriptionDetails
+        subscription={viewingSubscription}
+        transactions={transactions}
+        categories={categories}
+        goals={goals}
+        accounts={accounts}
+        onClose={() => setViewingSeries(null)}
+        /* Uma cobrança abre como lançamento, e o detalhe da assinatura fecha:
+           dois modais empilhados deixam a pessoa sem saber o que o Esc fecha. */
+        onOpenTransaction={(transaction) => {
+          setViewingSeries(null)
+          setViewingId(transaction.id)
+        }}
+      />
+
+      <Dialog
+        open={editing !== null}
+        onClose={() => setEditing(null)}
+        title="Editar transação"
+        description={
+          editing?.installment
+            ? `Parcela ${editing.installment.index} de ${editing.installment.total}. As demais não mudam.`
+            : undefined
+        }
+      >
+        {editing ? (
+          <TransactionForm
+            categories={categories}
+            goals={goals}
+            accounts={accounts}
+            initial={editing}
+            submitLabel="Salvar alterações"
+            onCancel={() => setEditing(null)}
+            onSubmit={(draft) => {
+              updateTransaction(editing.id, draft)
+              setEditing(null)
+            }}
+          />
+        ) : null}
+      </Dialog>
 
       <Dialog
         open={composing}
         onClose={() => setComposing(false)}
-        title="Novo lançamento"
+        title="Nova transação"
         description="Some ao mês selecionado assim que você registrar."
       >
         <TransactionForm
@@ -315,171 +408,5 @@ export function DashboardPage() {
         />
       </Dialog>
     </>
-  )
-}
-
-/**
- * A pastilha de resumo. `tone="auto"` resolve pelo sinal, para o Acumulado —
- * que não é uma categoria de fluxo, é o saldo — carregar a mesma leitura
- * verde/terracota do Resultado, sem inventar uma quarta cor para isso.
- */
-function SummaryStat({
-  label,
-  cents,
-  tone,
-}: {
-  label: string
-  cents: Cents
-  tone: TransactionKind | 'auto'
-}) {
-  const dotTone = tone === 'auto' ? (cents >= 0 ? 'income' : 'expense') : tone
-
-  return (
-    <div>
-      <dt className="flex items-center gap-1.5 text-xs text-muted">
-        <FlowIndicator tone={dotTone} />
-        {label}
-      </dt>
-      <dd className="mt-1.5">
-        <Money cents={cents} className="text-base font-semibold" />
-      </dd>
-    </div>
-  )
-}
-
-/**
- * A meta em destaque, em papel.
- *
- * Ela já foi um bloco de tinta. Com a barra lateral escura, a coluna esquerda
- * passou a empilhar barra, cartão e meta — três massas escuras seguidas, e a
- * tela inteira pendeu para um lado. A cota de tinta agora é gasta na barra e
- * no cartão; aqui o peso vem do anel, que é tinta cheia num painel claro.
- */
-function GoalSpotlight({ goal }: { goal: GoalProgress | undefined }) {
-  if (!goal) {
-    return (
-      <Card>
-        <EmptyState
-          icon="target"
-          size="sm"
-          title="Nenhuma meta ainda"
-          description="Uma meta transforma sobra em objetivo: você separa um valor e acompanha o quanto falta."
-          action={
-            <Link to="/metas">
-              <Button size="sm" variant="quiet" icon="plus">
-                Criar meta
-              </Button>
-            </Link>
-          }
-        />
-      </Card>
-    )
-  }
-
-  return (
-    <Card>
-      <CardHeader
-        title="Meta em foco"
-        description={goal.goal.name}
-        action={
-          <Link
-            to="/metas"
-            aria-label="Ver todas as metas"
-            className="inline-flex size-9 items-center justify-center rounded-sm bg-sunken text-ink transition-colors duration-150 hover:bg-hairline"
-          >
-            <Icon name="arrow-right" size={15} />
-          </Link>
-        }
-      />
-      <div className="flex items-center gap-5">
-        <Donut
-          value={goal.percent}
-          rawValue={goal.rawPercent}
-          label={`${goal.goal.name}: ${goal.rawPercent}% da meta`}
-          tone="income"
-        />
-        <div className="min-w-0">
-          <p className="text-xs text-muted">Já guardado</p>
-          <p className="mt-1.5 text-lg font-semibold">
-            <Money cents={goal.savedCents} tabular={false} />
-          </p>
-          <p className="mt-3 text-xs text-muted">
-            {goal.reached ? (
-              'Meta atingida.'
-            ) : (
-              <>
-                Faltam <Money cents={goal.remainingCents} emphasis="strong" />
-              </>
-            )}
-          </p>
-        </div>
-      </div>
-    </Card>
-  )
-}
-
-/**
- * Resumo dos orçamentos. Mostra primeiro o que está mais perto de estourar,
- * porque a única pergunta que este painel responde é "onde eu preciso frear".
- */
-function BudgetSummary({ rows }: { rows: BudgetStatus[] }) {
-  if (rows.length === 0) {
-    return (
-      <EmptyState
-        icon="wallet"
-        size="sm"
-        title="Sem limites definidos para este mês"
-        description="Um limite por categoria transforma o gasto em algo que você acompanha durante o mês, e não descobre no fim dele."
-        action={
-          <Link to="/orcamento">
-            <Button size="sm" variant="quiet" icon="plus">
-              Definir limites
-            </Button>
-          </Link>
-        }
-      />
-    )
-  }
-
-  return (
-    <ul className="grid gap-5 sm:grid-cols-2">
-      {rows.slice(0, 4).map((row) => (
-        <li key={row.categoryId}>
-          <div className="mb-2 flex items-baseline justify-between gap-3">
-            <span className="flex min-w-0 items-center gap-2.5">
-              <Icon name={row.icon} size={15} className="shrink-0 text-faint" />
-              <span className="truncate text-[0.8125rem] font-medium text-ink">{row.label}</span>
-            </span>
-            {row.state === 'exceeded' ? (
-              <Badge tone="strong" icon="triangle-alert" className="shrink-0">
-                Estourou
-              </Badge>
-            ) : row.state === 'warning' ? (
-              <Badge tone="outline" icon="circle-alert" className="shrink-0">
-                No limite
-              </Badge>
-            ) : (
-              <span className="tnum shrink-0 text-xs text-muted">{row.percent}%</span>
-            )}
-          </div>
-          <Progress
-            value={row.barPercent}
-            overflow={row.percent}
-            label={`${row.label}: ${row.percent}% do limite usado`}
-            tone={row.state === 'exceeded' ? 'expense' : 'income'}
-          />
-          <p className="mt-2 text-xs text-muted">
-            <Money cents={row.spentCents} /> de{' '}
-            <Money cents={row.limitCents} emphasis="muted" />
-            {row.remainingCents < 0 ? (
-              <>
-                {' · '}
-                <Money cents={Math.abs(row.remainingCents)} emphasis="strong" /> acima
-              </>
-            ) : null}
-          </p>
-        </li>
-      ))}
-    </ul>
   )
 }

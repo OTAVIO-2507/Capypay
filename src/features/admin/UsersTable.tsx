@@ -34,12 +34,14 @@ export function UsersTable({
     <div className="-mx-2 overflow-x-auto">
       <table className="w-full min-w-[36rem] border-collapse text-left text-[0.8125rem]">
         <thead>
-          <tr className="border-b border-hairline text-xs text-muted">
-            <th className="px-2 py-2.5 font-medium">E-mail</th>
-            <th className="px-2 py-2.5 font-medium">Papel</th>
-            <th className="px-2 py-2.5 font-medium">Último acesso</th>
-            <th className="px-2 py-2.5 font-medium">Criada</th>
-            <th className="px-2 py-2.5 font-medium">
+          {/* Mesma regra das outras tabelas do produto: rótulo de coluna em
+              caixa alta, cinza, com tracking. */}
+          <tr className="border-b border-hairline text-xs font-medium tracking-[0.06em] text-muted uppercase">
+            <th className="px-2 py-2.5">E-mail</th>
+            <th className="px-2 py-2.5">Papel</th>
+            <th className="px-2 py-2.5">Último acesso</th>
+            <th className="px-2 py-2.5">Criada</th>
+            <th className="px-2 py-2.5">
               <span className="sr-only">Abrir</span>
             </th>
           </tr>

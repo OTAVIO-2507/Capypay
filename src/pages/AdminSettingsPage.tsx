@@ -4,21 +4,13 @@ import { Icon } from '@/components/Icon'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardWell } from '@/components/ui/Card'
-import { Segmented, type SegmentOption } from '@/components/ui/Controls'
 import { Field, TextInput } from '@/components/ui/Field'
 import { supabase } from '@/data/supabaseClient'
-import type { ThemePreference } from '@/domain/types'
 import { AdminProfileDialog } from '@/features/admin/AdminProfileDialog'
 import { senhaAtualConfere } from '@/features/security/confirmarSenha'
 import { TwoFactorCard } from '@/features/security/TwoFactorCard'
-import { useAdminProfile, useAdminPreferences } from '@/store/adminPreferences'
+import { useAdminProfile } from '@/store/adminPreferences'
 import { useAuthStore } from '@/store/authStore'
-
-const TEMAS: readonly SegmentOption<ThemePreference>[] = [
-  { value: 'light', label: 'Claro', icon: 'sun' },
-  { value: 'dark', label: 'Escuro', icon: 'moon' },
-  { value: 'system', label: 'Automático', icon: 'monitor' },
-]
 
 const MINIMO_SENHA = 6
 
@@ -31,7 +23,6 @@ export function AdminSettingsPage() {
 
       <div className="grid gap-5 lg:grid-cols-2">
         <Perfil onEdit={() => setEditandoPerfil(true)} />
-        <Aparencia />
         {/* Ocupa a linha inteira: com ele numa das colunas, a grade de cinco
             cartões terminaria com um vão vazio ao lado do último. */}
         <TwoFactorCard />
@@ -79,24 +70,6 @@ function Perfil({ onEdit }: { onEdit: () => void }) {
           Personalizar
         </Button>
       </div>
-    </Card>
-  )
-}
-
-function Aparencia() {
-  const theme = useAdminPreferences((state) => state.theme)
-  const setTheme = useAdminPreferences((state) => state.setTheme)
-
-  return (
-    <Card>
-      <CardHeader title="Aparência" description="Como esta tela se apresenta." />
-      <Segmented label="Tema" options={TEMAS} value={theme} onChange={setTheme} />
-      <p className="mt-4 text-xs leading-relaxed text-muted">
-        Automático acompanha o sistema operacional e muda sozinho ao anoitecer. Esta escolha e o
-        retrato ficam neste navegador, não na conta: uma sessão de administração não abre o
-        documento de dados de ninguém, nem o próprio, e é lá que essas preferências moram do lado
-        do app financeiro.
-      </p>
     </Card>
   )
 }
@@ -290,7 +263,7 @@ function Sessao() {
         <div className="min-w-0">
           <p className="text-[0.8125rem] font-medium text-ink">Sair desta conta</p>
           <p className="text-xs text-muted">
-            Encerra a sessão neste navegador. O retrato e o tema continuam salvos aqui.
+            Encerra a sessão neste navegador. O retrato continua salvo aqui.
           </p>
         </div>
         <Button

@@ -1,3 +1,4 @@
+import type { ImportedCardTerms } from '@/domain/importing'
 import { supabase } from '@/data/supabaseClient'
 
 /**
@@ -33,11 +34,15 @@ export interface ExtratoSincronizado {
   number: string | null
   brand: string | null
   institution: string | null
+  /** Termos do cartão. Ausente em conta corrente e em função publicada antes do campo. */
+  card?: ImportedCardTerms | null
   entries: {
     key: string
     date: string
     amountCents: number
     description: string
+    /** A subcategoria do Pluggy, pelo nome. Ausente em função publicada antes do campo. */
+    aggregatorCategory?: string | null
     declaredInstallment?: { index: number; total: number; totalAmountCents?: number | null } | null
   }[]
 }

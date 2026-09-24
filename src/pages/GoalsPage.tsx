@@ -15,6 +15,7 @@ import type { Goal } from '@/domain/types'
 import { parseDecimalInput, percentOf, toCents, toInputValue } from '@/lib/money'
 import { useFinanceStore } from '@/store/financeStore'
 import { useGoals, useTransactions } from '@/store/hooks'
+import { cn } from '@/lib/cn'
 
 export function GoalsPage() {
   const goals = useGoals()
@@ -104,11 +105,17 @@ export function GoalsPage() {
                       <div className="mb-2.5 flex items-start justify-between gap-3">
                         <span className="flex min-w-0 items-center gap-3">
                           <span
-                            className={
-                              row.reached
-                                ? 'inline-flex size-10 shrink-0 items-center justify-center rounded-sm bg-block text-block-ink'
-                                : 'inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-sunken text-faint'
-                            }
+                            /*
+                              Só a cor muda com o estado. A versão anterior
+                              trocava também o tamanho (40 contra 36) e o raio,
+                              então a lista desalinhava conforme as metas eram
+                              atingidas — e o que devia ser "esta chegou" lia
+                              como "esta é de outro tipo".
+                            */
+                            className={cn(
+                              'inline-flex size-10 shrink-0 items-center justify-center rounded-sm',
+                              row.reached ? 'bg-accent/15 text-accent' : 'bg-sunken text-faint',
+                            )}
                           >
                             <Icon name={row.goal.icon} size={17} />
                           </span>
